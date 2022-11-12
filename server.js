@@ -1,13 +1,16 @@
 const express = require('express');
+const connectDB = require('./config/db');
+// const cors = require('cors');
 const path = require('path');
 
 const app = express();
 
-app.use(express.json());
+// Connect Database
+connectDB();
 
-app.get('/api', (req, res) => {
-  res.json({ msg: 'hello' });
-});
+app.use(express.json());
+// app.use(cors({ origin: 'http://localhost:3000' }));
+app.use('/api/messages', require('./routes/api/messages'));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
