@@ -1,6 +1,6 @@
 const express = require('express');
 const connectDB = require('./config/db');
-// const cors = require('cors');
+const cors = require('cors');
 const path = require('path');
 
 const app = express();
@@ -9,8 +9,14 @@ const app = express();
 connectDB();
 
 app.use(express.json());
-// app.use(cors({ origin: 'http://localhost:3000' }));
+
+if (process.env.NODE_ENV === 'dev') {
+  app.use(cors({ origin: 'http://localhost:3000' }));
+}
+
 app.use('/api/messages', require('./routes/api/messages'));
+app.use('/api/users', require('./routes/api/users'));
+app.use('/api/auth', require('./routes/api/auth'));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

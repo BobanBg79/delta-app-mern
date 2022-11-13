@@ -1,11 +1,17 @@
+import { Provider } from 'react-redux';
+import store from './store';
+import Router from './router';
+import { authOperations } from './modules/auth';
 import { useState } from 'react';
+import configureAxios from './utils/Http';
 import axios from 'axios';
-import logo from './logo.svg';
 import './App.css';
+
+configureAxios(store);
+store.dispatch(authOperations.authenticateUser());
 
 function App() {
   const [message, setComment] = useState(null);
-  console.log(111, message);
   const getComment = async () => {
     try {
       const message = await axios.get('/api/messages/nona', {
@@ -19,34 +25,13 @@ function App() {
     }
   };
 
-  const createComment = async () => {
-    try {
-      await axios.post(
-        '/api/messages',
-        {
-          name: 'nona',
-          content: 'Dje ste dje ste!!!',
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    } catch (err) {
-      console.log(err.message);
-    }
-  };
-
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <h1>This will be mern app one day</h1>
-        <button onClick={getComment}>Click for message</button>
-        {message && <p>{message}</p>}
-        <button onClick={createComment}>Create a message</button>
-      </header>
+      <button onClick={getComment}>Click for message</button>
+      {message && <p>{message}</p>}
+      <Provider store={store}>
+        <Router />
+      </Provider>
     </div>
   );
 }
