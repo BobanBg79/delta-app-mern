@@ -10,7 +10,7 @@ connectDB();
 
 app.use(express.json());
 
-if (process.env.NODE_ENV === 'dev') {
+if (process.env.NODE_ENV !== 'production') {
   app.use(cors({ origin: 'http://localhost:3000' }));
 }
 
