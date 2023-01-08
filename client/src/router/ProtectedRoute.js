@@ -6,9 +6,7 @@ const ProtectedRoute = ({ component: Component, token, loading, ...rest }) => (
   <Route
     {...rest}
     render={(props) => {
-      console.log(11111, props);
       if (!token) {
-        debugger;
         return <Redirect to={{ pathname: '/login', state: { from: props.location } }} />;
       }
       if (loading) {

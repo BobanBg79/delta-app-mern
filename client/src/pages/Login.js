@@ -5,8 +5,8 @@ import { authOperations } from '../modules/auth';
 const Login = () => {
   const dispatch = useDispatch();
   const [inputValues, setInputValues] = useState({ email: '', password: '' });
-  console.log(9999, inputValues);
   const { email, password } = inputValues;
+
   const onInputFieldChange = (e) => {
     setInputValues({
       ...inputValues,

@@ -30,7 +30,6 @@ router.post('/', async (req, res) => {
 // @access Public
 router.get('/:name', async (req, res) => {
   try {
-    console.log(1111, req.params.id);
     const message = await Message.findOne({
       name: req.params.name,
     });

@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/token';
 import { authOperations } from '../modules/auth';
 import { msgOperations } from '..//modules/message';
-console.log(444555, process.env.baseURL);
-axios.defaults.baseURL = process.env.baseURL || 'http://localhost:5000';
+
+axios.defaults.baseURL = 'http://localhost:5000';
 
 const configureAxios = (store) => {
   axios.interceptors.request.use((config) => {
