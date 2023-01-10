@@ -1,14 +1,19 @@
 import messageActions from './actions';
+import messageConstants from './constants';
 
-const showMsg = (message, type) => async dispatch => {
+const { SUCCESS, ERROR, WARNING } = messageConstants;
+
+const showMessageToast = (originalMessage, type) => async (dispatch) => {
+  const message = typeof originalMessage === 'string' ? [{ msg: originalMessage }] : originalMessage;
+
   switch (type) {
-    case 'success':
+    case SUCCESS:
       dispatch(messageActions.showSuccessMessage(message));
       break;
-    case 'error':
+    case ERROR:
       dispatch(messageActions.showErrorMessage(message));
       break;
-    case 'warning':
+    case WARNING:
       dispatch(messageActions.showWarningMessage(message));
       break;
     default:
@@ -17,6 +22,8 @@ const showMsg = (message, type) => async dispatch => {
   setTimeout(() => dispatch(messageActions.clearMessage()), 2500);
 };
 
-export default {
-  showMsg,
+const messageOperations = {
+  showMessageToast,
 };
+
+export default messageOperations;

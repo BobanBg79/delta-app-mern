@@ -2,9 +2,24 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const auth = require('../../middleware/auth');
 const { check, validationResult } = require('express-validator');
 
 const User = require('../../models/User');
+
+// @route GET api/auth
+// @desc Authenticate user with token
+// @access Private
+
+router.get('/', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 // @route    POST api/auth
 // @desc     Authenticate user with email and password & get token
@@ -20,13 +35,11 @@ router.post(
     }
 
     const { email, password } = req.body;
-    console.log(111111, email);
+
     try {
       let user = await User.findOne({ email });
-      console.log(22222, user);
 
       if (!user) {
-        console.log(33333, 'no found');
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }
 

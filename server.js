@@ -14,7 +14,6 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(cors({ origin: 'http://localhost:3000' }));
 }
 
-app.use('/api/messages', require('./routes/api/messages'));
 app.use('/api/users', require('./routes/api/users'));
 app.use('/api/auth', require('./routes/api/auth'));
 

@@ -3,18 +3,21 @@ import store from './store';
 import Router from './router';
 import { authOperations } from './modules/auth';
 import configureAxios from './utils/Http';
+import MessageToast from './components/MessageToast';
 import './App.css';
+import './styles/main.scss';
 
 configureAxios(store);
 store.dispatch(authOperations.authenticateUser());
 
 function App() {
   return (
-    <div className="App">
-      <Provider store={store}>
+    <Provider store={store}>
+      <div className="App">
+        <MessageToast />
         <Router />
-      </Provider>
-    </div>
+      </div>
+    </Provider>
   );
 }
 

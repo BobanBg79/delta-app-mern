@@ -1,0 +1,10 @@
+div#message-toast-container {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    .alert {
+        position: relative;
+        min-width: 300px;;
+    }
+}

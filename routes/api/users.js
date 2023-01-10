@@ -1,22 +1,23 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { USER_ROLES } = require('../../config/constants');
+const { USER_ROLES, accessTokenExpiresIn } = require('../../config/constants');
 const { check, validationResult } = require('express-validator');
 
 const User = require('../../models/User');
 
-// @route    POST api/users
+// @route    POST api/users/register
 // @desc     Create user
 // @access   Public
 router.post(
-  '/',
+  '/register',
   check('email', 'Please include a valid email').isEmail(),
   check('fname', 'First name is required').notEmpty(),
   check('lname', 'Last name is required').notEmpty(),
   check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
   check('telephone', 'Telephone is required').notEmpty(),
-  check('role', 'Telephone is required').custom((role) => Object.values(USER_ROLES).includes(role)),
+  check('role', 'User role is required').custom((role) => Object.values(USER_ROLES).includes(role)),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -46,7 +47,17 @@ router.post(
       user.password = await bcrypt.hash(password, salt);
 
       await user.save();
-      res.status(201).json({ msg: 'User has successfully been created!' });
+
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+
+      jwt.sign(payload, process.env.JSON_WT_SECRET, { expiresIn: accessTokenExpiresIn }, (err, token) => {
+        if (err) throw err;
+        res.json({ token });
+      });
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server error');

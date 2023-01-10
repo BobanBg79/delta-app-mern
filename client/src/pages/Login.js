@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { authOperations } from '../modules/auth';
+import { useHistory } from 'react-router-dom';
 
 const Login = () => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const [inputValues, setInputValues] = useState({ email: '', password: '' });
   const { email, password } = inputValues;
 
@@ -15,7 +18,7 @@ const Login = () => {
   };
 
   const login = () => {
-    dispatch(authOperations.login(inputValues));
+    dispatch(authOperations.login(inputValues)).then(() => history.push('/'));
   };
 
   return (
@@ -28,6 +31,10 @@ const Login = () => {
       <div>
         <label>Password</label>
         <input type="password" name="password" value={password} onChange={onInputFieldChange} />
+      </div>
+      <div className="signup">
+        <span>Not registered?</span>
+        <Link to="/signup">Sign up</Link>
       </div>
       <button onClick={login}>Login</button>
     </div>

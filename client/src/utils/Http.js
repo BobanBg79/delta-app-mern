@@ -9,7 +9,8 @@ const configureAxios = (store) => {
   axios.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['x-auth-token'] = token;
     }
     config.headers['Content-Type'] = 'application/json';
     return config;
@@ -19,7 +20,7 @@ const configureAxios = (store) => {
     (response) => response,
     (error) => {
       if (error.response.status === 401) {
-        store.dispatch(msgOperations.showMsg(error.response.data.error, 'error'));
+        store.dispatch(msgOperations.showMessageToast(error.response.data.error, 'error'));
         store.dispatch(authOperations.logout());
       }
       throw error;

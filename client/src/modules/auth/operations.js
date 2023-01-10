@@ -1,6 +1,10 @@
 import axios from 'axios';
 import authActions from './actions';
-import { msgOperations } from '../message';
+import { msgOperations, messageConstants } from '../message';
+import { accessToken } from '../../constants';
+
+const { SUCCESS, ERROR } = messageConstants;
+const { showMessageToast } = msgOperations;
 
 const {
   authAttempt,
@@ -17,28 +21,30 @@ const {
 
 const authenticateUser = () => async (dispatch) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(accessToken);
     if (token) {
       dispatch(authAttempt());
-      const response = await axios.get('/api/auth');
-      dispatch(authSuccess(response.data));
-      dispatch(msgOperations.showMsg('User successfully authenticated', 'success'));
+      const { data } = await axios.get('/api/auth');
+      dispatch(authSuccess(data));
+      dispatch(showMessageToast(`Welcome ${data.fname} ${data.lname}`, SUCCESS));
     }
   } catch (err) {
     dispatch(authFail());
+    dispatch(showMessageToast('Please login', ERROR));
   }
 };
 
 const registerUser = (data) => async (dispatch) => {
   dispatch(registerAttempt());
   try {
-    const response = await axios.post('api/user/register', data);
+    const response = await axios.post('api/users/register', data);
     dispatch(registerSuccess(response.data));
-    // TODO: set newly arrived token to LocalStorage
-    dispatch(msgOperations.showMsg('User successfully created', 'success'));
+    dispatch(showMessageToast([{ msg: 'User successfully created' }, { msg: 'some other message' }], SUCCESS));
   } catch (err) {
     dispatch(registerFail());
-    dispatch(msgOperations.showMsg(err.response.data.error, 'error'));
+    const { errors: errorMessagesArray } = err.response.data;
+    dispatch(showMessageToast(errorMessagesArray, ERROR));
+    throw err;
   }
 };
 
@@ -48,10 +54,10 @@ const login = (data) => async (dispatch) => {
     console.log('OVDE', data);
     const response = await axios.post('/api/auth', data);
     dispatch(loginSuccess(response.data));
-    dispatch(msgOperations.showMsg('Successfully logged in', 'success'));
+    dispatch(showMessageToast('Successfully logged in', SUCCESS));
   } catch (err) {
     dispatch(loginFail());
-    dispatch(msgOperations.showMsg(err.response.data.error, 'error'));
+    dispatch(showMessageToast(err.response.data.error, ERROR));
     throw err;
   }
 };
@@ -61,7 +67,7 @@ const logout = () => async (dispatch) => {
     delete axios.defaults.headers.common.Authorization;
     dispatch(logoutSuccess());
   } catch ({ response }) {
-    dispatch(msgOperations.showMsg(response.data.error, 'error'));
+    dispatch(showMessageToast(response.data.error, ERROR));
   }
 };
 

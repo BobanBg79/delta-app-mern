@@ -3,11 +3,11 @@ const SHOW_WARNING_MESSAGE = 'SHOW_WARNING_MESSAGE';
 const SHOW_ERROR_MESSAGE = 'SHOW_ERROR_MESSAGE';
 const CLEAR_MESSAGE = 'CLEAR_MESSAGE';
 
-const messageActionsTypes = {
+const messageActionTypes = {
   SHOW_SUCCESS_MESSAGE,
   SHOW_WARNING_MESSAGE,
   SHOW_ERROR_MESSAGE,
   CLEAR_MESSAGE,
 };
 
-export default messageActionsTypes;
+export default messageActionTypes;

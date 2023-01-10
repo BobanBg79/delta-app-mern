@@ -1,19 +1,23 @@
 import types from './types';
+import messageConstants from './constants';
+
+const { SUCCESS, ERROR, WARNING } = messageConstants;
+
 const INITIAL_STATE = {
-  message: '',
-  type: undefined,
+  messages: null,
+  type: null,
 };
 
 const reducer = (state = INITIAL_STATE, { type, payload }) => {
   switch (type) {
     case types.SHOW_SUCCESS_MESSAGE:
-      return { ...state, message: payload, type: 'success' };
+      return { ...state, messages: payload, type: SUCCESS };
     case types.SHOW_WARNING_MESSAGE:
-      return { ...state, message: payload, type: 'warning' };
+      return { ...state, messages: payload, type: WARNING };
     case types.SHOW_ERROR_MESSAGE:
-      return { ...state, message: payload, type: 'danger' };
+      return { ...state, messages: payload, type: ERROR };
     case types.CLEAR_MESSAGE:
-      return { ...state, message: '', type: undefined };
+      return { ...state, messages: null, type: undefined };
     default:
       return state;
   }

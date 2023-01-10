@@ -1,5 +1,10 @@
 import types from './types';
 
+const setAlertMessages = (alerMessagesArray, type) => ({
+  alerMessagesArray,
+  type,
+});
+
 const showSuccessMessage = (payload) => ({
   type: types.SHOW_SUCCESS_MESSAGE,
   payload,
@@ -17,6 +22,7 @@ const clearMessage = () => ({
 });
 
 const messageActionsObj = {
+  setAlertMessages,
   showSuccessMessage,
   showWarningMessage,
   showErrorMessage,

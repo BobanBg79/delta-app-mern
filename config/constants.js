@@ -6,6 +6,9 @@ const USER_ROLES = {
   employee: 'employee',
 };
 
+const accessTokenExpiresIn = '15 days';
+
 module.exports = {
   USER_ROLES,
+  accessTokenExpiresIn,
 };
