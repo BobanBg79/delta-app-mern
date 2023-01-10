@@ -51,13 +51,12 @@ const registerUser = (data) => async (dispatch) => {
 const login = (data) => async (dispatch) => {
   dispatch(loginAttempt());
   try {
-    console.log('OVDE', data);
     const response = await axios.post('/api/auth', data);
     dispatch(loginSuccess(response.data));
     dispatch(showMessageToast('Successfully logged in', SUCCESS));
   } catch (err) {
     dispatch(loginFail());
-    dispatch(showMessageToast(err.response.data.error, ERROR));
+    dispatch(showMessageToast(err.response.data.errors, ERROR));
     throw err;
   }
 };

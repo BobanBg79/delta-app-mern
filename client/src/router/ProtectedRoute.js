@@ -2,7 +2,7 @@ import React from 'react';
 import { Route, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 
-const ProtectedRoute = ({ component: Component, token, loading, ...rest }) => (
+const ProtectedRoute = ({ component: Component, id, token, loading, ...rest }) => (
   <Route
     {...rest}
     render={(props) => {
@@ -16,7 +16,11 @@ const ProtectedRoute = ({ component: Component, token, loading, ...rest }) => (
           </div>
         );
       }
-      return <Component {...props} />;
+      return (
+        <div id={id} className="page-wrapper">
+          <Component {...props} />
+        </div>
+      );
     }}
   />
 );

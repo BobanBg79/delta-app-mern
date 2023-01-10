@@ -17,7 +17,7 @@ const reducer = (state = INITIAL_STATE, { type, payload }) => {
     case types.SHOW_ERROR_MESSAGE:
       return { ...state, messages: payload, type: ERROR };
     case types.CLEAR_MESSAGE:
-      return { ...state, messages: null, type: undefined };
+      return { ...state, messages: null, type: null };
     default:
       return state;
   }
