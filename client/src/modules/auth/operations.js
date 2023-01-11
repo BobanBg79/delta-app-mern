@@ -30,7 +30,6 @@ const authenticateUser = () => async (dispatch) => {
     }
   } catch (err) {
     dispatch(authFail());
-    dispatch(showMessageToast('Please login', ERROR));
   }
 };
 
