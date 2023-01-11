@@ -4,7 +4,6 @@ import Router from './router';
 import { authOperations } from './modules/auth';
 import configureAxios from './utils/Http';
 import MessageToast from './components/MessageToast';
-import './App.css';
 import './styles/main.scss';
 
 configureAxios(store);

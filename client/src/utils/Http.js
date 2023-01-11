@@ -3,14 +3,13 @@ import { getToken } from '../utils/token';
 import { authOperations } from '../modules/auth';
 import { msgOperations } from '..//modules/message';
 
-axios.defaults.baseURL = 'http://localhost:5000';
-
+axios.defaults.baseURL = process.env.baseUrl || 'http://localhost:5000';
+console.log(9999999090900, process.env);
 const configureAxios = (store) => {
   axios.interceptors.request.use((config) => {
     const token = getToken();
     if (token) {
-      // config.headers['Authorization'] = `Bearer ${token}`;
-      config.headers['x-auth-token'] = token;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     config.headers['Content-Type'] = 'application/json';
     return config;

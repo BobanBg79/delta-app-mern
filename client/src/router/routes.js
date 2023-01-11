@@ -9,10 +9,10 @@ const PAGE_URLS = {
 const { loginUrl, signupUrl, homeUrl } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
-  LOGIN: { title: 'Login', path: loginUrl, component: LoginPage },
-  SIGNUP: { title: 'signup', path: signupUrl, component: SignupPage },
+  LOGIN: { title: 'Login', id: 'login', path: loginUrl, component: LoginPage },
+  SIGNUP: { title: 'Signup', id: 'signup', path: signupUrl, component: SignupPage },
 };
 
 export const PROTECTED_ROUTES = {
-  HOME: { title: 'Home page', path: homeUrl, component: HomePage },
+  HOME: { title: 'Home page', id: 'home', path: homeUrl, component: HomePage },
 };
