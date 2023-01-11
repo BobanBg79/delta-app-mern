@@ -39,7 +39,7 @@ const registerUser = (data) => async (dispatch) => {
   try {
     const response = await axios.post('api/users/register', data);
     dispatch(registerSuccess(response.data));
-    dispatch(showMessageToast([{ msg: 'User successfully created' }, { msg: 'some other message' }], SUCCESS));
+    dispatch(showMessageToast('User successfully created', SUCCESS));
   } catch (err) {
     dispatch(registerFail());
     const { errors: errorMessagesArray } = err.response.data;
