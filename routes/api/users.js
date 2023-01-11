@@ -56,7 +56,8 @@ router.post(
 
       jwt.sign(payload, process.env.JSON_WT_SECRET, { expiresIn: accessTokenExpiresIn }, (err, token) => {
         if (err) throw err;
-        res.json({ token });
+        const { password, ...responseUser } = user._doc;
+        res.json({ token, user: responseUser });
       });
     } catch (err) {
       console.error(err.message);
