@@ -11,7 +11,7 @@ const Homepage = () => {
   const logout = () => dispatch(authOperations.logout()).then(() => history.push('/'));
   return (
     <Row>
-      <Col xs md="8" className="mx-auto">
+      <Col xs md="6" className="mx-auto">
         <h1>Home page!</h1>
         <Button onClick={logout}>Logout</Button>
       </Col>

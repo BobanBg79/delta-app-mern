@@ -1,6 +1,8 @@
 import React from 'react';
 import { Route, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 const ProtectedRoute = ({ component: Component, id, token, loading, ...rest }) => (
   <Route
@@ -11,9 +13,11 @@ const ProtectedRoute = ({ component: Component, id, token, loading, ...rest }) =
       }
       if (loading) {
         return (
-          <div>
-            <h1>Loading</h1>
-          </div>
+          <Row>
+            <Col xs md="6" className="mx-auto">
+              <h1>Loading</h1>
+            </Col>
+          </Row>
         );
       }
       return (

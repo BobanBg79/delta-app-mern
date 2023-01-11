@@ -6,6 +6,7 @@ import { msgOperations } from '..//modules/message';
 axios.defaults.baseURL =
   process.env.NODE_ENV === 'production' ? 'https://delta-app-mern.herokuapp.com' : 'http://localhost:5000';
 console.log(11111, 'axios.defaults.baseURL: ', axios.defaults.baseURL);
+console.log(22222, 'process.env: ', process.env);
 
 const configureAxios = (store) => {
   axios.interceptors.request.use((config) => {

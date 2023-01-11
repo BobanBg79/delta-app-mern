@@ -2,6 +2,8 @@ import React from 'react';
 import { Route, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { useSelector } from 'react-redux';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 const PublicRoute = ({ component: Component, id, token, loading, ...rest }) => {
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -14,9 +16,11 @@ const PublicRoute = ({ component: Component, id, token, loading, ...rest }) => {
         }
         if (loading) {
           return (
-            <div>
-              <h1>Loading</h1>
-            </div>
+            <Row>
+              <Col xs md="6" className="mx-auto">
+                <h1>Loading</h1>
+              </Col>
+            </Row>
           );
         }
         return (
