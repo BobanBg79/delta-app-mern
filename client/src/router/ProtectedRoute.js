@@ -11,7 +11,6 @@ const ProtectedRoute = ({ component: Component, id, token, loading, ...rest }) =
       if (!token) {
         return <Redirect to={{ pathname: '/login', state: { from: props.location } }} />;
       }
-
       return loading ? (
         <Row>
           <Col xs md="6" className="mx-auto">
