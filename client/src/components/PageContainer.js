@@ -21,6 +21,11 @@ const PageContainer = ({ children }) => {
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
+          <Nav.Link as={Link} to="/apartments" eventKey="/apartments">
+            Apartments
+          </Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
           <Nav.Link as={Link} to="/test" eventKey="/test">
             Test Page
           </Nav.Link>
