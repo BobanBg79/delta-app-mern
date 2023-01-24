@@ -14,19 +14,21 @@ const PublicRoute = ({ component: Component, id, token, loading, ...rest }) => {
         if (isAuthenticated) {
           return <Redirect to={{ pathname: '/', state: { from: props.location } }} />;
         }
-        if (loading) {
-          return (
-            <Row>
-              <Col xs md="6" className="mx-auto">
-                <h1>Loading</h1>
-              </Col>
-            </Row>
-          );
-        }
+
         return (
-          <div id={id} className="page-wrapper">
-            <Component {...props} />
-          </div>
+          <>
+            {loading ? (
+              <Row>
+                <Col xs md="6" className="mx-auto">
+                  <h1>Loading</h1>
+                </Col>
+              </Row>
+            ) : (
+              <div id={id} className="page-wrapper">
+                <Component {...props} />
+              </div>
+            )}
+          </>
         );
       }}
     />
