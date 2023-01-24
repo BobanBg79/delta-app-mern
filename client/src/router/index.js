@@ -9,7 +9,6 @@ const RouterWrapper = () => {
     <Router>
       <Switch>
         {Object.entries(PUBLIC_ROUTES).map(([key, route]) => (
-          // <Route key={key} exact path={route.path} component={route.component} />
           <PublicRoutes key={key} exact path={route.path} component={route.component} id={route.id} />
         ))}
         {Object.entries(PROTECTED_ROUTES).map(([key, route]) => (
