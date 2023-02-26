@@ -1,4 +1,4 @@
 import apartmentsReducer from './reducers';
-export { default as apartmentActions } from './actions';
-export { default as apartmentTypes } from './types';
+export { default as apartmentsActions } from './actions';
+export { default as apartmentsTypes } from './types';
 export default apartmentsReducer;

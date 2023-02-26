@@ -1,33 +1,7 @@
 import axios from 'axios';
-import apartmentActions from './actions';
-import { msgOperations, messageConstants } from '../message';
+import apartmentsActions from './actions';
 
-const { SUCCESS, ERROR } = messageConstants;
-
-const { showMessageToast } = msgOperations;
-
-const {
-  setApartmentsFetchStart,
-  setApartmentsFetchEnd,
-  setApartments,
-  setApartmentsError,
-  setApartmentFetchStart,
-  setApartmentFetchEnd,
-  setApartment,
-  setApartmentError,
-} = apartmentActions;
-
-export const createApartment = (data) => async (dispatch) => {
-  try {
-    dispatch(setApartmentFetchStart());
-    await axios.post('/api/apartments', data);
-    dispatch(setApartmentFetchEnd());
-    dispatch(showMessageToast('Apartment is successfully created!', SUCCESS));
-  } catch (error) {
-    console.log(error.message);
-    dispatch(showMessageToast('Apartment could not be created', ERROR));
-  }
-};
+const { setApartmentsFetchStart, setApartmentsFetchEnd, setApartments, setApartmentsError } = apartmentsActions;
 
 export const getAllApartments = () => async (dispatch) => {
   try {
@@ -41,19 +15,7 @@ export const getAllApartments = () => async (dispatch) => {
   }
 };
 
-export const getApartment = (apartmentId) => async (dispatch) => {
-  try {
-    dispatch(setApartmentFetchStart());
-    const response = await axios.get(`/api/apartments/${apartmentId}`);
-    dispatch(setApartment(response.data));
-    dispatch(setApartmentFetchEnd());
-  } catch (error) {
-    dispatch(setApartmentError(error.message));
-  }
-};
-
 export const apartmentOperations = {
-  createApartment,
   getAllApartments,
 };
 
