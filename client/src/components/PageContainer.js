@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { authOperations } from '../modules/auth';
+import { getAllApartments } from '../modules/apartments/operations';
 import Nav from 'react-bootstrap/Nav';
 import { Link } from 'react-router-dom';
 import Button from 'react-bootstrap/Button';
@@ -11,6 +12,10 @@ const PageContainer = ({ children }) => {
   const history = useHistory();
   const dispatch = useDispatch();
   const logout = () => dispatch(authOperations.logout()).then(() => history.push('/'));
+
+  useEffect(() => {
+    dispatch(getAllApartments());
+  }, []);
 
   return (
     <div className="container">

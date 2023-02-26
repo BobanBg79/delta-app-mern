@@ -7,9 +7,10 @@ const PAGE_URLS = {
   testUrl: '/test',
   apartmentsList: '/apartments',
   apartmentView: '/apartments/:apartmentId',
+  apartmentCreate: '/apartments/create',
 };
 
-const { loginUrl, signupUrl, homeUrl, testUrl, apartmentsList, apartmentView } = PAGE_URLS;
+const { loginUrl, signupUrl, homeUrl, testUrl, apartmentsList, apartmentView, apartmentCreate } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
   LOGIN: { title: 'Login', id: 'login', path: loginUrl, component: LoginPage },
@@ -25,6 +26,12 @@ export const PROTECTED_ROUTES = {
     isExact: true,
     path: apartmentsList,
     component: ApartmentsList,
+  },
+  APARTMENT_CREATE: {
+    title: 'Create Apartment',
+    id: 'apartment-create',
+    path: apartmentCreate,
+    component: ApartmentView,
   },
   APARTMENT_VIEW: { title: 'Apartment', id: 'apartment', path: apartmentView, component: ApartmentView },
 };
