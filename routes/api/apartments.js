@@ -25,7 +25,7 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
-    const apartment = await Apartment.find({ _id: apartmentId });
+    const apartment = await Apartment.findOne({ _id: apartmentId });
     res.status(200).json({ apartment });
   } catch (error) {
     console.log(error.message);
@@ -69,6 +69,20 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json({ msg: 'Apartment successfully created' });
   } catch (error) {
     console.log(error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route    PUT api/apartments/:apartmentId
+// @desc     Update apartment
+// @access   Private
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { id: apartmentId } = req.params;
+    let updatedApartment = await Apartment.findOneAndUpdate({ _id: apartmentId }, req.body, { new: true });
+    res.status(200).json({ apartment: updatedApartment });
+  } catch (error) {
+    console.log(898989, error.message);
     res.status(500).send('Server error');
   }
 });
