@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { getApartment, createApartment } from '../../modules/apartments/operations';
+import { getApartment, createApartment, updateApartment } from '../../modules/apartment/operations';
 import ApartmentModel from './ApartmentModel';
 import ParkingDetails from './ParkingDetails';
 import AddressDetails from './AddressDetails';
@@ -18,23 +18,17 @@ const ApartmentView = () => {
   const { apartmentId } = useParams();
   const dispatch = useDispatch();
   const history = useHistory();
-  const { apartment } = useSelector((state) => state.apartments);
-  console.log(9999, 'apartment: ', apartment);
-  useEffect(() => {
-    apartmentId && dispatch(getApartment(apartmentId));
-  }, [apartmentId, dispatch]);
-  useEffect(() => {
-    apartment && setFormState(apartment);
-  }, [apartment]);
-
+  // redux state
+  const { apartment, fetching } = useSelector((state) => state.apartment);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);
   const [validated, setValidated] = useState(false);
   // Form data
   const { name, isActive, address, parking, apartmentFeatures, rentContractDetails } = formState;
+
   // methods
-  const makeFormEditable = () => setIsEditable(true);
+  const makeFormEditable = () => !fetching && setIsEditable(true);
 
   const cancelEditing = () => {
     setFormState(apartment);
@@ -54,29 +48,42 @@ const ApartmentView = () => {
     event.stopPropagation();
     const formIsValid = event.currentTarget.checkValidity();
     if (formIsValid) {
-      apartmentId ? alert('Submit') : dispatch(createApartment(formState)).then(() => history.push('/apartments'));
+      apartmentId
+        ? dispatch(updateApartment(apartmentId, formState)).then(() => setIsEditable(false))
+        : dispatch(createApartment(formState)).then(() => history.push('/apartments'));
     } else {
       setValidated(true);
     }
   };
 
+  // side effects
+  useEffect(() => {
+    apartmentId && dispatch(getApartment(apartmentId));
+  }, [apartmentId, dispatch]);
+  useEffect(() => {
+    apartment && setFormState(apartment);
+  }, [apartment]);
+  useEffect(() => {
+    fetching && setIsEditable(false);
+  }, [fetching]);
+
   return (
-    <div>
-      <Row>
+    <div className="form-container">
+      <Row className="form-heading">
         <Col>
           <h1>{apartmentId ? apartment && apartment.name : 'Create new apartment'}</h1>
+          {apartmentId && (
+            <>
+              {isEditable ? (
+                <Button onClick={cancelEditing} variant="danger" className="mx-2">
+                  Cancel
+                </Button>
+              ) : (
+                <Button onClick={makeFormEditable}>Edit</Button>
+              )}
+            </>
+          )}
         </Col>
-        {apartmentId && (
-          <Col>
-            {isEditable ? (
-              <Button onClick={cancelEditing} variant="danger" className="mx-2">
-                Cancel
-              </Button>
-            ) : (
-              <Button onClick={makeFormEditable}>Edit</Button>
-            )}
-          </Col>
-        )}
       </Row>
       <Row>
         <Form noValidate validated={validated} id="apartment-form-view" onSubmit={onSubmit}>
