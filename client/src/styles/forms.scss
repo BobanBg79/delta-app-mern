@@ -1,6 +1,12 @@
-form {
+.form-container {
     max-width: 600px;
-    margin: 12px auto
+    margin: 12px auto;
+    .form-heading .col {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        align-items: center;
+    }
 }
 .invalid-feedback {
     font-size: 12px;

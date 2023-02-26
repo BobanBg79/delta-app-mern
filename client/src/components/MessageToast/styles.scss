@@ -3,6 +3,7 @@ div#message-toast-container {
     top: 15px;
     left: 50%;
     transform: translateX(-50%);
+    z-index: 99;
     .alert {
         position: relative;
         min-width: 300px;;

@@ -1,0 +1,11 @@
+.nav {
+    display: flex;
+    justify-content: center;
+}
+.nav-item {
+    border: 2px solid #ebe9e9;
+    margin: 6px;
+    &:hover {
+        background-color: #f5f5f5;
+    }
+}
