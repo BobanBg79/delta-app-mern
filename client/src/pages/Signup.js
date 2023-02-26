@@ -11,12 +11,12 @@ const SignupForm = () => {
   const dispatch = useDispatch();
   const history = useHistory();
 
-  const [email, setEmail] = useState('slobodan_krasavcevic@yahoo.com');
-  const [fname, setFname] = useState('Boban');
-  const [lname, setLname] = useState('Krasavcevic');
-  const [password, setPassword] = useState('boki2005');
-  const [telephone, setTelephone] = useState('+381652140878');
-  const [role, setRole] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [fname, setFname] = useState('');
+  const [lname, setLname] = useState('');
+  const [password, setPassword] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [role, setRole] = useState('');
 
   function handleSubmit(event) {
     event.preventDefault();
