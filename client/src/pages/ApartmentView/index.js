@@ -8,11 +8,14 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { getApartment, createApartment, updateApartment } from '../../modules/apartment/operations';
+import { apartmentConstants, apartmentActions } from '../../modules/apartment';
 import ApartmentModel from './ApartmentModel';
 import ParkingDetails from './ParkingDetails';
 import AddressDetails from './AddressDetails';
 import ApartmentFeatures from './ApartmentFeatures';
 import RentContractDetails from './RentContractDetails';
+
+const { CAN_EDIT_APARTMENT_DETAILS } = apartmentConstants;
 
 const ApartmentView = () => {
   const { apartmentId } = useParams();
@@ -20,6 +23,7 @@ const ApartmentView = () => {
   const history = useHistory();
   // redux state
   const { apartment, fetching } = useSelector((state) => state.apartment);
+  const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);
@@ -49,7 +53,7 @@ const ApartmentView = () => {
     const formIsValid = event.currentTarget.checkValidity();
     if (formIsValid) {
       apartmentId
-        ? dispatch(updateApartment(apartmentId, formState)).then(() => setIsEditable(false))
+        ? dispatch(updateApartment(apartmentId, formState)).then(() => history.push('/apartments'))
         : dispatch(createApartment(formState)).then(() => history.push('/apartments'));
     } else {
       setValidated(true);
@@ -59,6 +63,7 @@ const ApartmentView = () => {
   // side effects
   useEffect(() => {
     apartmentId && dispatch(getApartment(apartmentId));
+    return () => dispatch(apartmentActions.resetApartment());
   }, [apartmentId, dispatch]);
   useEffect(() => {
     apartment && setFormState(apartment);
@@ -69,22 +74,24 @@ const ApartmentView = () => {
 
   return (
     <div className="form-container">
-      <Row className="form-heading">
-        <Col>
-          <h1>{apartmentId ? apartment && apartment.name : 'Create new apartment'}</h1>
-          {apartmentId && (
-            <>
-              {isEditable ? (
-                <Button onClick={cancelEditing} variant="danger" className="mx-2">
-                  Cancel
-                </Button>
-              ) : (
-                <Button onClick={makeFormEditable}>Edit</Button>
-              )}
-            </>
-          )}
-        </Col>
-      </Row>
+      {CAN_EDIT_APARTMENT_DETAILS.includes(userRole) && (
+        <Row className="form-heading">
+          <Col>
+            <h1>{apartmentId ? apartment && apartment.name : 'Create new apartment'}</h1>
+            {apartmentId && (
+              <>
+                {isEditable ? (
+                  <Button onClick={cancelEditing} variant="danger" className="mx-2">
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button onClick={makeFormEditable}>Edit</Button>
+                )}
+              </>
+            )}
+          </Col>
+        </Row>
+      )}
       <Row>
         <Form noValidate validated={validated} id="apartment-form-view" onSubmit={onSubmit}>
           <fieldset disabled={!isEditable}>

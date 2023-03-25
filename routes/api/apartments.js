@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const apartmentEditMiddleware = require('../../middleware/apartmentEditMiddleware');
 const { check, validationResult } = require('express-validator');
 
 const Apartment = require('../../models/Apartment');
@@ -11,7 +12,6 @@ const Apartment = require('../../models/Apartment');
 router.get('/', auth, async (req, res) => {
   try {
     const apartments = await Apartment.find();
-    debugger;
     res.json(apartments);
   } catch (error) {
     console.error(error.message);
@@ -76,13 +76,12 @@ router.post('/', auth, async (req, res) => {
 // @route    PUT api/apartments/:apartmentId
 // @desc     Update apartment
 // @access   Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', [auth, apartmentEditMiddleware], async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     let updatedApartment = await Apartment.findOneAndUpdate({ _id: apartmentId }, req.body, { new: true });
     res.status(200).json({ apartment: updatedApartment });
   } catch (error) {
-    console.log(898989, error.message);
     res.status(500).send('Server error');
   }
 });

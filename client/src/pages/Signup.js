@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { Link, useHistory } from 'react-router-dom';
-import { authOperations } from '../modules/auth';
+import { authOperations, authConstants } from '../modules/auth';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
+
+const { USER_ROLES } = authConstants;
 
 const SignupForm = () => {
   const dispatch = useDispatch();
@@ -18,9 +20,10 @@ const SignupForm = () => {
   const [telephone, setTelephone] = useState('');
   const [role, setRole] = useState('');
 
+  const setUserRole = (e) => setRole(e.target.value);
+
   function handleSubmit(event) {
     event.preventDefault();
-    // Send the form data to the server or do something else with it
     dispatch(
       authOperations.registerUser({
         email,
@@ -79,21 +82,19 @@ const SignupForm = () => {
           </Form.Group>
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput4">
             <Form.Label>Telephone</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="+381 123 456 789"
-              value={telephone}
-              onChange={(event) => setTelephone(event.target.value)}
-            />
+            <Form.Control type="text" value={telephone} onChange={(event) => setTelephone(event.target.value)} />
           </Form.Group>
+
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput5">
             <Form.Label>Role</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="+381 123 456 789"
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-            />
+            <Form.Select onChange={setUserRole}>
+              <option>Select the user role</option>
+              {Object.entries(USER_ROLES).map(([roleKey, roleValue]) => (
+                <option key={roleKey} value={roleValue}>
+                  {roleKey}
+                </option>
+              ))}
+            </Form.Select>
           </Form.Group>
 
           <Button type="submit">Sign Up</Button>

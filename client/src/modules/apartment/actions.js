@@ -17,11 +17,16 @@ const setApartmentError = (errorMessage) => ({
   payload: errorMessage,
 });
 
+const resetApartment = () => ({
+  type: types.RESET_APARTMENT,
+});
+
 const apartmentsActions = {
   setApartmentFetchStart,
   setApartmentFetchEnd,
   setApartment,
   setApartmentError,
+  resetApartment,
 };
 
 export default apartmentsActions;

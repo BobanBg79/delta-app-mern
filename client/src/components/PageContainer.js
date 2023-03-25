@@ -1,10 +1,9 @@
 import MainNavigation from './MainNavigation';
 
-const PageContainer = ({ children, pageTitle }) => {
+const PageContainer = ({ children }) => {
   return (
     <div className="container">
       <MainNavigation />
-      <h1>{pageTitle}</h1>
       {children}
     </div>
   );

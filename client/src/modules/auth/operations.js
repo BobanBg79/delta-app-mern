@@ -26,7 +26,7 @@ const authenticateUser = () => async (dispatch) => {
       dispatch(authAttempt());
       const { data } = await axios.get('/api/auth');
       dispatch(authSuccess(data));
-      dispatch(showMessageToast(`Welcome ${data.fname} ${data.lname}`, SUCCESS));
+      // dispatch(showMessageToast(`Welcome ${data.fname} ${data.lname}`, SUCCESS));
     }
   } catch (err) {
     dispatch(authFail());
