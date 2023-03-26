@@ -43,7 +43,7 @@ export const updateApartment = (apartmentId, data) => async (dispatch) => {
     dispatch(setApartmentFetchEnd());
   } catch (error) {
     const { response: { statusText } = {} } = error;
-    dispatch(showMessageToast(statusText || 'Apartment could not be updated', ERROR));
+    dispatch(showMessageToast(statusText || 'Apartment cannot be updated', ERROR));
     dispatch(setApartmentError(error.message));
   }
 };
@@ -55,8 +55,9 @@ export const deleteApartment = (apartmentId) => async (dispatch) => {
     dispatch(showMessageToast('Apartment has been permanently deleted!', SUCCESS));
     dispatch(setApartmentFetchEnd());
   } catch (error) {
-    dispatch(setApartmentError(error.message));
-    console.log('delete apartment error: ', error.message);
+    const { response: { statusText } = {} } = error;
+    dispatch(showMessageToast(statusText || 'Apartment cannot be deleted', ERROR));
+    dispatch(setApartmentError(statusText || error.message));
   }
 };
 
