@@ -1,4 +1,13 @@
-import { LoginPage, SignupPage, HomePage, TestPage, ApartmentsList, ApartmentView } from '../pages';
+import {
+  LoginPage,
+  SignupPage,
+  HomePage,
+  TestPage,
+  ApartmentsList,
+  ApartmentView,
+  ReservationsList,
+  ReservationView,
+} from '../pages';
 
 const PAGE_URLS = {
   loginUrl: '/login',
@@ -8,9 +17,23 @@ const PAGE_URLS = {
   apartmentsList: '/apartments',
   apartmentView: '/apartments/:apartmentId',
   apartmentCreate: '/apartments/create',
+  reservationsList: '/reservations',
+  reservationView: '/reservations/:reservationId',
+  reservationCreate: '/reservations/create',
 };
 
-const { loginUrl, signupUrl, homeUrl, testUrl, apartmentsList, apartmentView, apartmentCreate } = PAGE_URLS;
+const {
+  loginUrl,
+  signupUrl,
+  homeUrl,
+  testUrl,
+  apartmentsList,
+  apartmentView,
+  apartmentCreate,
+  reservationsList,
+  reservationView,
+  reservationCreate,
+} = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
   LOGIN: { title: 'Login', id: 'login', path: loginUrl, component: LoginPage },
@@ -34,4 +57,23 @@ export const PROTECTED_ROUTES = {
     component: ApartmentView,
   },
   APARTMENT_VIEW: { title: 'Apartment', id: 'apartment', path: apartmentView, component: ApartmentView },
+  RESERVATIONS: {
+    title: 'Reservations',
+    id: 'reservations',
+    isExact: true,
+    path: reservationsList,
+    component: ReservationsList,
+  },
+  RESERVATION_CREATE: {
+    title: 'Create Reservation',
+    id: 'reservation-create',
+    path: reservationCreate,
+    component: ReservationView,
+  },
+  RESERVATION_VIEW: {
+    title: 'Reservation',
+    id: 'reservation',
+    path: reservationView,
+    component: ReservationView,
+  },
 };
