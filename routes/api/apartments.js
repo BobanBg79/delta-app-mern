@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
-const apartmentEditMiddleware = require('../../middleware/apartmentEditMiddleware');
+const { apartmentEditMiddleware, apartmentDeleteMiddleware } = require('../../middleware/apartmentMiddleware');
 const { check, validationResult } = require('express-validator');
 
 const Apartment = require('../../models/Apartment');
@@ -81,6 +81,19 @@ router.put('/:id', [auth, apartmentEditMiddleware], async (req, res) => {
     const { id: apartmentId } = req.params;
     let updatedApartment = await Apartment.findOneAndUpdate({ _id: apartmentId }, req.body, { new: true });
     res.status(200).json({ apartment: updatedApartment });
+  } catch (error) {
+    res.status(500).send('Server error');
+  }
+});
+
+// @route    DELETE api/apartments/:apartmentId
+// @desc     Delete apartment
+// @access   Private
+router.delete('/:id', [auth, apartmentDeleteMiddleware], async (req, res) => {
+  try {
+    const { id: apartmentId } = req.params;
+    await Apartment.findByIdAndDelete({ _id: apartmentId });
+    res.status(200).json({ msg: 'Apartment is successfully deleted' });
   } catch (error) {
     res.status(500).send('Server error');
   }

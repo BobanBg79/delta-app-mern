@@ -53,20 +53,6 @@ const Login = () => {
       </Col>
     </Row>
   );
-
-  return (
-    <div>
-      <h1>Login page!</h1>
-      <div>
-        <label>Email</label>
-        <input type="text" name="email" value={email} onChange={onInputFieldChange} />
-      </div>
-      <div>
-        <label>Password</label>
-        <input type="password" name="password" value={password} onChange={onInputFieldChange} />
-      </div>
-    </div>
-  );
 };
 
 export default Login;

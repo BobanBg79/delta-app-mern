@@ -48,9 +48,22 @@ export const updateApartment = (apartmentId, data) => async (dispatch) => {
   }
 };
 
+export const deleteApartment = (apartmentId) => async (dispatch) => {
+  try {
+    dispatch(setApartmentFetchStart());
+    await axios.delete(`api/apartments/${apartmentId}`);
+    dispatch(showMessageToast('Apartment has been permanently deleted!', SUCCESS));
+    dispatch(setApartmentFetchEnd());
+  } catch (error) {
+    dispatch(setApartmentError(error.message));
+    console.log('delete apartment error: ', error.message);
+  }
+};
+
 export const apartmentOperations = {
   getApartment,
   createApartment,
+  updateApartment,
 };
 
 export default apartmentOperations;

@@ -2,15 +2,18 @@ import { useHistory } from 'react-router-dom';
 import Badge from 'react-bootstrap/Badge';
 import Table from 'react-bootstrap/Table';
 import TableIcons from '../../components/TableIcons';
-import Dropdown from 'react-bootstrap/Dropdown';
+import TableActionDropdown from './TableActionDropdown';
 
-const ApartmentsTable = ({ apartments }) => {
+const ApartmentsTable = ({ apartments, showModal }) => {
   // constants
   const history = useHistory();
+
   // methods
   const onApartmentClick = (apartmentId) => () => {
     history.push(`/apartments/${apartmentId}`);
   };
+
+  const sortApartmentsAsc = (firstApartment, nextApartment) => (firstApartment.name > nextApartment.name ? 1 : -1);
 
   return (
     <Table striped bordered hover className="apartments-table">
@@ -28,7 +31,7 @@ const ApartmentsTable = ({ apartments }) => {
         </tr>
       </thead>
       <tbody>
-        {apartments.map((apartment) => {
+        {apartments.sort(sortApartmentsAsc).map((apartment) => {
           const {
             _id,
             name,
@@ -60,14 +63,8 @@ const ApartmentsTable = ({ apartments }) => {
               <td>
                 <Badge bg={isActive ? 'success' : 'danger'}>{isActive ? 'Active' : 'Inactive'}</Badge>
               </td>
-              <td>
-                <Dropdown onClick={(e) => e.stopPropagation()}>
-                  <Dropdown.Toggle variant="secondary" className="apartments-list-action-dropdown" />
-                  <Dropdown.Menu>
-                    <Dropdown.Item href="#/action-1">Apartment details</Dropdown.Item>
-                    <Dropdown.Item href="#/action-2">Delete apartment</Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
+              <td className="action-cell">
+                <TableActionDropdown apartmentId={_id} showModal={showModal} />
               </td>
             </tr>
           );

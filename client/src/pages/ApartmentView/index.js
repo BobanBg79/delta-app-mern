@@ -24,6 +24,7 @@ const ApartmentView = () => {
   // redux state
   const { apartment, fetching } = useSelector((state) => state.apartment);
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
+  const userCanEditApartment = CAN_EDIT_APARTMENT_DETAILS.includes(userRole);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);
@@ -74,7 +75,7 @@ const ApartmentView = () => {
 
   return (
     <div className="form-container">
-      {CAN_EDIT_APARTMENT_DETAILS.includes(userRole) && (
+      {userCanEditApartment && (
         <Row className="form-heading">
           <Col>
             <h1>{apartmentId ? apartment && apartment.name : 'Create new apartment'}</h1>
@@ -116,9 +117,11 @@ const ApartmentView = () => {
             <ParkingDetails parking={parking} onInputChange={onInputChange} />
             <ApartmentFeatures apartmentFeatures={apartmentFeatures} onInputChange={onInputChange} />
             <RentContractDetails rentContractDetails={rentContractDetails} onInputChange={onInputChange} />
-            <Button variant="primary" type="submit">
-              Submit
-            </Button>
+            {userCanEditApartment && (
+              <Button variant="primary" type="submit">
+                Submit
+              </Button>
+            )}
           </fieldset>
         </Form>
       </Row>
