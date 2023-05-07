@@ -16,6 +16,20 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/reservations/:reservationId
+// @desc    Get reservation by reservationId
+// @access  Private
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const { id: reservationId } = req.params;
+    const reservation = await Reservation.findOne({ _id: reservationId });
+    res.status(200).json({ reservation });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send('Server error');
+  }
+});
+
 // @route    POST api/reservations
 // @desc     Create reservation
 // @access   Private

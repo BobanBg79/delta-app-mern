@@ -1,7 +1,6 @@
 import axios from 'axios';
 import reservationActions from './actions';
 import { msgOperations, messageConstants } from '../message';
-import MockedReservation from './MockedReservation';
 const { SUCCESS, ERROR } = messageConstants;
 
 const { showMessageToast } = msgOperations;
@@ -17,25 +16,10 @@ const {
   setReservationsError,
 } = reservationActions;
 
-// export const getReservation = (reservationId) => async (dispatch) => {
-//   try {
-//     dispatch(setApartmentFetchStart());
-//     const response = await axios.get(`/api/apartments/${reservationId}`);
-//     const { apartment } = response.data;
-//     dispatch(setApartment(apartment));
-//     dispatch(setApartmentFetchEnd());
-//   } catch (error) {
-//     dispatch(setApartmentError(error.message));
-//   }
-// };
-
-const fakeFetchReservation = () =>
-  new Promise((res, rej) => setTimeout(() => res({ data: { reservation: MockedReservation } }), 2500));
-
-export const getReservation = () => async (dispatch) => {
+export const getReservation = (reservationId) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
-    const response = await fakeFetchReservation();
+    const response = await axios.get(`/api/reservations/${reservationId}`);
     const { reservation } = response.data;
     dispatch(setReservation(reservation));
   } catch (error) {
