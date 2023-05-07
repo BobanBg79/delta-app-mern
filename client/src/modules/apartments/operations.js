@@ -8,15 +8,16 @@ export const getAllApartments = () => async (dispatch) => {
     dispatch(setApartmentsFetchStart());
     const response = await axios.get('/api/apartments');
     dispatch(setApartments(response.data));
-    dispatch(setApartmentsFetchEnd());
   } catch (error) {
     dispatch(setApartmentsError(error.message));
     console.log(':::apartments operationsm getAllApartments Error: ', error.message);
+  } finally {
+    dispatch(setApartmentsFetchEnd());
   }
 };
 
-export const apartmentOperations = {
+export const apartmentsOperations = {
   getAllApartments,
 };
 
-export default apartmentOperations;
+export default apartmentsOperations;

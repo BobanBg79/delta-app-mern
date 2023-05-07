@@ -13,9 +13,9 @@ const apartments = (state = INITIAL_STATE, { type, payload }) => {
     case types.APARTMENT_FETCH_END:
       return { ...state, fetching: false };
     case types.SET_APARTMENT:
-      return { ...state, apartment: payload };
+      return { ...state, apartment: payload, fetching: false };
     case types.SET_APARTMENT_ERROR:
-      return { ...state, apartment: null, fetchError: payload };
+      return { ...state, apartment: null, fetchError: payload, fetching: false };
     case types.RESET_APARTMENT:
       return { ...state, apartment: null };
     default:

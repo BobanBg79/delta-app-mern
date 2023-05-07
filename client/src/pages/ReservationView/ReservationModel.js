@@ -1,5 +1,7 @@
 const ReservationModel = {
   createdAt: '',
+  apartmentName: 'Jorgovan',
+  apartmentId: '', // mongoose model Apartment
   checkIn: '', //timestamp *
   checkOut: '', // timestamp *
   expectedCheckInTime: '', // timestamp
@@ -35,30 +37,5 @@ const ReservationModel = {
       note: '', // 'String'
     },
   ],
-
-  isActive: true,
-  address: {
-    floor: '',
-    apartmentNumber: '',
-    street: '',
-  },
-  parking: {
-    ownParking: false,
-    parkingNumber: '',
-    parkingType: '',
-  },
-  apartmentFeatures: {
-    dishwasher: false,
-    bathtub: false,
-    balcony: false,
-    wifiNetworkName: '',
-    wifiNetworkPassword: '',
-  },
-  rentContractDetails: {
-    monthlyRent: '',
-    paymentPeriod: '',
-    ownerName: '',
-    ownerPhone: '',
-  },
 };
-export default ApartmentModel;
+export default ReservationModel;
