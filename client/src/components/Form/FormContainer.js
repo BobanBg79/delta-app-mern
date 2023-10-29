@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 
 const FormContainer = ({ formContainerProps, children }) => {
   const {
+    userId,
     entity,
     entityName,
     entityModel,
@@ -48,7 +49,7 @@ const FormContainer = ({ formContainerProps, children }) => {
     if (formIsValid) {
       entityIdFromUrlParam
         ? dispatch(updateEntity(entityIdFromUrlParam, formState)).then(onEntityUpdateSuccess)
-        : dispatch(createEntity(formState)).then(onEntityCreateSuccess);
+        : dispatch(createEntity({ ...formState, user: userId })).then(onEntityCreateSuccess);
     } else {
       setValidated(true);
     }

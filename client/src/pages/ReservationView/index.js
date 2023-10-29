@@ -13,10 +13,11 @@ const ReservationView = () => {
   const history = useHistory();
 
   const { reservation, fetching } = useSelector((state) => state.reservation);
-  const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
+  const { user: { role: userRole, _id: userId } = {} } = useSelector((state) => state.auth);
   const userCanEditReservation = CAN_EDIT_RESERVATION_DETAILS.includes(userRole);
 
   const formContainerProps = {
+    userId,
     entity: reservation,
     entityName: 'reservation',
     entityModel: ReservationModel,

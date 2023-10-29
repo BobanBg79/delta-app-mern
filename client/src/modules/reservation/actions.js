@@ -35,7 +35,7 @@ const setReservations = (reservations) => ({
 });
 
 const setReservationsError = (errorMessage) => ({
-  type: types.SET_RESERVATION_ERROR,
+  type: types.SET_RESERVATIONS_ERROR,
   payload: errorMessage,
 });
 

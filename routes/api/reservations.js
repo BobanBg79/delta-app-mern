@@ -8,7 +8,7 @@ const Reservation = require('../../models/Reservation');
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const reservations = await Reservation.find();
+    const reservations = await Reservation.find().populate('createdBy', ['fname', 'lname']);
     res.json(reservations);
   } catch (error) {
     console.error(error.message);
@@ -22,7 +22,7 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const { id: reservationId } = req.params;
-    const reservation = await Reservation.findOne({ _id: reservationId });
+    const reservation = await Reservation.findOne({ _id: reservationId }).populate('createdBy', ['fname', 'lname']);
     res.status(200).json({ reservation });
   } catch (error) {
     console.log(error.message);
@@ -44,12 +44,38 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ errors: [{ msg: 'Reservation already exists' }] });
     }
 
-    reservation = new Reservation({ apartmentName });
+    reservation = new Reservation({ ...reservationData });
 
     await reservation.save();
     res.status(201).json({ msg: 'Reservation  successfully created' });
   } catch (error) {
     console.log(error.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route    PUT api/reservations/:reservationId
+// @desc     Update reservation
+// @access   Private
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const { id: reservationId } = req.params;
+    let updatedReservation = await Reservation.findOneAndUpdate({ id: reservationId }, req.body, { new: true });
+    res.status(200).json({ reservation: updatedReservation });
+  } catch (error) {
+    res.status(500).send('Server error');
+  }
+});
+
+// @route    DELETE api/reservations/:reservationId
+// @desc     Delete reservation
+// @access   Private
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const { id: reservationId } = req.params;
+    await Apartment.findByIdAndDelete({ _id: reservationId });
+    res.status(200).json({ msg: 'Reservation is successfully deleted' });
+  } catch (error) {
     res.status(500).send('Server error');
   }
 });

@@ -1,6 +1,7 @@
 const ReservationModel = {
   createdAt: '',
-  apartmentName: 'Jorgovan',
+  createdBy: '',
+  apartmentName: '',
   apartmentId: '', // mongoose model Apartment
   checkIn: '', //timestamp *
   checkOut: '', // timestamp *
