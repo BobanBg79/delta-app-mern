@@ -43,6 +43,7 @@ export const createReservation = (data) => async (dispatch) => {
     const errorMessage = errors[0].msg;
     dispatch(showMessageToast(errorMessage, ERROR));
     dispatch(setReservationError(errorMessage));
+    return { error: true };
   } finally {
     dispatch(setReservationFetchEnd());
   }
@@ -63,19 +64,6 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
     dispatch(setReservationFetchEnd());
   }
 };
-
-// export const deleteApartment = (apartmentId) => async (dispatch) => {
-//   try {
-//     dispatch(setApartmentFetchStart());
-//     await axios.delete(`api/apartments/${apartmentId}`);
-//     dispatch(showMessageToast('Apartment has been permanently deleted!', SUCCESS));
-//     dispatch(setApartmentFetchEnd());
-//   } catch (error) {
-//     const { response: { statusText } = {} } = error;
-//     dispatch(showMessageToast(statusText || 'Apartment cannot be deleted', ERROR));
-//     dispatch(setApartmentError(statusText || error.message));
-//   }
-// };
 
 export const getAllReservations = () => async (dispatch) => {
   try {

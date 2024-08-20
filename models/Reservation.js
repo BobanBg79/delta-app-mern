@@ -8,9 +8,23 @@ const ReservationSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'user',
+    required: true,
   },
-  apartmentName: {
+  reservationStatus: {
     type: String,
+    required: true,
+  },
+  apartment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'apartment',
+    required: true,
+  },
+  checkIn: {
+    type: Number,
+    required: true,
+  },
+  checkOut: {
+    type: Number,
     required: true,
   },
 });

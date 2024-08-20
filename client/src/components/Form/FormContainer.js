@@ -4,6 +4,7 @@ import { nestValue } from '../../utils/common';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
+import { setReservationHours } from '../../utils/date';
 
 const FormContainer = ({ formContainerProps, children }) => {
   const {
@@ -34,6 +35,21 @@ const FormContainer = ({ formContainerProps, children }) => {
     setIsEditable(false);
   };
 
+  const onDatePickerChange = (checkInpathArr, checkOutpathArr) => (dateRangeArr) => {
+    if (!dateRangeArr) {
+      // case when user clears value from dateRangePicker component
+      // set value to null
+      const newFormData = nestValue(formState, checkInpathArr, null);
+      const newFormData2 = nestValue(newFormData, checkOutpathArr, null);
+
+      return setFormState(newFormData2);
+    }
+    const [checkInTimestamp, checkOutTimestamp] = setReservationHours(dateRangeArr);
+    const newFormData = nestValue(formState, checkInpathArr, checkInTimestamp);
+    const newFormData2 = nestValue(newFormData, checkOutpathArr, checkOutTimestamp);
+    setFormState(newFormData2);
+  };
+
   const onInputChange = (pathArr) => (event) => {
     const { value, checked } = event.target;
     const isCheckBox = event.target.type === 'checkbox';
@@ -48,8 +64,12 @@ const FormContainer = ({ formContainerProps, children }) => {
     const formIsValid = event.currentTarget.checkValidity();
     if (formIsValid) {
       entityIdFromUrlParam
-        ? dispatch(updateEntity(entityIdFromUrlParam, formState)).then(onEntityUpdateSuccess)
-        : dispatch(createEntity({ ...formState, user: userId })).then(onEntityCreateSuccess);
+        ? dispatch(updateEntity(entityIdFromUrlParam, formState)).then(
+            (response) => !response?.error && onEntityUpdateSuccess()
+          )
+        : dispatch(createEntity({ ...formState, userId })).then(
+            (response) => !response?.error && onEntityCreateSuccess()
+          );
     } else {
       setValidated(true);
     }
@@ -59,7 +79,16 @@ const FormContainer = ({ formContainerProps, children }) => {
     // Checking isValidElement is the safe way and avoids a
     // typescript error too.
     if (isValidElement(child)) {
-      return cloneElement(child, { formState, isEditable, validated, editEntityPermission, onInputChange, onSubmit });
+      return cloneElement(child, {
+        formState,
+        isEditable,
+        validated,
+        editEntityPermission,
+        entityIdFromUrlParam,
+        onDatePickerChange,
+        onInputChange,
+        onSubmit,
+      });
     }
     return child;
   });
@@ -72,9 +101,14 @@ const FormContainer = ({ formContainerProps, children }) => {
   useEffect(() => {
     entity && setFormState(entity);
   }, [entity]);
+
   useEffect(() => {
-    fetching && setIsEditable(false);
-  }, [fetching]);
+    if (fetching) {
+      setIsEditable(false);
+    } else {
+      !entityIdFromUrlParam && setIsEditable(true);
+    }
+  }, [fetching, entityIdFromUrlParam]);
 
   return (
     <div className="form-container">
