@@ -19,7 +19,7 @@ const showMessageToast = (originalMessage, type) => async (dispatch) => {
     default:
       break;
   }
-  setTimeout(() => dispatch(messageActions.clearMessage()), 2500);
+  setTimeout(() => dispatch(messageActions.clearMessage()), 4500);
 };
 
 const messageOperations = {
