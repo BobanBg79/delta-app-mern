@@ -6,3 +6,4 @@ export { default as ApartmentsList } from './ApartmentsList';
 export { default as ApartmentView } from './ApartmentView';
 export { default as ReservationsList } from './ReservationsList';
 export { default as ReservationView } from './ReservationView';
+export { default as MultiCalendar } from './MultiCalendar';

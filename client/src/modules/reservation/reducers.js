@@ -27,12 +27,26 @@ const reservation = (state = INITIAL_STATE, { type, payload }) => {
     case types.RESERVATIONS_FETCH_END:
       return { ...state, reservationsFetching: false };
     case types.SET_RESERVATIONS:
-      return { ...state, reservations: payload, reservationsFetching: false };
+      const apartmentReservationMap = digestReservationPerApartment(payload);
+      return {
+        ...state,
+        reservations: payload,
+        apartmentReservations: apartmentReservationMap,
+        reservationsFetching: false,
+      };
     case types.SET_RESERVATIONS_ERROR:
       return { ...state, reservations: [], reservationsFetchError: payload, reservationsFetching: false };
     default:
       return state;
   }
 };
+
+const digestReservationPerApartment = (reservationsArr) =>
+  reservationsArr.reduce((map, reservation) => {
+    const {
+      apartment: { _id: apartmentId },
+    } = reservation;
+    return { ...map, [apartmentId]: [...(map[apartmentId] || []), reservation] };
+  }, {});
 
 export default reservation;

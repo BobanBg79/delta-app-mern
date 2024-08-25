@@ -7,6 +7,7 @@ import {
   ApartmentView,
   ReservationsList,
   ReservationView,
+  MultiCalendar,
 } from '../pages';
 
 const PAGE_URLS = {
@@ -20,6 +21,7 @@ const PAGE_URLS = {
   reservationsList: '/reservations',
   reservationView: '/reservations/:reservationId',
   reservationCreate: '/reservations/create',
+  multicalendar: '/multicalendar',
 };
 
 const {
@@ -33,6 +35,7 @@ const {
   reservationsList,
   reservationView,
   reservationCreate,
+  multicalendar,
 } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
@@ -75,5 +78,11 @@ export const PROTECTED_ROUTES = {
     id: 'reservation',
     path: reservationView,
     component: ReservationView,
+  },
+  MULTICALENDAR: {
+    title: 'Multicalendar',
+    id: 'multicalendar',
+    path: multicalendar,
+    component: MultiCalendar,
   },
 };

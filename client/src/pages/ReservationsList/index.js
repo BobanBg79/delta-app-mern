@@ -6,6 +6,7 @@ import { getAllReservations } from '../../modules/reservation/operations';
 import { useDispatch } from 'react-redux';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import Table from 'react-bootstrap/Table';
+import { formatDateDefault } from '../../utils/date';
 
 const ReservationsList = () => {
   const dispatch = useDispatch();
@@ -38,15 +39,37 @@ const ReservationsList = () => {
             <thead>
               <tr>
                 <th>Apartment Name</th>
+                <th>Reservation ID</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Created by</th>
+                <th>Created at</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {reservations.map((reservation) => {
-                const { apartmentName, _id } = reservation;
+                const {
+                  apartment: { name: apartmentName },
+                  _id,
+                  checkIn,
+                  checkOut,
+                  reservationStatus,
+                  createdBy: { fname, lname },
+                  createdAt,
+                } = reservation;
                 return (
                   <tr key={_id} onClick={onReservationClick(_id)}>
                     <td>{apartmentName}</td>
+                    <td>{_id}</td>
+                    <td>{formatDateDefault(checkIn)}</td>
+                    <td>{formatDateDefault(checkOut)}</td>
+                    <td>{reservationStatus}</td>
+                    <td>
+                      {fname} {lname}
+                    </td>
+                    <td>{formatDateDefault(createdAt)}</td>
                     <td className="action-cell"></td>
                   </tr>
                 );
