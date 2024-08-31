@@ -21,10 +21,20 @@ const ReservationForm = ({
   onSubmit,
 }) => {
   const { beforeToday, allowedDays, combine } = DateRangePicker;
-  const { apartment, reservationStatus, checkIn = null, checkOut = null } = formState;
+  // Form state
+  const {
+    apartment,
+    reservationStatus,
+    checkIn = null,
+    checkOut = null,
+    guest: { telephone, fname, lname } = {},
+    telephone: reservationTelephone,
+  } = formState;
+  // redux state
   const { apartments: apartmentsArray } = useSelector((state) => state.apartments);
   const dateRange = checkIn && checkOut ? [new Date(checkIn), new Date(checkOut)] : [null, null];
   console.log('reservation for , formState: ', formState);
+
   return (
     <Form noValidate validated={validated} id="reservation-form-view" onSubmit={onSubmit}>
       <fieldset disabled={!isEditable}>
@@ -83,18 +93,42 @@ const ReservationForm = ({
             </FloatingLabel>
           </Col>
 
-          {/* <Form.Group as={Col} className="mb-3" controlId="apartmentName">
-            <FloatingLabel controlId="apartmentName" label="Apartment name" className="mb-3">
+          <Col xs="6">
+            <FloatingLabel controlId="telephone" label="Guest telephone" className="mb-3">
               <Form.Control
                 required
                 type="text"
-                value={apartmentName}
-                onChange={onInputChange(['apartmentName'])}
+                value={telephone || reservationTelephone}
+                onChange={onInputChange(['guest', 'telephone'])}
                 onBlur={() => console.log(55555, 'BLUR')}
               />
-              <Form.Control.Feedback type="invalid">Please enter apartment name.</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">Please enter guest contact phone number.</Form.Control.Feedback>
             </FloatingLabel>
-          </Form.Group> */}
+          </Col>
+          <Col xs="6">
+            <FloatingLabel controlId="fname" label="Guest first name" className="mb-3">
+              <Form.Control
+                required
+                type="text"
+                value={fname}
+                onChange={onInputChange(['guest', 'fname'])}
+                onBlur={() => console.log(55555, 'BLUR fname')}
+              />
+              <Form.Control.Feedback type="invalid">Please enter guest name.</Form.Control.Feedback>
+            </FloatingLabel>
+          </Col>
+          <Col xs="6">
+            <FloatingLabel controlId="lname" label="Guest last name" className="mb-3">
+              <Form.Control
+                required
+                type="text"
+                value={lname}
+                onChange={onInputChange(['guest', 'lname'])}
+                onBlur={() => console.log(55555, 'BLUR lname')}
+              />
+              <Form.Control.Feedback type="invalid">Please enter guest last name.</Form.Control.Feedback>
+            </FloatingLabel>
+          </Col>
         </Row>
         {editEntityPermission && (
           <Button variant="primary" type="submit">

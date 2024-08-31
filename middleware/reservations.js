@@ -1,5 +1,6 @@
 const Reservation = require('../models/Reservation');
 const { RESERVATION_STATUSES } = require('../config/reservationConstants');
+const axios = require('axios');
 
 async function checkOverbooking(req, res, next) {
   if (req.body.reservationStatus !== RESERVATION_STATUSES.active) return next();
@@ -52,7 +53,50 @@ function checkReservationFields(req, res, next) {
   next();
 }
 
+async function saveGuestData(req, res, next) {
+  const { body: reservationData } = req;
+  if (!reservationData.guest.shouldSaveGuestData) return next();
+
+  // Try to save guest data in database
+  const { userId } = reservationData;
+  const { telephone, fname, lname } = reservationData.guest;
+  const guestData = {
+    telephone,
+    fname,
+    lname,
+    userId,
+  };
+
+  // Extract the authorization token from the request headers
+  const authToken = req.header('Authorization');
+
+  try {
+    // Call the /api/guests route with a POST request to save Guest data in database
+    const guestResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/guests`, guestData, {
+      headers: { Authorization: authToken },
+    });
+
+    if (guestResponse.status !== 201) {
+      throw new Error('Failed to save guest data');
+    }
+    const { _id: guestId } = guestResponse.data.guest;
+
+    req.body.guest.guestId = guestId;
+
+    next();
+  } catch (error) {
+    const { existingGuest } = error?.response?.data || {};
+    if (existingGuest) {
+      req.body.guest.guestId = existingGuest._id;
+      return next();
+    }
+
+    next();
+  }
+}
+
 module.exports = {
   checkOverbooking,
   checkReservationFields,
+  saveGuestData,
 };

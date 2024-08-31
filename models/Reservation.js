@@ -27,6 +27,14 @@ const ReservationSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  guest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'guest',
+  },
+  telephone: {
+    type: String,
+    required: true,
+  },
 });
 
 module.exports = mongoose.model('reservation', ReservationSchema);

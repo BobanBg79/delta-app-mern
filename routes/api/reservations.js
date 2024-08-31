@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
 const Reservation = require('../../models/Reservation');
-const { checkOverbooking, checkReservationFields } = require('../../middleware/reservations');
+const { checkOverbooking, checkReservationFields, saveGuestData } = require('../../middleware/reservations');
 
 // @route   GET api/reservations
 // @desc    Get the list of all reservations
@@ -11,7 +11,8 @@ router.get('/', auth, async (req, res) => {
   try {
     const reservations = await Reservation.find()
       .populate('createdBy', ['fname', 'lname'])
-      .populate('apartment', ['name']);
+      .populate('apartment', ['name'])
+      .populate('guest', ['fname', 'lname', 'telephone']);
     res.json(reservations);
   } catch (error) {
     console.error(error.message);
@@ -27,6 +28,7 @@ router.get('/:id', auth, async (req, res) => {
     const { id: reservationId } = req.params;
     const reservation = await Reservation.findOne({ _id: reservationId })
       .populate('createdBy', ['fname', 'lname'])
+      .populate('guest', ['fname', 'lname', 'telephone'])
       .select({ createdAt: 0, createdBy: 0, _id: 0 });
 
     res.status(200).json({ reservation });
@@ -39,14 +41,19 @@ router.get('/:id', auth, async (req, res) => {
 // @route    POST api/reservations
 // @desc     Create reservation
 // @access   Private
-router.post('/', [auth, checkReservationFields, checkOverbooking], async (req, res) => {
+router.post('/', [auth, checkReservationFields, checkOverbooking, saveGuestData], async (req, res) => {
   try {
     const { body: reservationData } = req;
-    const { userId } = reservationData;
+    const { userId, guest } = reservationData;
 
-    const reservation = new Reservation({ ...reservationData, createdBy: userId });
+    const reservation = new Reservation({
+      ...reservationData,
+      createdBy: userId,
+      guest: guest.guestId,
+      telephone: guest.telephone,
+    });
+
     await reservation.save();
-
     res.status(201).json({ msg: 'Reservation  successfully created' });
   } catch (error) {
     console.log(error.message);
