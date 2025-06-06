@@ -6,26 +6,49 @@ import { getAllReservations } from '../../modules/reservation/operations';
 import { useDispatch } from 'react-redux';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import Table from 'react-bootstrap/Table';
+import Badge from 'react-bootstrap/Badge';
 import { formatDateDefault } from '../../utils/date';
 
 const ReservationsList = () => {
   const dispatch = useDispatch();
   const history = useHistory();
-  // local state
+
+  // Local state
   const [reservationIdToDelete, setReservationIdToDelete] = useState();
-  // redux state
+
+  // Redux state
   const { reservationsFetching, reservations } = useSelector((state) => state.reservation);
-  // methods
-  // const showModal = (apartmentId) => setReservationIdToDelete(apartmentId);
+
+  // Methods
   const closeModal = () => setReservationIdToDelete(null);
   const onReservationClick = (reservationId) => () => {
     history.push(`/reservations/${reservationId}`);
   };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'canceled':
+        return 'danger';
+      case 'noshow':
+        return 'warning';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const formatGuestName = (guest) => {
+    if (!guest) return 'No guest assigned';
+    return `${guest.firstName} ${guest.lastName || ''}`.trim();
+  };
+
   useEffect(() => {
     dispatch(getAllReservations());
   }, [dispatch]);
 
-  if (reservationsFetching) return <div>Fetching...</div>;
+  if (reservationsFetching) return <div>Loading reservations...</div>;
+
   return (
     <div>
       <TableHeader
@@ -35,42 +58,62 @@ const ReservationsList = () => {
       />
       {reservations.length ? (
         <>
-          <Table striped bordered hover className="apartments-table">
+          <Table striped bordered hover className="reservations-table">
             <thead>
               <tr>
-                <th>Apartment Name</th>
-                <th>Reservation ID</th>
-                <th>From</th>
-                <th>To</th>
+                <th>Apartment</th>
+                <th>Guest</th>
+                <th>Contact Number</th>
+                <th>Planned Check-in</th>
+                <th>Planned Check-out</th>
+                <th>Nights</th>
+                <th>Total Amount</th>
+                <th>Booking Agent</th>
                 <th>Status</th>
-                <th>Created by</th>
-                <th>Created at</th>
-                <th></th>
+                <th>Created By</th>
+                <th>Created At</th>
               </tr>
             </thead>
             <tbody>
               {reservations.map((reservation) => {
                 const {
-                  apartment: { name: apartmentName },
                   _id,
-                  checkIn,
-                  checkOut,
-                  reservationStatus,
-                  createdBy: { fname, lname },
+                  apartment,
+                  guest,
+                  phoneNumber,
+                  plannedCheckIn,
+                  plannedCheckOut,
+                  numberOfNights,
+                  totalAmount,
+                  bookingAgent,
+                  status,
+                  createdBy,
                   createdAt,
                 } = reservation;
+
                 return (
-                  <tr key={_id} onClick={onReservationClick(_id)}>
-                    <td>{apartmentName}</td>
-                    <td>{_id}</td>
-                    <td>{formatDateDefault(checkIn)}</td>
-                    <td>{formatDateDefault(checkOut)}</td>
-                    <td>{reservationStatus}</td>
+                  <tr key={_id} onClick={onReservationClick(_id)} style={{ cursor: 'pointer' }}>
                     <td>
-                      {fname} {lname}
+                      <strong>{apartment?.name || 'Unknown Apartment'}</strong>
                     </td>
+                    <td>{formatGuestName(guest)}</td>
+                    <td>{phoneNumber}</td>
+                    <td>{formatDateDefault(plannedCheckIn)}</td>
+                    <td>{formatDateDefault(plannedCheckOut)}</td>
+                    <td>
+                      <Badge bg="info">{numberOfNights || 0} nights</Badge>
+                    </td>
+                    <td>
+                      <strong>€{totalAmount?.toFixed(2) || '0.00'}</strong>
+                    </td>
+                    <td>{bookingAgent?.name || 'Unknown Agent'}</td>
+                    <td>
+                      <Badge bg={getStatusBadgeVariant(status)}>
+                        {status?.charAt(0).toUpperCase() + status?.slice(1) || 'Unknown'}
+                      </Badge>
+                    </td>
+                    <td>{createdBy ? `${createdBy.fname} ${createdBy.lname}` : 'Unknown'}</td>
                     <td>{formatDateDefault(createdAt)}</td>
-                    <td className="action-cell"></td>
                   </tr>
                 );
               })}
@@ -79,7 +122,7 @@ const ReservationsList = () => {
           {reservationIdToDelete && <ConfirmationModal closeModal={closeModal} apartmentId={reservationIdToDelete} />}
         </>
       ) : (
-        <div>Sorry, unable to retreive reservations. Please try again later</div>
+        <div>No reservations found. Create your first reservation to get started.</div>
       )}
     </div>
   );

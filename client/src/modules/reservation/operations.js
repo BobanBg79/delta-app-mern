@@ -1,8 +1,8 @@
 import axios from 'axios';
 import reservationActions from './actions';
 import { msgOperations, messageConstants } from '../message';
-const { SUCCESS, ERROR } = messageConstants;
 
+const { SUCCESS, ERROR } = messageConstants;
 const { showMessageToast } = msgOperations;
 
 const {
@@ -32,15 +32,28 @@ export const getReservation = (reservationId) => async (dispatch) => {
 export const createReservation = (data) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
-    await axios.post('/api/reservations', data);
+
+    // Transform data to match backend expectations
+    const transformedData = {
+      ...data,
+      // Convert guest object to separate fields
+      guest:
+        data.guest && data.guest.firstName
+          ? {
+              phoneNumber: data.guest.phoneNumber,
+              firstName: data.guest.firstName,
+              lastName: data.guest.lastName,
+            }
+          : null,
+      // Ensure pricing fields are numbers
+      pricePerNight: parseFloat(data.pricePerNight) || 0,
+      totalAmount: parseFloat(data.totalAmount) || 0,
+    };
+
+    await axios.post('/api/reservations', transformedData);
     dispatch(showMessageToast('Reservation is successfully created!', SUCCESS));
   } catch (error) {
-    const {
-      response: {
-        data: { errors },
-      },
-    } = error;
-    const errorMessage = errors[0].msg;
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Failed to create reservation';
     dispatch(showMessageToast(errorMessage, ERROR));
     dispatch(setReservationError(errorMessage));
     return { error: true };
@@ -52,14 +65,33 @@ export const createReservation = (data) => async (dispatch) => {
 export const updateReservation = (reservationId, data) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
-    const response = await axios.put(`/api/reservations/${reservationId}`, data);
+
+    // Transform data to match backend expectations
+    const transformedData = {
+      ...data,
+      // Convert guest object to separate fields if guest data provided
+      guest:
+        data.guest && data.guest.firstName
+          ? {
+              phoneNumber: data.guest.phoneNumber,
+              firstName: data.guest.firstName,
+              lastName: data.guest.lastName,
+            }
+          : undefined,
+      // Ensure pricing fields are numbers
+      pricePerNight: parseFloat(data.pricePerNight) || 0,
+      totalAmount: parseFloat(data.totalAmount) || 0,
+    };
+
+    const response = await axios.put(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
     dispatch(setReservation(reservation));
-    dispatch(showMessageToast(`Reservation is successfully updated!`, SUCCESS));
+    dispatch(showMessageToast('Reservation is successfully updated!', SUCCESS));
   } catch (error) {
-    const { response: { statusText } = {} } = error;
-    dispatch(showMessageToast(statusText || 'Reservation cannot be updated', ERROR));
-    dispatch(setReservationError(error.message));
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Failed to update reservation';
+    dispatch(showMessageToast(errorMessage, ERROR));
+    dispatch(setReservationError(errorMessage));
+    return { error: true };
   } finally {
     dispatch(setReservationFetchEnd());
   }
@@ -71,9 +103,35 @@ export const getAllReservations = () => async (dispatch) => {
     const response = await axios.get('/api/reservations');
     dispatch(setReservations(response.data));
   } catch (error) {
-    dispatch(setReservationsError(error.message));
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message;
+    dispatch(setReservationsError(errorMessage));
   } finally {
     dispatch(setReservationsFetchEnd());
+  }
+};
+
+export const deleteReservation = (reservationId) => async (dispatch) => {
+  try {
+    dispatch(setReservationFetchStart());
+    await axios.delete(`/api/reservations/${reservationId}`);
+    dispatch(showMessageToast('Reservation has been canceled!', SUCCESS));
+  } catch (error) {
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Failed to cancel reservation';
+    dispatch(showMessageToast(errorMessage, ERROR));
+    dispatch(setReservationError(errorMessage));
+  } finally {
+    dispatch(setReservationFetchEnd());
+  }
+};
+
+// Guest search operation
+export const searchGuestsByPhone = (phoneNumber) => async () => {
+  try {
+    const response = await axios.get(`/api/guests/search-by-phone/${phoneNumber}`);
+    return response.data.guests;
+  } catch (error) {
+    console.error('Error searching guests:', error);
+    return [];
   }
 };
 
@@ -81,6 +139,9 @@ export const reservationOperations = {
   getReservation,
   createReservation,
   updateReservation,
+  getAllReservations,
+  deleteReservation,
+  searchGuestsByPhone,
 };
 
 export default reservationOperations;

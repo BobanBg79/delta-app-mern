@@ -80,16 +80,29 @@ const ReservationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'bookingAgent',
     required: true,
+    default: null, // Will be set to "direct reservation" agent ID
   },
   pricePerNight: {
     type: Number,
     required: true,
     min: [0, 'Price per night must be greater than 0'],
+    validate: {
+      validator: function (value) {
+        return value > 0;
+      },
+      message: 'Price per night cannot be 0 or negative value',
+    },
   },
   totalAmount: {
     type: Number,
     required: true,
     min: [0, 'Total amount must be greater than 0'],
+    validate: {
+      validator: function (value) {
+        return value > 0;
+      },
+      message: 'Total amount cannot be 0 or negative value',
+    },
   },
   guest: {
     type: mongoose.Schema.Types.ObjectId,
@@ -126,11 +139,11 @@ ReservationSchema.pre('save', function (next) {
     }
     // If only total amount is provided, calculate price per night
     else if (this.totalAmount && !this.pricePerNight && nights > 0) {
-      this.pricePerNight = this.totalAmount / nights;
+      this.pricePerNight = Math.round((this.totalAmount / nights) * 100) / 100; // Round to 2 decimal places
     }
     // If only price per night is provided, calculate total amount
     else if (this.pricePerNight && !this.totalAmount && nights > 0) {
-      this.totalAmount = this.pricePerNight * nights;
+      this.totalAmount = Math.round(this.pricePerNight * nights * 100) / 100; // Round to 2 decimal places
     }
   }
   next();
