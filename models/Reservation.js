@@ -79,8 +79,8 @@ const ReservationSchema = new mongoose.Schema({
   bookingAgent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'bookingAgent',
-    required: true,
-    default: null, // Will be set to "direct reservation" agent ID
+    required: false, // Made optional - null means direct reservation
+    default: null,
   },
   pricePerNight: {
     type: Number,
@@ -123,6 +123,14 @@ ReservationSchema.virtual('numberOfNights').get(function () {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
   return 0;
+});
+
+// Virtual for booking agent display name
+ReservationSchema.virtual('bookingAgentDisplay').get(function () {
+  if (this.bookingAgent && this.bookingAgent.name) {
+    return this.bookingAgent.name;
+  }
+  return 'Direct Reservation';
 });
 
 // Pre-save middleware to auto-calculate price fields

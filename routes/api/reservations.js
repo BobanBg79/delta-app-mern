@@ -16,7 +16,7 @@ router.get('/', auth, async (req, res) => {
       .populate('createdBy', ['fname', 'lname'])
       .populate('apartment', ['name'])
       .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
-      .populate('bookingAgent', ['name'])
+      .populate('bookingAgent', ['name']) // Will be null for direct reservations
       .sort({ createdAt: -1 });
     res.json(reservations);
   } catch (error) {
@@ -35,7 +35,7 @@ router.get('/:id', auth, async (req, res) => {
       .populate('createdBy', ['fname', 'lname'])
       .populate('apartment', ['name'])
       .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
-      .populate('bookingAgent', ['name']);
+      .populate('bookingAgent', ['name']); // Will be null for direct reservations
 
     if (!reservation) {
       return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
@@ -63,7 +63,7 @@ router.post(
     check('apartment', 'Apartment selection is required').isMongoId(),
     check('phoneNumber', 'Contact number is required').notEmpty(),
     check('phoneNumber', 'Please provide a valid phone number').matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent', 'Booking agent selection is required').isMongoId(),
+    check('bookingAgent', 'Booking agent must be a valid ID').optional().isMongoId(), // Made optional
     check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
     check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
   ],
@@ -81,7 +81,7 @@ router.post(
         plannedCheckoutTime,
         apartment,
         phoneNumber,
-        bookingAgent,
+        bookingAgent, // Can be null/undefined for direct reservations
         pricePerNight,
         totalAmount,
         reservationNotes,
@@ -132,12 +132,14 @@ router.post(
         });
       }
 
-      // Verify booking agent exists
-      const agentExists = await BookingAgent.findById(bookingAgent);
-      if (!agentExists) {
-        return res.status(404).json({
-          errors: [{ msg: 'Selected booking agent not found' }],
-        });
+      // Verify booking agent exists (only if provided)
+      if (bookingAgent) {
+        const agentExists = await BookingAgent.findById(bookingAgent);
+        if (!agentExists) {
+          return res.status(404).json({
+            errors: [{ msg: 'Selected booking agent not found' }],
+          });
+        }
       }
 
       // Handle guest data if provided
@@ -176,7 +178,7 @@ router.post(
         plannedCheckoutTime,
         apartment,
         phoneNumber: phoneNumber.trim(),
-        bookingAgent,
+        bookingAgent: bookingAgent || null, // Set to null if not provided (direct reservation)
         pricePerNight: pricePerNight || 0,
         totalAmount: totalAmount || 0,
         guest: guestId,
@@ -191,7 +193,7 @@ router.post(
         { path: 'createdBy', select: 'fname lname' },
         { path: 'apartment', select: 'name' },
         { path: 'guest', select: 'firstName lastName phoneNumber' },
-        { path: 'bookingAgent', select: 'name' },
+        { path: 'bookingAgent', select: 'name' }, // Will be null for direct reservations
       ]);
 
       res.status(201).json({
@@ -219,7 +221,7 @@ router.put(
     check('phoneNumber', 'Please provide a valid phone number')
       .optional()
       .matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent', 'Booking agent selection is required').optional().isMongoId(),
+    check('bookingAgent', 'Booking agent must be a valid ID').optional().isMongoId(), // Made optional
     check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
     check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
   ],
@@ -278,6 +280,19 @@ router.put(
         }
       }
 
+      // Verify booking agent exists (only if provided and being updated)
+      if (updateData.bookingAgent && updateData.bookingAgent !== 'null') {
+        const agentExists = await BookingAgent.findById(updateData.bookingAgent);
+        if (!agentExists) {
+          return res.status(404).json({
+            errors: [{ msg: 'Selected booking agent not found' }],
+          });
+        }
+      } else if (updateData.bookingAgent === 'null' || updateData.bookingAgent === null) {
+        // Allow setting to null for direct reservations
+        updateData.bookingAgent = null;
+      }
+
       // Update reservation
       Object.keys(updateData).forEach((key) => {
         if (key !== 'guest') {
@@ -293,7 +308,7 @@ router.put(
         { path: 'createdBy', select: 'fname lname' },
         { path: 'apartment', select: 'name' },
         { path: 'guest', select: 'firstName lastName phoneNumber' },
-        { path: 'bookingAgent', select: 'name' },
+        { path: 'bookingAgent', select: 'name' }, // Will be null for direct reservations
       ]);
 
       res.json({

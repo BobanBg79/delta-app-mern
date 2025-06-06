@@ -51,7 +51,9 @@ const ReservationForm = ({
 
   // Redux state
   const { apartments: apartmentsArray } = useSelector((state) => state.apartments);
-  const { bookingAgents: bookingAgentsArray } = useSelector((state) => state.bookingAgents);
+  const { bookingAgents: bookingAgentsArray, fetching: bookingAgentsFetching } = useSelector(
+    (state) => state.bookingAgents
+  );
 
   // Date range for DateRangePicker
   const dateRange =
@@ -232,24 +234,27 @@ const ReservationForm = ({
           </Col>
         </Row>
 
-        {/* Booking Agent */}
+        {/* Booking Agent/Mediator - Optional but with real entities */}
         <Row className="mb-4">
           <Col xs="12">
             <FloatingLabel label="Mediator" className="mb-3">
               <Form.Select
-                required
-                value={bookingAgent}
+                value={bookingAgent || ''}
                 onChange={onInputChange(['bookingAgent'])}
                 aria-label="booking agent"
+                disabled={bookingAgentsFetching}
               >
-                <option value="">Select mediator</option>
-                {bookingAgentsArray.map(({ name, _id }) => (
+                <option value="">Direct Reservation</option>
+                {bookingAgentsArray.map(({ name, _id, commission }) => (
                   <option key={_id} value={_id}>
-                    {name}
+                    {name} {commission > 0 && `(${commission}% commission)`}
                   </option>
                 ))}
               </Form.Select>
-              <Form.Control.Feedback type="invalid">Please choose a mediator.</Form.Control.Feedback>
+              <Form.Text className="text-muted">
+                Select "Direct Reservation" for direct bookings or choose a booking agent/mediator
+              </Form.Text>
+              {bookingAgentsFetching && <Form.Text className="text-info">Loading booking agents...</Form.Text>}
             </FloatingLabel>
           </Col>
         </Row>
@@ -384,13 +389,11 @@ const ReservationForm = ({
               <Col xs="4">
                 <FloatingLabel controlId="firstName" label="Guest first name" className="mb-3">
                   <Form.Control
-                    required
                     type="text"
                     value={firstName}
                     onChange={onInputChange(['guest', 'firstName'])}
                     disabled={!showGuestForm && !guestPhone}
                   />
-                  <Form.Control.Feedback type="invalid">Please enter guest first name.</Form.Control.Feedback>
                 </FloatingLabel>
               </Col>
               <Col xs="4">

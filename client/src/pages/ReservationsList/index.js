@@ -43,6 +43,18 @@ const ReservationsList = () => {
     return `${guest.firstName} ${guest.lastName || ''}`.trim();
   };
 
+  const formatBookingAgent = (bookingAgent) => {
+    if (!bookingAgent) return 'Direct Reservation';
+    return bookingAgent.name;
+  };
+
+  const getBookingAgentBadge = (bookingAgent) => {
+    if (!bookingAgent) {
+      return <Badge bg="primary">Direct</Badge>;
+    }
+    return <Badge bg="secondary">{bookingAgent.name}</Badge>;
+  };
+
   useEffect(() => {
     dispatch(getAllReservations());
   }, [dispatch]);
@@ -68,7 +80,7 @@ const ReservationsList = () => {
                 <th>Planned Check-out</th>
                 <th>Nights</th>
                 <th>Total Amount</th>
-                <th>Booking Agent</th>
+                <th>Mediator</th>
                 <th>Status</th>
                 <th>Created By</th>
                 <th>Created At</th>
@@ -106,7 +118,7 @@ const ReservationsList = () => {
                     <td>
                       <strong>€{totalAmount?.toFixed(2) || '0.00'}</strong>
                     </td>
-                    <td>{bookingAgent?.name || 'Unknown Agent'}</td>
+                    <td>{getBookingAgentBadge(bookingAgent)}</td>
                     <td>
                       <Badge bg={getStatusBadgeVariant(status)}>
                         {status?.charAt(0).toUpperCase() + status?.slice(1) || 'Unknown'}
