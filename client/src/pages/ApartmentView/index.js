@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, useHistory } from 'react-router-dom';
-import { nestValue } from '../../utils/common';
+import { nestFieldValue } from '../../utils/common';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
@@ -44,7 +44,7 @@ const ApartmentView = () => {
     const { value, checked } = event.target;
     const isCheckBox = event.target.type === 'checkbox';
     const fieldValue = isCheckBox ? checked : value;
-    const newFormData = nestValue(formState, pathArr, fieldValue);
+    const newFormData = nestFieldValue(formState, pathArr, fieldValue);
     setFormState(newFormData);
   };
 
