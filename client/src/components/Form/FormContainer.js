@@ -1,6 +1,6 @@
 import { isValidElement, cloneElement, useState, useEffect, Children } from 'react';
 import { useDispatch } from 'react-redux';
-import { nestValue } from '../../utils/common';
+import { nestFieldValue } from '../../utils/common';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
@@ -39,14 +39,14 @@ const FormContainer = ({ formContainerProps, children }) => {
     if (!dateRangeArr) {
       // case when user clears value from dateRangePicker component
       // set value to null
-      const newFormData = nestValue(formState, checkInpathArr, null);
-      const newFormData2 = nestValue(newFormData, checkOutpathArr, null);
+      const newFormData = nestFieldValue(formState, checkInpathArr, null);
+      const newFormData2 = nestFieldValue(newFormData, checkOutpathArr, null);
 
       return setFormState(newFormData2);
     }
     const [checkInTimestamp, checkOutTimestamp] = setReservationHours(dateRangeArr);
-    const newFormData = nestValue(formState, checkInpathArr, checkInTimestamp);
-    const newFormData2 = nestValue(newFormData, checkOutpathArr, checkOutTimestamp);
+    const newFormData = nestFieldValue(formState, checkInpathArr, checkInTimestamp);
+    const newFormData2 = nestFieldValue(newFormData, checkOutpathArr, checkOutTimestamp);
     setFormState(newFormData2);
   };
 
@@ -54,7 +54,7 @@ const FormContainer = ({ formContainerProps, children }) => {
     const { value, checked } = event.target;
     const isCheckBox = event.target.type === 'checkbox';
     const fieldValue = isCheckBox ? checked : value;
-    const newFormData = nestValue(formState, pathArr, fieldValue);
+    const newFormData = nestFieldValue(formState, pathArr, fieldValue);
     setFormState(newFormData);
   };
 
