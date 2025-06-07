@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
@@ -155,6 +155,24 @@ const ReservationForm = ({
     onInputChange(['guest', 'lastName'])({ target: { value: '' } });
   };
 
+  useEffect(() => {
+    onInputChange(['pricePerNight'])({ target: { value: '' } });
+  }, [plannedCheckIn, plannedCheckOut]);
+
+  useEffect(() => {
+    // Immediately calculate and update total amount
+    if (numberOfNights > 0 && pricePerNight > 0) {
+      const calculatedTotal = (pricePerNight * numberOfNights).toFixed(2);
+      // Create a synthetic event for totalAmount update
+      const syntheticEvent = {
+        target: { value: calculatedTotal },
+      };
+      onInputChange(['totalAmount'])(syntheticEvent);
+    } else if (!pricePerNight) {
+      onInputChange(['totalAmount'])({ target: { value: '' } });
+    }
+  }, [pricePerNight]);
+
   return (
     <Form noValidate validated={validated} id="reservation-form-view" onSubmit={onSubmit}>
       <fieldset disabled={!isEditable}>
@@ -291,7 +309,6 @@ const ReservationForm = ({
                 min="1"
                 value={pricePerNight}
                 onChange={onInputChange(['pricePerNight'])}
-                onBlur={handlePricePerNightChange}
                 placeholder="0.00"
               />
               <Form.Control.Feedback type="invalid">Price per night must be greater than 0.</Form.Control.Feedback>
