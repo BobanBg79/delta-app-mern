@@ -27,13 +27,13 @@ const ReservationForm = ({
 }) => {
   const dispatch = useDispatch();
 
-  // Local state for guest search and management
+  // Local state for guest search and management only
   const [guestSearchResults, setGuestSearchResults] = useState([]);
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [selectedGuest, setSelectedGuest] = useState(null);
 
-  // Form state destructuring
+  // Form state destructuring with proper null checking
   const {
     status,
     plannedCheckIn,
@@ -45,60 +45,98 @@ const ReservationForm = ({
     bookingAgent,
     pricePerNight,
     totalAmount,
-    guest: { phoneNumber: guestPhone, firstName, lastName } = {},
+    guest,
     reservationNotes,
-  } = formState;
+  } = formState || {};
+
+  // Helper function to safely get nested values
+  const getFieldValue = (field, defaultValue = '') => {
+    if (!field) return defaultValue;
+    if (typeof field === 'object' && field.value !== undefined) {
+      return field.value;
+    }
+    return field || defaultValue;
+  };
+
+  // Safely extract field values
+  const statusValue = getFieldValue(status, 'active');
+  const plannedCheckInValue = getFieldValue(plannedCheckIn, null);
+  const plannedCheckOutValue = getFieldValue(plannedCheckOut, null);
+  const plannedArrivalTimeValue = getFieldValue(plannedArrivalTime, '');
+  const plannedCheckoutTimeValue = getFieldValue(plannedCheckoutTime, '');
+  const apartmentValue = getFieldValue(apartment, '');
+  const phoneNumberValue = getFieldValue(phoneNumber, '');
+  const bookingAgentValue = getFieldValue(bookingAgent, '');
+  const pricePerNightValue = getFieldValue(pricePerNight, '');
+  const totalAmountValue = getFieldValue(totalAmount, '');
+  const reservationNotesValue = getFieldValue(reservationNotes, '');
+
+  // Guest fields with extra safety for nested structure
+  const guestValue = guest?.value || guest || {};
+  const guestPhone = getFieldValue(guestValue.phoneNumber || guestValue?.telephone, '');
+  const firstName = getFieldValue(guestValue.firstName || guestValue?.fname, '');
+  const lastName = getFieldValue(guestValue.lastName || guestValue?.lname, '');
 
   // Redux state
-  const { apartments: apartmentsArray } = useSelector((state) => state.apartments);
-  const { bookingAgents: bookingAgentsArray, fetching: bookingAgentsFetching } = useSelector(
+  const { apartments: apartmentsArray = [] } = useSelector((state) => state.apartments);
+  const { bookingAgents: bookingAgentsArray = [], fetching: bookingAgentsFetching } = useSelector(
     (state) => state.bookingAgents
   );
 
   // Date range for DateRangePicker
   const dateRange =
-    plannedCheckIn && plannedCheckOut ? [new Date(plannedCheckIn), new Date(plannedCheckOut)] : [null, null];
+    plannedCheckInValue && plannedCheckOutValue
+      ? [new Date(plannedCheckInValue), new Date(plannedCheckOutValue)]
+      : [null, null];
 
   // Calculate number of nights
   const numberOfNights = useMemo(() => {
-    if (plannedCheckIn && plannedCheckOut) {
-      const checkIn = new Date(plannedCheckIn);
-      const checkOut = new Date(plannedCheckOut);
+    if (plannedCheckInValue && plannedCheckOutValue) {
+      const checkIn = new Date(plannedCheckInValue);
+      const checkOut = new Date(plannedCheckOutValue);
       const diffTime = Math.abs(checkOut - checkIn);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
     return 0;
-  }, [plannedCheckIn, plannedCheckOut]);
+  }, [plannedCheckInValue, plannedCheckOutValue]);
 
   // Load booking agents on component mount
   useEffect(() => {
-    dispatch(getAllBookingAgents(true)); // Get only active agents
+    dispatch(getAllBookingAgents(true));
   }, [dispatch]);
-
-  // Handle price calculations
+  // Handle price calculations with immediate update
   const handlePricePerNightChange = (event) => {
-    const value = parseFloat(event.target.value) || 0;
-    onInputChange(['pricePerNight'])(event);
+    const pricePerNight = parseFloat(event.target.value) || 0;
 
-    if (numberOfNights > 0 && value > 0) {
-      const calculatedTotal = (value * numberOfNights).toFixed(2);
-      onInputChange(['totalAmount'])({ target: { value: calculatedTotal } });
+    // Immediately calculate and update total amount
+    if (numberOfNights > 0 && pricePerNight > 0) {
+      const calculatedTotal = (pricePerNight * numberOfNights).toFixed(2);
+      // Create a synthetic event for totalAmount update
+      const syntheticEvent = {
+        target: { value: calculatedTotal },
+      };
+      onInputChange(['totalAmount'])(syntheticEvent);
     }
   };
 
   const handleTotalAmountChange = (event) => {
     const value = parseFloat(event.target.value) || 0;
-    onInputChange(['totalAmount'])(event);
 
+    // Immediately calculate and update price per night
     if (numberOfNights > 0 && value > 0) {
       const calculatedPerNight = (value / numberOfNights).toFixed(2);
-      onInputChange(['pricePerNight'])({ target: { value: calculatedPerNight } });
+      // Create a synthetic event for pricePerNight update
+      const syntheticEvent = {
+        target: { value: calculatedPerNight },
+      };
+      onInputChange(['pricePerNight'])(syntheticEvent);
     }
   };
 
-  // Handle guest phone search
+  // Handle guest phone search with FormContainer's onInputChange
   const handleGuestPhoneSearch = (event) => {
     const phone = event.target.value;
+    // Use FormContainer's onInputChange for state management
     onInputChange(['guest', 'phoneNumber'])(event);
 
     // Clear existing timeout
@@ -129,6 +167,7 @@ const ReservationForm = ({
 
   const selectExistingGuest = (guest) => {
     setSelectedGuest(guest);
+    // Use FormContainer's onInputChange for all field updates
     onInputChange(['guest', 'phoneNumber'])({ target: { value: guest.phoneNumber } });
     onInputChange(['guest', 'firstName'])({ target: { value: guest.firstName } });
     onInputChange(['guest', 'lastName'])({ target: { value: guest.lastName || '' } });
@@ -140,7 +179,7 @@ const ReservationForm = ({
     setShowGuestForm(true);
     setSelectedGuest(null);
     setGuestSearchResults([]);
-    // Keep the phone number but clear names
+    // Use FormContainer's onInputChange to clear names
     onInputChange(['guest', 'firstName'])({ target: { value: '' } });
     onInputChange(['guest', 'lastName'])({ target: { value: '' } });
   };
@@ -169,7 +208,7 @@ const ReservationForm = ({
               <FloatingLabel label="Reservation status" className="mb-3">
                 <Form.Select
                   required
-                  value={status}
+                  value={statusValue}
                   onChange={onInputChange(['status'])}
                   aria-label="reservation status"
                 >
@@ -190,12 +229,20 @@ const ReservationForm = ({
           </Col>
           <Col xs="6">
             <FloatingLabel controlId="plannedArrivalTime" label="Planned arrival time" className="mb-3">
-              <Form.Control type="time" value={plannedArrivalTime} onChange={onInputChange(['plannedArrivalTime'])} />
+              <Form.Control
+                type="time"
+                value={plannedArrivalTimeValue}
+                onChange={onInputChange(['plannedArrivalTime'])}
+              />
             </FloatingLabel>
           </Col>
           <Col xs="6">
             <FloatingLabel controlId="plannedCheckoutTime" label="Planned check-out time" className="mb-3">
-              <Form.Control type="time" value={plannedCheckoutTime} onChange={onInputChange(['plannedCheckoutTime'])} />
+              <Form.Control
+                type="time"
+                value={plannedCheckoutTimeValue}
+                onChange={onInputChange(['plannedCheckoutTime'])}
+              />
             </FloatingLabel>
           </Col>
         </Row>
@@ -206,7 +253,7 @@ const ReservationForm = ({
             <FloatingLabel label="Apartment" className="mb-3">
               <Form.Select
                 required
-                value={apartment}
+                value={apartmentValue}
                 onChange={onInputChange(['apartment'])}
                 aria-label="apartment name"
               >
@@ -225,7 +272,7 @@ const ReservationForm = ({
               <Form.Control
                 required
                 type="text"
-                value={phoneNumber}
+                value={phoneNumberValue}
                 onChange={onInputChange(['phoneNumber'])}
                 pattern="^\+?[\d\s\-\(\)]{7,}$"
               />
@@ -234,12 +281,12 @@ const ReservationForm = ({
           </Col>
         </Row>
 
-        {/* Booking Agent/Mediator - Optional but with real entities */}
+        {/* Booking Agent/Mediator */}
         <Row className="mb-4">
           <Col xs="12">
             <FloatingLabel label="Mediator" className="mb-3">
               <Form.Select
-                value={bookingAgent || ''}
+                value={bookingAgentValue}
                 onChange={onInputChange(['bookingAgent'])}
                 aria-label="booking agent"
                 disabled={bookingAgentsFetching}
@@ -272,8 +319,9 @@ const ReservationForm = ({
                 type="number"
                 step="0.01"
                 min="0.01"
-                value={pricePerNight}
-                onChange={handlePricePerNightChange}
+                value={pricePerNightValue}
+                onChange={onInputChange(['pricePerNight'])}
+                onBlur={handlePricePerNightChange}
               />
               <Form.Control.Feedback type="invalid">Price per night must be greater than 0.</Form.Control.Feedback>
             </FloatingLabel>
@@ -285,8 +333,9 @@ const ReservationForm = ({
                 type="number"
                 step="0.01"
                 min="0.01"
-                value={totalAmount}
-                onChange={handleTotalAmountChange}
+                value={totalAmountValue}
+                onChange={onInputChange(['totalAmount'])}
+                onBlur={handleTotalAmountChange}
               />
               <Form.Control.Feedback type="invalid">Total amount must be greater than 0.</Form.Control.Feedback>
             </FloatingLabel>
@@ -429,12 +478,12 @@ const ReservationForm = ({
               <Form.Control
                 as="textarea"
                 style={{ height: '100px' }}
-                value={reservationNotes}
+                value={reservationNotesValue}
                 onChange={onInputChange(['reservationNotes'])}
                 maxLength="255"
                 placeholder="Guest needs baby crib, late night check-in, etc."
               />
-              <Form.Text className="text-muted">{reservationNotes?.length || 0}/255 characters</Form.Text>
+              <Form.Text className="text-muted">{reservationNotesValue?.length || 0}/255 characters</Form.Text>
             </FloatingLabel>
           </Col>
         </Row>
