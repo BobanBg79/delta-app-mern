@@ -33,12 +33,27 @@ export const createReservation = (data) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
 
-    // Only need to ensure pricing fields are numbers
+    // Transform data for API
     const transformedData = {
       ...data,
+      // Convert dates to ISO strings if they are timestamps
+      plannedCheckIn: data.plannedCheckIn ? new Date(data.plannedCheckIn).toISOString() : null,
+      plannedCheckOut: data.plannedCheckOut ? new Date(data.plannedCheckOut).toISOString() : null,
+      // Ensure pricing fields are numbers
       pricePerNight: parseFloat(data.pricePerNight) || 0,
       totalAmount: parseFloat(data.totalAmount) || 0,
     };
+
+    // Remove bookingAgent if it's empty string
+    if (transformedData.bookingAgent === '') {
+      delete transformedData.bookingAgent;
+    }
+
+    // Remove empty createdBy if present
+    if (transformedData.createdBy === '') {
+      delete transformedData.createdBy;
+    }
+
     await axios.post('/api/reservations', transformedData);
     dispatch(showMessageToast('Reservation is successfully created!', SUCCESS));
   } catch (error) {
@@ -55,13 +70,27 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
 
-    // Only need to ensure pricing fields are numbers
+    // Transform data for API
     const transformedData = {
       ...data,
+      // Convert dates to ISO strings if they are timestamps
+      plannedCheckIn: data.plannedCheckIn ? new Date(data.plannedCheckIn).toISOString() : null,
+      plannedCheckOut: data.plannedCheckOut ? new Date(data.plannedCheckOut).toISOString() : null,
+      // Ensure pricing fields are numbers
       pricePerNight: parseFloat(data.pricePerNight) || 0,
       totalAmount: parseFloat(data.totalAmount) || 0,
     };
 
+    // Remove bookingAgent if it's empty string
+    if (transformedData.bookingAgent === '') {
+      delete transformedData.bookingAgent;
+    }
+
+    // Remove empty createdBy if present
+    if (transformedData.createdBy === '') {
+      delete transformedData.createdBy;
+    }
+    debugger;
     const response = await axios.put(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
     dispatch(setReservation(reservation));
