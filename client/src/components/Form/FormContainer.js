@@ -52,7 +52,7 @@ const FormContainer = ({ formContainerProps, children }) => {
   };
 
   const onInputChange = (pathArr) => (event) => {
-    debugger;
+    // Removed debugger statement
     const { value, checked } = event.target;
     const isCheckBox = event.target.type === 'checkbox';
     const fieldValue = isCheckBox ? checked : value;

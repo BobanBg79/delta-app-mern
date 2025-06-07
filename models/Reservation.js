@@ -89,7 +89,6 @@ const ReservationSchema = new mongoose.Schema({
     min: [0.01, 'Price per night must be greater than 0'],
     validate: {
       validator: function (value) {
-        debugger;
         return value > 0;
       },
       message: 'Price per night must be a positive number greater than 0',

@@ -1,12 +1,16 @@
 export const nestFieldValue = (obj, arr, value) => {
-  const nestedValue = arr.length !== 1;
-  const objKey = arr[0];
+  // Base case: if we've reached the end of the path
+  if (arr.length === 1) {
+    return {
+      ...obj,
+      [arr[0]]: value, // Direct assignment, no wrapping
+    };
+  }
 
+  // Recursive case: we need to go deeper
+  const [head, ...tail] = arr;
   return {
     ...obj,
-    [objKey]: {
-      ...obj[objKey],
-      value: nestedValue ? nestFieldValue(obj[objKey], arr.slice(1), value) : value,
-    },
+    [head]: nestFieldValue(obj[head] || {}, tail, value),
   };
 };
