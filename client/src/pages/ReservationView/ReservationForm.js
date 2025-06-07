@@ -75,21 +75,6 @@ const ReservationForm = ({
     dispatch(getAllBookingAgents(true));
   }, [dispatch]);
 
-  // Handle price calculations with immediate update
-  const handlePricePerNightChange = (event) => {
-    const pricePerNight = parseFloat(event.target.value) || 0;
-
-    // Immediately calculate and update total amount
-    if (numberOfNights > 0 && pricePerNight > 0) {
-      const calculatedTotal = (pricePerNight * numberOfNights).toFixed(2);
-      // Create a synthetic event for totalAmount update
-      const syntheticEvent = {
-        target: { value: calculatedTotal },
-      };
-      onInputChange(['totalAmount'])(syntheticEvent);
-    }
-  };
-
   const handleTotalAmountChange = (event) => {
     const value = parseFloat(event.target.value) || 0;
 
