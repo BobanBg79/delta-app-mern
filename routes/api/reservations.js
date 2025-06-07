@@ -1,3 +1,4 @@
+// routes/api/reservations.js
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
@@ -63,9 +64,16 @@ router.post(
     check('apartment', 'Apartment selection is required').isMongoId(),
     check('phoneNumber', 'Contact number is required').notEmpty(),
     check('phoneNumber', 'Please provide a valid phone number').matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent', 'Booking agent must be a valid ID').optional().isMongoId(), // Made optional
-    check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
-    check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
+    // Make bookingAgent truly optional - only validate if present
+    check('bookingAgent')
+      .optional({ values: 'falsy' }) // This allows empty string, null, undefined
+      .isMongoId()
+      .withMessage('Booking agent must be a valid ID'),
+    // Make pricing required and enforce positive values
+    check('pricePerNight', 'Price per night is required').notEmpty(),
+    check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 1 }),
+    check('totalAmount', 'Total amount is required').notEmpty(),
+    check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 1 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -87,6 +95,8 @@ router.post(
         reservationNotes,
         guest: guestData,
       } = req.body;
+
+      console.log('Received reservation data:', req.body);
 
       // Validate dates
       const checkInDate = new Date(plannedCheckIn);
@@ -127,60 +137,87 @@ router.post(
       // Verify apartment exists
       const apartmentExists = await Apartment.findById(apartment);
       if (!apartmentExists) {
-        return res.status(404).json({
-          errors: [{ msg: 'Selected apartment not found' }],
+        return res.status(400).json({
+          errors: [{ msg: 'Selected apartment does not exist' }],
         });
       }
 
-      // Verify booking agent exists (only if provided)
-      if (bookingAgent) {
+      // Verify booking agent exists if provided
+      if (bookingAgent && bookingAgent.trim() !== '') {
         const agentExists = await BookingAgent.findById(bookingAgent);
         if (!agentExists) {
-          return res.status(404).json({
-            errors: [{ msg: 'Selected booking agent not found' }],
+          return res.status(400).json({
+            errors: [{ msg: 'Selected booking agent does not exist' }],
           });
         }
       }
 
-      // Handle guest data if provided
+      // Handle guest creation if guest data provided
       let guestId = null;
-      if (guestData && guestData.firstName && guestData.phoneNumber) {
-        // Try to find existing guest
-        let guest = await Guest.findOne({
-          phoneNumber: guestData.phoneNumber.trim(),
-          firstName: guestData.firstName.trim(),
-        });
+      if (guestData && (guestData.firstName || guestData.lastName)) {
+        // Check if guest already exists by phone number
+        let guest = await Guest.findOne({ phoneNumber: guestData.phoneNumber });
 
-        // Create new guest if not found
         if (!guest) {
           guest = new Guest({
-            phoneNumber: guestData.phoneNumber.trim(),
-            firstName: guestData.firstName.trim(),
-            lastName: guestData.lastName ? guestData.lastName.trim() : '',
+            phoneNumber: guestData.phoneNumber?.trim() || '',
+            firstName: guestData.firstName?.trim() || '',
+            lastName: guestData.lastName?.trim() || '',
             createdBy: req.user.id,
           });
+          await guest.save();
+        } else {
+          // Update existing guest info if provided
+          if (guestData.firstName?.trim()) guest.firstName = guestData.firstName.trim();
+          if (guestData.lastName?.trim()) guest.lastName = guestData.lastName.trim();
           await guest.save();
         }
         guestId = guest._id;
       }
 
-      // Validate pricing - at least one must be provided
-      if (!pricePerNight && !totalAmount) {
+      // Validate pricing - both must be provided and positive
+      const finalPricePerNight = parseFloat(pricePerNight);
+      const finalTotalAmount = parseFloat(totalAmount);
+
+      if (!finalPricePerNight || finalPricePerNight <= 0) {
         return res.status(400).json({
-          errors: [{ msg: 'Either price per night or total amount must be provided' }],
+          errors: [{ msg: 'Price per night must be a positive number greater than 0' }],
+        });
+      }
+
+      if (!finalTotalAmount || finalTotalAmount <= 0) {
+        return res.status(400).json({
+          errors: [{ msg: 'Total amount must be a positive number greater than 0' }],
+        });
+      }
+
+      // Validate that pricing is reasonable (total should roughly match nights * price)
+      const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+      const expectedTotal = finalPricePerNight * nights;
+      const tolerance = Math.max(1, expectedTotal * 0.05); // 5% tolerance or minimum 1 unit
+
+      if (Math.abs(expectedTotal - finalTotalAmount) > tolerance) {
+        return res.status(400).json({
+          errors: [
+            {
+              msg: `Total amount (${finalTotalAmount}) does not match price per night (${finalPricePerNight}) × ${nights} nights. Expected approximately ${expectedTotal.toFixed(
+                2
+              )}`,
+            },
+          ],
         });
       }
 
       const reservation = new Reservation({
         plannedCheckIn: checkInDate,
         plannedCheckOut: checkOutDate,
-        plannedArrivalTime,
-        plannedCheckoutTime,
+        plannedArrivalTime: plannedArrivalTime || '',
+        plannedCheckoutTime: plannedCheckoutTime || '',
         apartment,
         phoneNumber: phoneNumber.trim(),
-        bookingAgent: bookingAgent || null, // Set to null if not provided (direct reservation)
-        pricePerNight: pricePerNight || 0,
-        totalAmount: totalAmount || 0,
+        bookingAgent: bookingAgent && bookingAgent.trim() !== '' ? bookingAgent : null,
+        pricePerNight: finalPricePerNight,
+        totalAmount: finalTotalAmount,
         guest: guestId,
         reservationNotes: reservationNotes || '',
         createdBy: req.user.id,
@@ -201,7 +238,7 @@ router.post(
         reservation,
       });
     } catch (error) {
-      console.error(error.message);
+      console.error('Reservation creation error:', error.message);
       res.status(500).send({ errors: [{ msg: 'Server error' }] });
     }
   }
@@ -221,9 +258,11 @@ router.put(
     check('phoneNumber', 'Please provide a valid phone number')
       .optional()
       .matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent', 'Booking agent must be a valid ID').optional().isMongoId(), // Made optional
-    check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
-    check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
+    check('bookingAgent').optional({ values: 'falsy' }).isMongoId().withMessage('Booking agent must be a valid ID'),
+    check('pricePerNight', 'Price per night is required').notEmpty(),
+    check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 0.01 }),
+    check('totalAmount', 'Total amount is required').notEmpty(),
+    check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 0.01 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -234,6 +273,8 @@ router.put(
     try {
       const { id: reservationId } = req.params;
       const updateData = req.body;
+
+      console.log('Updating reservation with data:', updateData);
 
       // Find existing reservation
       let reservation = await Reservation.findById(reservationId);
@@ -260,11 +301,11 @@ router.put(
           });
         }
 
-        // Check for overlapping reservations (excluding current reservation)
+        // Check for overlapping reservations (excluding current one)
         const overlappingReservations = await Reservation.find({
+          _id: { $ne: reservationId },
           apartment: updateData.apartment || reservation.apartment,
           status: 'active',
-          _id: { $ne: reservationId },
           $or: [
             {
               plannedCheckIn: { $lt: checkOutDate },
@@ -280,35 +321,49 @@ router.put(
         }
       }
 
-      // Verify booking agent exists (only if provided and being updated)
-      if (updateData.bookingAgent && updateData.bookingAgent !== 'null') {
-        const agentExists = await BookingAgent.findById(updateData.bookingAgent);
-        if (!agentExists) {
-          return res.status(404).json({
-            errors: [{ msg: 'Selected booking agent not found' }],
+      // Handle guest data update if provided
+      if (updateData.guest && (updateData.guest.firstName || updateData.guest.lastName)) {
+        let guest = await Guest.findOne({ phoneNumber: updateData.guest.phoneNumber });
+
+        if (!guest) {
+          guest = new Guest({
+            phoneNumber: updateData.guest.phoneNumber?.trim() || '',
+            firstName: updateData.guest.firstName?.trim() || '',
+            lastName: updateData.guest.lastName?.trim() || '',
+            createdBy: req.user.id,
           });
+          await guest.save();
+        } else {
+          if (updateData.guest.firstName?.trim()) guest.firstName = updateData.guest.firstName.trim();
+          if (updateData.guest.lastName?.trim()) guest.lastName = updateData.guest.lastName.trim();
+          await guest.save();
         }
-      } else if (updateData.bookingAgent === 'null' || updateData.bookingAgent === null) {
-        // Allow setting to null for direct reservations
+        updateData.guest = guest._id;
+      }
+
+      // Clean up bookingAgent field
+      if (
+        updateData.bookingAgent !== undefined &&
+        (!updateData.bookingAgent || updateData.bookingAgent.trim() === '')
+      ) {
         updateData.bookingAgent = null;
       }
 
-      // Update reservation
+      // Update the reservation
       Object.keys(updateData).forEach((key) => {
-        if (key !== 'guest') {
-          // Handle guest separately
+        if (updateData[key] !== undefined) {
           reservation[key] = updateData[key];
         }
       });
 
       await reservation.save();
 
-      // Populate the updated reservation
+      // Populate the updated reservation for response
       await reservation.populate([
         { path: 'createdBy', select: 'fname lname' },
         { path: 'apartment', select: 'name' },
         { path: 'guest', select: 'firstName lastName phoneNumber' },
-        { path: 'bookingAgent', select: 'name' }, // Will be null for direct reservations
+        { path: 'bookingAgent', select: 'name' },
       ]);
 
       res.json({
@@ -316,17 +371,14 @@ router.put(
         reservation,
       });
     } catch (error) {
-      console.error(error.message);
-      if (error.kind === 'ObjectId') {
-        return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
-      }
+      console.error('Reservation update error:', error.message);
       res.status(500).send({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
 
 // @route    DELETE api/reservations/:reservationId
-// @desc     Delete reservation (mark as canceled)
+// @desc     Delete reservation
 // @access   Private
 router.delete('/:id', auth, async (req, res) => {
   try {
@@ -337,11 +389,8 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
     }
 
-    // Mark as canceled instead of deleting to preserve data integrity
-    reservation.status = 'canceled';
-    await reservation.save();
-
-    res.json({ msg: 'Reservation has been canceled' });
+    await reservation.deleteOne();
+    res.json({ msg: 'Reservation deleted successfully' });
   } catch (error) {
     console.error(error.message);
     if (error.kind === 'ObjectId') {

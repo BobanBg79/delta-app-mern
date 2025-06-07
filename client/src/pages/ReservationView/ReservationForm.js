@@ -1,3 +1,4 @@
+// client/src/pages/ReservationView/ReservationForm.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Form from 'react-bootstrap/Form';
@@ -104,10 +105,12 @@ const ReservationForm = ({
   useEffect(() => {
     dispatch(getAllBookingAgents(true));
   }, [dispatch]);
+
   // Handle price calculations with immediate update
   const handlePricePerNightChange = (event) => {
-    const pricePerNight = parseFloat(event.target.value) || 0;
+    onInputChange(['pricePerNight'])(event);
 
+    const pricePerNight = parseFloat(event.target.value) || 0;
     // Immediately calculate and update total amount
     if (numberOfNights > 0 && pricePerNight > 0) {
       const calculatedTotal = (pricePerNight * numberOfNights).toFixed(2);
@@ -120,8 +123,9 @@ const ReservationForm = ({
   };
 
   const handleTotalAmountChange = (event) => {
-    const value = parseFloat(event.target.value) || 0;
+    onInputChange(['totalAmount'])(event);
 
+    const value = parseFloat(event.target.value) || 0;
     // Immediately calculate and update price per night
     if (numberOfNights > 0 && value > 0) {
       const calculatedPerNight = (value / numberOfNights).toFixed(2);
@@ -222,6 +226,17 @@ const ReservationForm = ({
           )}
         </Row>
 
+        {/* Show number of nights when dates are selected */}
+        {numberOfNights > 0 && (
+          <Row className="mb-3">
+            <Col xs="12">
+              <Alert variant="info">
+                <strong>Duration:</strong> {numberOfNights} night{numberOfNights !== 1 ? 's' : ''}
+              </Alert>
+            </Col>
+          </Row>
+        )}
+
         {/* Time Selection */}
         <Row className="mb-4">
           <Col xs="12">
@@ -275,33 +290,30 @@ const ReservationForm = ({
                 value={phoneNumberValue}
                 onChange={onInputChange(['phoneNumber'])}
                 pattern="^\+?[\d\s\-\(\)]{7,}$"
+                placeholder="Contact number for this reservation"
               />
-              <Form.Control.Feedback type="invalid">Please enter a valid contact phone number.</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">Please provide a valid contact number.</Form.Control.Feedback>
             </FloatingLabel>
           </Col>
         </Row>
 
-        {/* Booking Agent/Mediator */}
+        {/* Booking Agent */}
         <Row className="mb-4">
-          <Col xs="12">
-            <FloatingLabel label="Mediator" className="mb-3">
+          <Col xs="6">
+            <FloatingLabel label="Booking Agent (Optional)" className="mb-3">
               <Form.Select
                 value={bookingAgentValue}
                 onChange={onInputChange(['bookingAgent'])}
                 aria-label="booking agent"
                 disabled={bookingAgentsFetching}
               >
-                <option value="">Direct Reservation</option>
-                {bookingAgentsArray.map(({ name, _id, commission }) => (
+                <option value="">Direct Reservation (No Agent)</option>
+                {bookingAgentsArray.map(({ name, _id }) => (
                   <option key={_id} value={_id}>
-                    {name} {commission > 0 && `(${commission}% commission)`}
+                    {name}
                   </option>
                 ))}
               </Form.Select>
-              <Form.Text className="text-muted">
-                Select "Direct Reservation" for direct bookings or choose a booking agent/mediator
-              </Form.Text>
-              {bookingAgentsFetching && <Form.Text className="text-info">Loading booking agents...</Form.Text>}
             </FloatingLabel>
           </Col>
         </Row>
@@ -309,68 +321,64 @@ const ReservationForm = ({
         {/* Pricing */}
         <Row className="mb-4">
           <Col xs="12">
-            <h5>Pricing</h5>
-            {numberOfNights > 0 && <Alert variant="info">Number of nights: {numberOfNights} • Currency: EURO</Alert>}
+            <h6>Pricing Information</h6>
           </Col>
-          <Col xs="6">
+          <Col xs="4">
             <FloatingLabel controlId="pricePerNight" label="Price per night" className="mb-3">
               <Form.Control
                 required
                 type="number"
-                step="0.01"
-                min="0.01"
+                step="0.1"
+                min="1"
                 value={pricePerNightValue}
                 onChange={onInputChange(['pricePerNight'])}
                 onBlur={handlePricePerNightChange}
+                placeholder="0.00"
               />
               <Form.Control.Feedback type="invalid">Price per night must be greater than 0.</Form.Control.Feedback>
             </FloatingLabel>
           </Col>
-          <Col xs="6">
-            <FloatingLabel controlId="totalAmount" label="Total reservation amount" className="mb-3">
+          <Col xs="4">
+            <FloatingLabel controlId="totalAmount" label="Total amount" className="mb-3">
               <Form.Control
                 required
                 type="number"
-                step="0.01"
-                min="0.01"
+                step="0.1"
+                min="1"
                 value={totalAmountValue}
                 onChange={onInputChange(['totalAmount'])}
                 onBlur={handleTotalAmountChange}
+                placeholder="0.00"
               />
               <Form.Control.Feedback type="invalid">Total amount must be greater than 0.</Form.Control.Feedback>
             </FloatingLabel>
           </Col>
         </Row>
 
-        {/* Guest Details */}
+        {/* Guest Information */}
         <Row className="mb-4">
           <Col xs="12">
-            <h5>Guest Details</h5>
-            <p className="text-muted">Search by phone number to find existing guest or create new one</p>
+            <h6>Guest Information (Optional)</h6>
           </Col>
-
-          {/* Guest Phone Search */}
           <Col xs="4">
-            <FloatingLabel controlId="guestPhone" label="Guest telephone" className="mb-3">
+            <FloatingLabel controlId="guestPhoneNumber" label="Guest phone number" className="mb-3">
               <Form.Control
                 type="text"
                 value={guestPhone}
                 onChange={handleGuestPhoneSearch}
-                placeholder="Type phone number to search..."
+                placeholder="Search by phone number"
               />
             </FloatingLabel>
 
-            {/* Guest search results */}
+            {/* Guest Search Results */}
             {guestSearchResults.length > 0 && (
               <Card className="mb-3">
-                <Card.Header>
-                  <small className="text-muted">Found guests:</small>
-                </Card.Header>
+                <Card.Header>Found Guests</Card.Header>
                 <Card.Body className="p-2">
                   {guestSearchResults.map((guest) => (
                     <div
                       key={guest._id}
-                      className="guest-result p-2 border-bottom cursor-pointer hover-bg-light"
+                      className="border rounded p-2 mb-2 cursor-pointer hover-bg-light"
                       onClick={() => selectExistingGuest(guest)}
                       style={{ cursor: 'pointer' }}
                     >
@@ -379,34 +387,18 @@ const ReservationForm = ({
                       </strong>
                       <br />
                       <small className="text-muted">{guest.phoneNumber}</small>
+                      {guest.blocked && <small className="text-danger"> (Blocked)</small>}
                     </div>
                   ))}
-                  <div className="mt-2">
-                    <Button variant="outline-primary" size="sm" onClick={handleCreateNewGuest}>
-                      Create new guest
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            )}
-
-            {/* No search results but has phone input */}
-            {guestPhone && guestPhone.length >= 3 && guestSearchResults.length === 0 && !selectedGuest && (
-              <Card className="mb-3">
-                <Card.Body className="p-2">
-                  <small className="text-muted">No guests found with this phone number.</small>
-                  <div className="mt-2">
-                    <Button variant="outline-primary" size="sm" onClick={handleCreateNewGuest}>
-                      Create new guest
-                    </Button>
-                  </div>
+                  <Button variant="outline-primary" size="sm" onClick={handleCreateNewGuest}>
+                    Create New Guest
+                  </Button>
                 </Card.Body>
               </Card>
             )}
           </Col>
 
-          {/* Selected Guest Display or Guest Form */}
-          {selectedGuest && !showGuestForm ? (
+          {selectedGuest ? (
             <>
               <Col xs="8">
                 <Card className="mb-3">

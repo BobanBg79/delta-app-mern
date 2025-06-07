@@ -1,3 +1,4 @@
+// client/src/components/Form/FormContainer.js
 import { isValidElement, cloneElement, useState, useEffect, Children } from 'react';
 import { useDispatch } from 'react-redux';
 import { nestFieldValue } from '../../utils/common';
@@ -51,6 +52,7 @@ const FormContainer = ({ formContainerProps, children }) => {
   };
 
   const onInputChange = (pathArr) => (event) => {
+    debugger;
     const { value, checked } = event.target;
     const isCheckBox = event.target.type === 'checkbox';
     const fieldValue = isCheckBox ? checked : value;
@@ -98,6 +100,7 @@ const FormContainer = ({ formContainerProps, children }) => {
     entityIdFromUrlParam && dispatch(getEntity(entityIdFromUrlParam));
     return () => dispatch(resetEntity());
   }, [entityIdFromUrlParam, dispatch, getEntity, resetEntity]);
+
   useEffect(() => {
     entity && setFormState(entity);
   }, [entity]);
