@@ -18,6 +18,12 @@ const navItems = [
     strict: false,
   },
   {
+    label: 'Guests',
+    path: '/guests',
+    exact: false,
+    strict: false,
+  },
+  {
     label: 'Multicalendar',
     path: '/multicalendar',
     exact: false,

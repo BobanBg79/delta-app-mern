@@ -54,7 +54,6 @@ const ReservationForm = ({
   const { bookingAgents: bookingAgentsArray = [], fetching: bookingAgentsFetching } = useSelector(
     (state) => state.bookingAgents
   );
-
   // Date range for DateRangePicker
   const dateRange =
     plannedCheckIn && plannedCheckOut ? [new Date(plannedCheckIn), new Date(plannedCheckOut)] : [null, null];
@@ -230,7 +229,7 @@ const ReservationForm = ({
             <FloatingLabel label="Apartment" className="mb-3">
               <Form.Select
                 required
-                value={apartment}
+                value={apartment._id}
                 onChange={onInputChange(['apartment'])}
                 aria-label="apartment name"
               >
@@ -330,7 +329,7 @@ const ReservationForm = ({
             <FloatingLabel controlId="guestPhoneNumber" label="Guest phone number" className="mb-3">
               <Form.Control
                 type="text"
-                value={guest.phoneNumber || ''}
+                value={guest?.phoneNumber || ''}
                 onChange={handleGuestPhoneSearch}
                 placeholder="Search by phone number"
               />
@@ -363,13 +362,13 @@ const ReservationForm = ({
           </Col>
 
           {/* Show guest name fields if guest is selected or creating new */}
-          {(selectedGuest || showGuestForm || guest.firstName) && (
+          {(selectedGuest || showGuestForm || guest?.firstName) && (
             <>
               <Col xs="4">
                 <FloatingLabel controlId="guestFirstName" label="First name" className="mb-3">
                   <Form.Control
                     type="text"
-                    value={guest.firstName || ''}
+                    value={guest?.firstName || ''}
                     onChange={onInputChange(['guest', 'firstName'])}
                     placeholder="Guest first name"
                   />
@@ -379,7 +378,7 @@ const ReservationForm = ({
                 <FloatingLabel controlId="guestLastName" label="Last name" className="mb-3">
                   <Form.Control
                     type="text"
-                    value={guest.lastName || ''}
+                    value={guest?.lastName || ''}
                     onChange={onInputChange(['guest', 'lastName'])}
                     placeholder="Guest last name"
                   />
@@ -390,7 +389,7 @@ const ReservationForm = ({
         </Row>
 
         {/* Guest Info Note */}
-        {!guest.phoneNumber && (
+        {!guest?.phoneNumber && (
           <Row className="mb-3">
             <Col xs="12">
               <Alert variant="info">

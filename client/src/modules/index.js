@@ -5,10 +5,14 @@ import apartmentReducer from './apartment';
 import apartmentsReducer from './apartments';
 import reservationReducer from './reservation';
 import bookingAgentsReducer from './bookingAgents';
+import guestReducer from './guest';
+import guestsReducer from './guests';
 
 export default combineReducers({
   apartment: apartmentReducer,
   apartments: apartmentsReducer,
+  guest: guestReducer,
+  guests: guestsReducer,
   alertMessages: messageReducer,
   auth: authReducer,
   reservation: reservationReducer,

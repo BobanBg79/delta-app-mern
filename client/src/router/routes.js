@@ -8,6 +8,8 @@ import {
   ReservationsList,
   ReservationView,
   MultiCalendar,
+  GuestView,
+  GuestsList,
 } from '../pages';
 
 const PAGE_URLS = {
@@ -22,6 +24,9 @@ const PAGE_URLS = {
   reservationView: '/reservations/:reservationId',
   reservationCreate: '/reservations/create',
   multicalendar: '/multicalendar',
+  guestsList: '/guests',
+  guestView: '/guests/:guestId',
+  guestCreate: '/guests/create',
 };
 
 const {
@@ -36,6 +41,9 @@ const {
   reservationView,
   reservationCreate,
   multicalendar,
+  guestsList,
+  guestView,
+  guestCreate,
 } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
@@ -85,4 +93,18 @@ export const PROTECTED_ROUTES = {
     path: multicalendar,
     component: MultiCalendar,
   },
+  GUESTS_LIST: {
+    title: 'Guests list',
+    id: 'guests_list',
+    isExact: true,
+    path: guestsList,
+    component: GuestsList,
+  },
+  GUEST_CREATE: {
+    title: 'Create Guest',
+    id: 'guest-create',
+    path: guestCreate,
+    component: GuestView,
+  },
+  GUEST_VIEW: { title: 'Guest', id: 'guest', path: guestView, component: GuestView },
 };

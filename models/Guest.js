@@ -14,6 +14,12 @@ const GuestSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
+    validate: {
+      validator: function (value) {
+        return /^\+?[\d\s\-\(\)]{7,}$/.test(value);
+      },
+      message: 'Please provide a valid phone number',
+    },
   },
   firstName: {
     type: String,

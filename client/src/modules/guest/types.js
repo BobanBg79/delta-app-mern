@@ -1,0 +1,15 @@
+const GUEST_FETCH_START = 'GUEST_FETCH_START';
+const GUEST_FETCH_END = 'GUEST_FETCH_END';
+const SET_GUEST = 'SET_GUEST';
+const SET_GUEST_ERROR = 'SET_GUEST_ERROR';
+const RESET_GUEST = 'RESET_GUEST';
+
+const guestActionTypes = {
+  GUEST_FETCH_START,
+  GUEST_FETCH_END,
+  SET_GUEST,
+  SET_GUEST_ERROR,
+  RESET_GUEST,
+};
+
+export default guestActionTypes;

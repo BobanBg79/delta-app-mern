@@ -33,6 +33,7 @@ const ReservationView = () => {
     onEntityUpdateSuccess: () => history.push('/reservations'),
     onEntityCreateSuccess: () => history.push('/reservations'),
   };
+
   return (
     <FormContainer formContainerProps={formContainerProps}>
       <ReservationForm />

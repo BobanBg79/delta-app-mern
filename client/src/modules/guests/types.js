@@ -1,0 +1,13 @@
+const GUESTS_FETCH_START = 'GUESTS_FETCH_START';
+const GUESTS_FETCH_END = 'GUESTS_FETCH_END';
+const SET_GUESTS = 'SET_GUESTS';
+const SET_GUESTS_ERROR = 'SET_GUESTS_ERROR';
+
+const guestsActionTypes = {
+  GUESTS_FETCH_START,
+  GUESTS_FETCH_END,
+  SET_GUESTS,
+  SET_GUESTS_ERROR,
+};
+
+export default guestsActionTypes;
