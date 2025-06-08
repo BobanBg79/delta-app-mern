@@ -64,11 +64,19 @@ router.post(
     check('apartment', 'Apartment selection is required').isMongoId(),
     check('phoneNumber', 'Contact number is required').notEmpty(),
     check('phoneNumber', 'Please provide a valid phone number').matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    // Make bookingAgent truly optional - only validate if present
     check('bookingAgent')
-      .optional({ values: 'falsy' }) // This allows empty string, null, undefined
-      .isMongoId()
-      .withMessage('Booking agent must be a valid ID'),
+      .optional()
+      .custom((value) => {
+        // Allow null, undefined, or empty string (for direct reservations)
+        if (value === null || value === undefined || value === '') {
+          return true;
+        }
+        // If a value is provided, it must be a valid MongoDB ObjectId
+        if (typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)) {
+          return true;
+        }
+        throw new Error('Booking agent must be a valid ID');
+      }),
     // Make pricing required and enforce positive values
     check('pricePerNight', 'Price per night is required').notEmpty(),
     check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 1 }),
@@ -258,13 +266,26 @@ router.put(
     check('phoneNumber', 'Please provide a valid phone number')
       .optional()
       .matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent').optional({ values: 'falsy' }).isMongoId().withMessage('Booking agent must be a valid ID'),
+    check('bookingAgent')
+      .optional()
+      .custom((value) => {
+        // Allow null, undefined, or empty string (for direct reservations)
+        if (value === null || value === undefined || value === '') {
+          return true;
+        }
+        // If a value is provided, it must be a valid MongoDB ObjectId
+        if (typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)) {
+          return true;
+        }
+        throw new Error('Booking agent must be a valid ID');
+      }),
     check('pricePerNight', 'Price per night is required').notEmpty(),
     check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 0.01 }),
     check('totalAmount', 'Total amount is required').notEmpty(),
     check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 0.01 }),
   ],
   async (req, res) => {
+    debugger;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
