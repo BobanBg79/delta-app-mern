@@ -110,6 +110,7 @@ router.post(
   ],
   async (req, res) => {
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
@@ -118,16 +119,14 @@ router.post(
       const { phoneNumber, firstName, lastName = '', notes = '', blocked = false } = req.body;
       const createdBy = req.user.id;
 
-      // Check if guest with same phone number and first name already exists
-      let existingGuest = await Guest.findOne({
+      const existingGuest = await Guest.findOne({
         phoneNumber: phoneNumber.trim(),
         firstName: firstName.trim(),
       });
 
       if (existingGuest) {
         return res.status(409).json({
-          errors: [{ msg: `Guest with phone number ${phoneNumber} and name ${firstName} already exists` }],
-          existingGuest,
+          errors: [{ msg: `Another guest with phone number ${phoneNumber} and name ${firstName} already exists` }],
         });
       }
 
@@ -194,7 +193,7 @@ router.put(
         return res.status(404).json({ errors: [{ msg: 'Guest not found' }] });
       }
 
-      // Check if another guest with same phone number and first name exists
+      // Check if another guest with same phone number AND first name exists
       const existingGuest = await Guest.findOne({
         phoneNumber: phoneNumber.trim(),
         firstName: firstName.trim(),

@@ -42,9 +42,6 @@ const GuestSchema = new mongoose.Schema({
   },
 });
 
-// Create compound index for unique combination of phoneNumber and firstName
-GuestSchema.index({ phoneNumber: 1, firstName: 1 }, { unique: true });
-
 // Virtual for full name
 GuestSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`.trim();
