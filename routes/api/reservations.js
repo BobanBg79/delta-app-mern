@@ -82,6 +82,7 @@ router.post(
     check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 1 }),
     check('totalAmount', 'Total amount is required').notEmpty(),
     check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 1 }),
+    check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -100,6 +101,7 @@ router.post(
         bookingAgent, // Can be null/undefined for direct reservations
         pricePerNight,
         totalAmount,
+        guestId,
         reservationNotes,
         guest: guestData,
       } = req.body;
@@ -142,6 +144,15 @@ router.post(
         });
       }
 
+      // Validate guest exists if provided
+      if (guestId) {
+        const guest = await Guest.findById(guestId);
+        if (!guest) {
+          return res.status(400).json({
+            errors: [{ msg: 'Selected guest not found' }],
+          });
+        }
+      }
       // Verify apartment exists
       const apartmentExists = await Apartment.findById(apartment);
       if (!apartmentExists) {
@@ -158,29 +169,6 @@ router.post(
             errors: [{ msg: 'Selected booking agent does not exist' }],
           });
         }
-      }
-
-      // Handle guest creation if guest data provided
-      let guestId = null;
-      if (guestData && (guestData.firstName || guestData.lastName)) {
-        // Check if guest already exists by phone number
-        let guest = await Guest.findOne({ phoneNumber: guestData.phoneNumber });
-
-        if (!guest) {
-          guest = new Guest({
-            phoneNumber: guestData.phoneNumber?.trim() || '',
-            firstName: guestData.firstName?.trim() || '',
-            lastName: guestData.lastName?.trim() || '',
-            createdBy: req.user.id,
-          });
-          await guest.save();
-        } else {
-          // Update existing guest info if provided
-          if (guestData.firstName?.trim()) guest.firstName = guestData.firstName.trim();
-          if (guestData.lastName?.trim()) guest.lastName = guestData.lastName.trim();
-          await guest.save();
-        }
-        guestId = guest._id;
       }
 
       // Validate pricing - both must be provided and positive
@@ -226,7 +214,7 @@ router.post(
         bookingAgent: bookingAgent && bookingAgent.trim() !== '' ? bookingAgent : null,
         pricePerNight: finalPricePerNight,
         totalAmount: finalTotalAmount,
-        guest: guestId,
+        guest: guestId || null,
         reservationNotes: reservationNotes || '',
         createdBy: req.user.id,
       });
@@ -283,6 +271,7 @@ router.put(
     check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 0.01 }),
     check('totalAmount', 'Total amount is required').notEmpty(),
     check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 0.01 }),
+    check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
   ],
   async (req, res) => {
     debugger;
@@ -341,25 +330,24 @@ router.put(
           });
         }
       }
-
-      // Handle guest data update if provided
-      if (updateData.guest && (updateData.guest.firstName || updateData.guest.lastName)) {
-        let guest = await Guest.findOne({ phoneNumber: updateData.guest.phoneNumber });
-
-        if (!guest) {
-          guest = new Guest({
-            phoneNumber: updateData.guest.phoneNumber?.trim() || '',
-            firstName: updateData.guest.firstName?.trim() || '',
-            lastName: updateData.guest.lastName?.trim() || '',
-            createdBy: req.user.id,
-          });
-          await guest.save();
+      // Handle guestId update - map to guest field
+      if (updateData.guestId !== undefined) {
+        if (updateData.guestId && updateData.guestId.trim() !== '') {
+          // Validate guest exists
+          const guest = await Guest.findById(updateData.guestId);
+          if (!guest) {
+            return res.status(400).json({
+              errors: [
+                { msg: 'Selected guest not found. Please assign another guest or leave it empty in reservation form' },
+              ],
+            });
+          }
+          updateData.guest = updateData.guestId;
         } else {
-          if (updateData.guest.firstName?.trim()) guest.firstName = updateData.guest.firstName.trim();
-          if (updateData.guest.lastName?.trim()) guest.lastName = updateData.guest.lastName.trim();
-          await guest.save();
+          // Clear guest assignment
+          updateData.guest = null;
         }
-        updateData.guest = guest._id;
+        delete updateData.guestId; // Remove guestId from updateData
       }
 
       // Clean up bookingAgent field

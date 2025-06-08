@@ -12,11 +12,7 @@ const ReservationModel = {
   bookingAgent: '', // ObjectId reference - now optional (empty string means direct reservation)
   pricePerNight: '',
   totalAmount: '',
-  guest: {
-    phoneNumber: '',
-    firstName: '',
-    lastName: '',
-  },
+  guestId: '',
   reservationNotes: '',
 };
 

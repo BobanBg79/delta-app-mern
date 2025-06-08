@@ -21,6 +21,11 @@ export const getReservation = (reservationId) => async (dispatch) => {
     dispatch(setReservationFetchStart());
     const response = await axios.get(`/api/reservations/${reservationId}`);
     const { reservation } = response.data;
+    if (reservation.guest) {
+      reservation.guestId = reservation.guest._id || reservation.guest;
+    } else {
+      reservation.guestId = '';
+    }
     dispatch(setReservation(reservation));
   } catch (error) {
     dispatch(setReservationError(error.message));
@@ -53,7 +58,9 @@ export const createReservation = (data) => async (dispatch) => {
     if (transformedData.createdBy === '') {
       delete transformedData.createdBy;
     }
-
+    if (transformedData.guestId === '') {
+      delete transformedData.guestId;
+    }
     await axios.post('/api/reservations', transformedData);
     dispatch(showMessageToast('Reservation is successfully created!', SUCCESS));
   } catch (error) {
@@ -90,9 +97,18 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
     if (transformedData.createdBy === '') {
       delete transformedData.createdBy;
     }
+    // Handle guestId - send as guestId, backend will map to guest
+    if (transformedData.guestId === '') {
+      delete transformedData.guestId;
+    }
     debugger;
     const response = await axios.put(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
+    if (reservation.guest) {
+      reservation.guestId = reservation.guest._id || reservation.guest;
+    } else {
+      reservation.guestId = '';
+    }
     dispatch(setReservation(reservation));
     dispatch(showMessageToast('Reservation is successfully updated!', SUCCESS));
   } catch (error) {
@@ -132,26 +148,10 @@ export const deleteReservation = (reservationId) => async (dispatch) => {
   }
 };
 
-// Search guests by phone number for guest selection
-export const searchGuestsByPhone = (phoneNumber) => async () => {
-  try {
-    if (!phoneNumber || phoneNumber.length < 3) {
-      return [];
-    }
-
-    const response = await axios.get(`/api/guests/search-by-phone/${phoneNumber}`);
-    return response.data.guests || [];
-  } catch (error) {
-    console.error('Guest search error:', error);
-    return [];
-  }
-};
-
 export default {
   getReservation,
   createReservation,
   updateReservation,
   getAllReservations,
   deleteReservation,
-  searchGuestsByPhone,
 };
