@@ -101,7 +101,7 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
     if (transformedData.guestId === '') {
       delete transformedData.guestId;
     }
-    debugger;
+
     const response = await axios.put(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
     if (reservation.guest) {

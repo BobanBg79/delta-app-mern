@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const reservationsGuestCheck = require('../../middleware/reservationsGuestCheck');
 const { check, validationResult } = require('express-validator');
 const Reservation = require('../../models/Reservation');
 const Guest = require('../../models/Guest');
@@ -59,6 +60,7 @@ router.post(
   '/',
   [
     auth,
+    reservationsGuestCheck,
     check('plannedCheckIn', 'Planned check-in date is required').isISO8601(),
     check('plannedCheckOut', 'Planned check-out date is required').isISO8601(),
     check('apartment', 'Apartment selection is required').isMongoId(),
@@ -144,15 +146,6 @@ router.post(
         });
       }
 
-      // Validate guest exists if provided
-      if (guestId) {
-        const guest = await Guest.findById(guestId);
-        if (!guest) {
-          return res.status(400).json({
-            errors: [{ msg: 'Selected guest not found' }],
-          });
-        }
-      }
       // Verify apartment exists
       const apartmentExists = await Apartment.findById(apartment);
       if (!apartmentExists) {
@@ -247,6 +240,7 @@ router.put(
   '/:id',
   [
     auth,
+    reservationsGuestCheck,
     check('plannedCheckIn', 'Planned check-in date is required').optional().isISO8601(),
     check('plannedCheckOut', 'Planned check-out date is required').optional().isISO8601(),
     check('apartment', 'Apartment selection is required').optional().isMongoId(),
@@ -274,7 +268,6 @@ router.put(
     check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
   ],
   async (req, res) => {
-    debugger;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
