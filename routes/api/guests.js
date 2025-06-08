@@ -62,7 +62,6 @@ router.get('/search-by-phone/:phoneNumber', auth, async (req, res) => {
       phoneNumber: { $regex: phoneNumber.trim(), $options: 'i' },
     })
       .populate('createdBy', ['fname', 'lname'])
-      .limit(10) // Limit search results
       .sort({ createdAt: -1 });
 
     res.json({ guests });
