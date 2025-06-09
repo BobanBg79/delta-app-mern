@@ -9,48 +9,167 @@
     }
 }
 
+.multicalendar-table-container {
+    width: 100%;
+    overflow-x: auto;
+    position: relative;
+}
+
 .multicalendar-table {
+    width: 100%;
+    table-layout: fixed; // This ensures consistent column widths
+    
     .apartment-row {
         position: relative;
+        height: 60px; // Fixed height instead of min-height
+        display: table-row;
+        
         .apartment-name {
             width: 198px;
             padding: 8px 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            height: 100%;
         }
+        
         .apartment-name-cell {
             padding: 0;
+            vertical-align: top; // Changed to top alignment
+            height: 60px;
+            position: relative;
+        }
+        
+        .date-cell {
+            height: 60px;
+            vertical-align: top; // Changed to top alignment
+            position: relative;
         }
     }
+    
     .date-cell {
         border-right: 1px solid #e5e5e5;
+        height: 60px;
     }
+    
     .sticky-table-table {
-        .apartment-row:last-of-type .date-cell{
+        .apartment-row:last-of-type .date-cell {
             border-bottom: 1px solid #e5e5e5;
         }
-
     }
+    
     .dates-row {
+        height: 50px; // Fixed height for header
+        
         .date-label {
             width: 30px;
             font-size: 12px;
+            text-align: center;
+            line-height: 1.2;
         }
+        
         .date-label-cell {
             padding: 6px;
             text-align: center;
+            background-color: #f8f9fa;
+            font-weight: 500;
+            height: 50px;
+            vertical-align: middle;
         }
     }
+    
     .reservation {
         position: absolute;
-        top: 0;
+        top: 8px; // More precise positioning from top of row
         display: flex;
         align-items: center;
-        height: 40px;
-        padding: 6px;
-        background-color: #66339957;
-        border: 1px solid rebeccapurple;
-        border-radius: 6px;
-        font-size: 14px;
+        justify-content: center;
+        height: 36px; // Slightly smaller to fit better in row
+        padding: 4px 6px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 1px solid #5a67d8;
+        border-radius: 4px; // Slightly smaller border radius
+        font-size: 10px;
+        color: white;
+        font-weight: 500;
         overflow: hidden;
-        margin-left: -21px;
+        margin-left: 1px; // Small margin from cell border
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s ease; // Smooth transitions
+        
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+            z-index: 20;
+        }
+        
+        .reservation-dates {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+        .partial-indicator {
+            color: #ffd700;
+            font-weight: bold;
+            margin: 0 1px;
+        }
+        
+        // Different colors for partial reservations
+        &.partial-reservation {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-color: #e53e3e;
+        }
+        
+        // Better stacking for overlapping reservations
+        &:nth-of-type(2) {
+            top: 12px;
+            z-index: 9;
+        }
+        
+        &:nth-of-type(3) {
+            top: 16px;
+            z-index: 8;
+        }
+        
+        &:nth-of-type(4) {
+            top: 20px;
+            z-index: 7;
+        }
+    }
+}
+
+// Ensure table renders properly
+.sticky-table-table {
+    width: 100% !important;
+}
+
+.sticky-table-row {
+    display: table-row;
+}
+
+.sticky-table-cell {
+    display: table-cell;
+    vertical-align: top;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+    .multicalendar-table-container {
+        overflow-x: auto;
+        
+        .multicalendar-table {
+            min-width: 1000px;
+            
+            .reservation {
+                font-size: 9px;
+                height: 32px;
+                padding: 2px 4px;
+            }
+        }
     }
 }
