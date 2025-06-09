@@ -1,5 +1,5 @@
-const Reservation = require('../models/Reservation');
-const Apartment = require('../models/Apartment');
+const Reservation = require('../../models/Reservation');
+const Apartment = require('../../models/Apartment');
 
 /**
  * Middleware to validate reservation dates and check for overbooking
