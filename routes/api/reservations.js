@@ -4,6 +4,7 @@ const router = express.Router();
 const auth = require('../../middleware/auth');
 const reservationsGuestCheck = require('../../middleware/reservationsGuestCheck');
 const reservationDatesCheck = require('../../middleware/reservations/reservationDatesCheck');
+const reservationExistsCheck = require('../../middleware/reservations/reservationExistsCheck');
 const { check, validationResult } = require('express-validator');
 const Reservation = require('../../models/Reservation');
 const Guest = require('../../models/Guest');
@@ -208,8 +209,8 @@ router.put(
     // Phase 1: Basic middleware
     auth, // 1. Authorization
     reservationsGuestCheck, // 2. Guest validation
-
-    // Phase 2: Input validation (optional for PUT since not all fields may be updated)
+    reservationExistsCheck, // 3. does reservation we want to update exists in db at all
+    // Phase 3: Input validation (optional for PUT since not all fields may be updated)
     check('plannedCheckIn', 'Planned check-in date must be valid').optional().isISO8601(),
     check('plannedCheckOut', 'Planned check-out date must be valid').optional().isISO8601(),
     check('apartment', 'Apartment selection must be valid').optional().isMongoId(),
@@ -233,28 +234,20 @@ router.put(
     check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
     check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
     check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
-
-    // Phase 3: Check validation results (stops here if validation fails)
+    // Phase 4: Check validation results (stops here if validation fails)
     checkValidationErrors,
-
-    // Phase 4: Date validation and overbooking check
+    // Phase 5: Date validation and overbooking check
     // (Will skip if dates not provided, full validation if dates are provided)
     reservationDatesCheck,
-
-    // Phase 5: Main handler
+    // Phase 6: Main handler
   ],
   async (req, res) => {
     try {
-      const { id: reservationId } = req.params;
       const updateData = req.body;
-
       console.log('Updating reservation with data:', updateData);
 
-      // Find existing reservation
-      let reservation = await Reservation.findById(reservationId);
-      if (!reservation) {
-        return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
-      }
+      // Get the existing reservation from middleware (already fetched and validated)
+      let reservation = req.existingReservation;
 
       // Date validations were handled by reservationDatesCheck middleware
       // If dates were provided and validated, we can access: req.validatedDates
