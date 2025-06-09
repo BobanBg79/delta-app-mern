@@ -35,7 +35,6 @@ router.get('/:id', auth, async (req, res) => {
     const { id: reservationId } = req.params;
     const reservation = await Reservation.findById(reservationId)
       .populate('createdBy', ['fname', 'lname'])
-      .populate('apartment', ['name'])
       .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
       .populate('bookingAgent', ['name']); // Will be null for direct reservations
 

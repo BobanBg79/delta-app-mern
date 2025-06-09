@@ -26,7 +26,6 @@ const ReservationForm = ({
 }) => {
   const dispatch = useDispatch();
 
-  // Form state destructuring - now much simpler!
   const {
     status = 'active',
     plannedCheckIn = null,
@@ -175,7 +174,7 @@ const ReservationForm = ({
               <FloatingLabel label="Apartment" className="mb-3">
                 <Form.Select
                   required
-                  value={apartment._id}
+                  value={apartment}
                   onChange={onInputChange(['apartment'])}
                   aria-label="apartment name"
                 >
