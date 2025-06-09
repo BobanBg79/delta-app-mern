@@ -3,11 +3,22 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
 const reservationsGuestCheck = require('../../middleware/reservationsGuestCheck');
+const reservationDatesCheck = require('../../middleware/reservations/reservationDatesCheck');
 const { check, validationResult } = require('express-validator');
 const Reservation = require('../../models/Reservation');
 const Guest = require('../../models/Guest');
 const BookingAgent = require('../../models/BookingAgent');
 const Apartment = require('../../models/Apartment');
+
+// Create a validation checker middleware that stops the chain if validation fails
+const checkValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  // If validation passes, continue to the next middleware
+  next();
+};
 
 // @route   GET api/reservations
 // @desc    Get the list of all reservations
@@ -58,8 +69,9 @@ router.get('/:id', auth, async (req, res) => {
 router.post(
   '/',
   [
-    auth,
-    reservationsGuestCheck,
+    auth, // 1. Authorization
+    reservationsGuestCheck, // 2. Guest validation
+    // 3. Input validation with express-validator
     check('plannedCheckIn', 'Planned check-in date is required').isISO8601(),
     check('plannedCheckOut', 'Planned check-out date is required').isISO8601(),
     check('apartment', 'Apartment selection is required').isMongoId(),
@@ -84,17 +96,14 @@ router.post(
     check('totalAmount', 'Total amount is required').notEmpty(),
     check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 1 }),
     check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
+    // Phase 3: Check validation results (stops here if validation fails)
+    checkValidationErrors,
+    // Phase 4: Business logic validation (only runs if basic validation passed)
+    reservationDatesCheck,
   ],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     try {
       const {
-        plannedCheckIn,
-        plannedCheckOut,
         plannedArrivalTime,
         plannedCheckoutTime,
         apartment,
@@ -109,49 +118,8 @@ router.post(
 
       console.log('Received reservation data:', req.body);
 
-      // Validate dates
-      const checkInDate = new Date(plannedCheckIn);
-      const checkOutDate = new Date(plannedCheckOut);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (checkInDate < today) {
-        return res.status(400).json({
-          errors: [{ msg: 'Check-in date cannot be in the past' }],
-        });
-      }
-
-      if (checkOutDate <= checkInDate) {
-        return res.status(400).json({
-          errors: [{ msg: 'Check-out date must be after check-in date' }],
-        });
-      }
-
-      // Check for overlapping reservations
-      const overlappingReservations = await Reservation.find({
-        apartment,
-        status: 'active',
-        $or: [
-          {
-            plannedCheckIn: { $lt: checkOutDate },
-            plannedCheckOut: { $gt: checkInDate },
-          },
-        ],
-      });
-
-      if (overlappingReservations.length > 0) {
-        return res.status(409).json({
-          errors: [{ msg: 'Apartment is already booked for the selected dates' }],
-        });
-      }
-
-      // Verify apartment exists
-      const apartmentExists = await Apartment.findById(apartment);
-      if (!apartmentExists) {
-        return res.status(400).json({
-          errors: [{ msg: 'Selected apartment does not exist' }],
-        });
-      }
+      // Get the validated dates from the middleware
+      const { checkInDate, checkOutDate, nights } = req.validatedDates;
 
       // Verify booking agent exists if provided
       if (bookingAgent && bookingAgent.trim() !== '') {
@@ -180,7 +148,6 @@ router.post(
       }
 
       // Validate that pricing is reasonable (total should roughly match nights * price)
-      const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
       const expectedTotal = finalPricePerNight * nights;
       const tolerance = Math.max(1, expectedTotal * 0.05); // 5% tolerance or minimum 1 unit
 
@@ -232,17 +199,20 @@ router.post(
   }
 );
 
-// @route    PUT api/reservations/:reservationId
+// @route    PUT api/reservations/:id
 // @desc     Update reservation
 // @access   Private
 router.put(
   '/:id',
   [
-    auth,
-    reservationsGuestCheck,
-    check('plannedCheckIn', 'Planned check-in date is required').optional().isISO8601(),
-    check('plannedCheckOut', 'Planned check-out date is required').optional().isISO8601(),
-    check('apartment', 'Apartment selection is required').optional().isMongoId(),
+    // Phase 1: Basic middleware
+    auth, // 1. Authorization
+    reservationsGuestCheck, // 2. Guest validation
+
+    // Phase 2: Input validation (optional for PUT since not all fields may be updated)
+    check('plannedCheckIn', 'Planned check-in date must be valid').optional().isISO8601(),
+    check('plannedCheckOut', 'Planned check-out date must be valid').optional().isISO8601(),
+    check('apartment', 'Apartment selection must be valid').optional().isMongoId(),
     check('phoneNumber', 'Contact number is required').optional().notEmpty(),
     check('phoneNumber', 'Please provide a valid phone number')
       .optional()
@@ -260,18 +230,20 @@ router.put(
         }
         throw new Error('Booking agent must be a valid ID');
       }),
-    check('pricePerNight', 'Price per night is required').notEmpty(),
-    check('pricePerNight', 'Price per night must be a positive number').isFloat({ min: 0.01 }),
-    check('totalAmount', 'Total amount is required').notEmpty(),
-    check('totalAmount', 'Total amount must be a positive number').isFloat({ min: 0.01 }),
+    check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
+    check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
     check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
+
+    // Phase 3: Check validation results (stops here if validation fails)
+    checkValidationErrors,
+
+    // Phase 4: Date validation and overbooking check
+    // (Will skip if dates not provided, full validation if dates are provided)
+    reservationDatesCheck,
+
+    // Phase 5: Main handler
   ],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     try {
       const { id: reservationId } = req.params;
       const updateData = req.body;
@@ -284,44 +256,9 @@ router.put(
         return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
       }
 
-      // If dates are being updated, validate them
-      if (updateData.plannedCheckIn || updateData.plannedCheckOut) {
-        const checkInDate = new Date(updateData.plannedCheckIn || reservation.plannedCheckIn);
-        const checkOutDate = new Date(updateData.plannedCheckOut || reservation.plannedCheckOut);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      // Date validations were handled by reservationDatesCheck middleware
+      // If dates were provided and validated, we can access: req.validatedDates
 
-        if (checkInDate < today) {
-          return res.status(400).json({
-            errors: [{ msg: 'Check-in date cannot be in the past' }],
-          });
-        }
-
-        if (checkOutDate <= checkInDate) {
-          return res.status(400).json({
-            errors: [{ msg: 'Check-out date must be after check-in date' }],
-          });
-        }
-
-        // Check for overlapping reservations (excluding current one)
-        const overlappingReservations = await Reservation.find({
-          _id: { $ne: reservationId },
-          apartment: updateData.apartment || reservation.apartment,
-          status: 'active',
-          $or: [
-            {
-              plannedCheckIn: { $lt: checkOutDate },
-              plannedCheckOut: { $gt: checkInDate },
-            },
-          ],
-        });
-
-        if (overlappingReservations.length > 0) {
-          return res.status(409).json({
-            errors: [{ msg: 'Apartment is already booked for the selected dates' }],
-          });
-        }
-      }
       // Handle guestId update - map to guest field
       if (updateData.guestId !== undefined) {
         if (updateData.guestId && updateData.guestId.trim() !== '') {
@@ -348,6 +285,60 @@ router.put(
         (!updateData.bookingAgent || updateData.bookingAgent.trim() === '')
       ) {
         updateData.bookingAgent = null;
+      }
+
+      // Verify booking agent exists if provided
+      if (updateData.bookingAgent && updateData.bookingAgent.trim() !== '') {
+        const agentExists = await BookingAgent.findById(updateData.bookingAgent);
+        if (!agentExists) {
+          return res.status(400).json({
+            errors: [{ msg: 'Selected booking agent does not exist' }],
+          });
+        }
+      }
+
+      // Validate pricing if being updated
+      if (updateData.pricePerNight !== undefined || updateData.totalAmount !== undefined) {
+        const finalPricePerNight = parseFloat(updateData.pricePerNight || reservation.pricePerNight);
+        const finalTotalAmount = parseFloat(updateData.totalAmount || reservation.totalAmount);
+
+        if (!finalPricePerNight || finalPricePerNight <= 0) {
+          return res.status(400).json({
+            errors: [{ msg: 'Price per night must be a positive number greater than 0' }],
+          });
+        }
+
+        if (!finalTotalAmount || finalTotalAmount <= 0) {
+          return res.status(400).json({
+            errors: [{ msg: 'Total amount must be a positive number greater than 0' }],
+          });
+        }
+
+        // Calculate nights for pricing validation
+        let nights;
+        if (req.validatedDates) {
+          // Dates were updated and validated by middleware
+          nights = req.validatedDates.nights;
+        } else {
+          // Use existing reservation dates
+          nights = Math.ceil((reservation.plannedCheckOut - reservation.plannedCheckIn) / (1000 * 60 * 60 * 24));
+        }
+
+        // Validate that pricing is reasonable
+        const expectedTotal = finalPricePerNight * nights;
+        const tolerance = Math.max(1, expectedTotal * 0.05); // 5% tolerance or minimum 1 unit
+
+        if (Math.abs(expectedTotal - finalTotalAmount) > tolerance) {
+          return res.status(400).json({
+            errors: [
+              {
+                msg: `Total amount (${finalTotalAmount}) does not match price per night (${finalPricePerNight}) × ${nights} nights. Expected approximately ${expectedTotal.toFixed(
+                  2
+                )}`,
+              },
+            ],
+          });
+        }
       }
 
       // Update the reservation
