@@ -25,8 +25,8 @@ const reservationDatesCheck = async (req, res, next) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. Check if check-in date is in the past
-    if (checkInDate < today) {
+    // 1. Check if check-in date is in the past (only for reservation creation flow, not in update flow)
+    if (checkInDate < today && !currentReservationId) {
       return res.status(400).json({
         errors: [{ msg: 'Check-in date cannot be in the past' }],
       });

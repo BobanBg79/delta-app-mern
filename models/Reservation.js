@@ -19,15 +19,6 @@ const ReservationSchema = new mongoose.Schema({
   plannedCheckIn: {
     type: Date,
     required: true,
-    validate: {
-      validator: function (value) {
-        // Check-in cannot be in the past (allow today)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return value >= today;
-      },
-      message: 'Planned check-in date cannot be in the past',
-    },
   },
   plannedArrivalTime: {
     type: String, // Format: "HH:MM"

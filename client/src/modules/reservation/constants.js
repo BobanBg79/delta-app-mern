@@ -11,5 +11,5 @@ export const CAN_DELETE_RESERVATION = [admin, owner];
 export const RESERVATION_STATUSES = {
   active: 'active',
   canceled: 'canceled',
-  completed: 'completed',
+  noshow: 'noshow',
 };

@@ -60,6 +60,17 @@ const ReservationForm = ({
     return 0;
   }, [plannedCheckIn, plannedCheckOut]);
 
+  const canSetNoShow = useMemo(() => {
+    if (!plannedCheckIn) return false;
+
+    const checkInDate = new Date(plannedCheckIn);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    checkInDate.setHours(0, 0, 0, 0);
+
+    return checkInDate <= today;
+  }, [plannedCheckIn]);
+
   // Load booking agents on component mount
   useEffect(() => {
     dispatch(getAllBookingAgents(true));
@@ -128,10 +139,17 @@ const ReservationForm = ({
                   >
                     <option value={active}>Active</option>
                     <option value={canceled}>Canceled</option>
-                    <option value={noshow}>No Show</option>
+                    <option value={noshow} disabled={!canSetNoShow}>
+                      No Show {!canSetNoShow ? '(Check-in date must be today or past)' : ''}
+                    </option>
                   </Form.Select>
                   <Form.Control.Feedback type="invalid">Please choose reservation status.</Form.Control.Feedback>
                 </FloatingLabel>
+                {status === noshow && !canSetNoShow && (
+                  <Alert variant="warning" className="mt-2">
+                    Cannot set status to "No Show" - check-in date is in the future.
+                  </Alert>
+                )}
               </Col>
             )}
           </Row>
