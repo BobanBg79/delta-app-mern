@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StickyTable, Row, Cell } from 'react-sticky-table';
 import MulticalendarApartmentRow from './MulticalendarApartmentRow';
-
 import { useSelector, useDispatch } from 'react-redux';
 import { getArrayOfConsecutiveDates, extractDateElements } from '../../utils/date';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { MULTICALENDAR_ELEMENTS_DIMENSIONS } from './constants';
 import TableHeader from '../../components/TableHeader';
-import { getAllReservations } from '../../modules/reservation/operations';
+import { getReservationsInDateRange } from '../../modules/reservation/operations';
 
 const { dateCellWidth, apartmentNameCellWidth } = MULTICALENDAR_ELEMENTS_DIMENSIONS;
 const initialRowOffset = dateCellWidth + apartmentNameCellWidth;
@@ -18,16 +17,23 @@ const MultiCalendar = () => {
   const { apartments } = useSelector((state) => state.apartments);
   const [tableRendered, setTableRendered] = useState(false);
 
-  const startDate = new Date();
-  const endDate = new Date();
-  endDate.setDate(startDate.getDate() + 30);
+  // Use useMemo to memoize date objects
+  const dateRange = useMemo(() => {
+    const start = new Date();
+    const end = new Date();
+    end.setDate(start.getDate() + 30);
+    return { startDate: start, endDate: end };
+  }, []);
 
-  const datesArray = getArrayOfConsecutiveDates(startDate, 30);
+  const { startDate, endDate } = dateRange;
 
-  // Fetch all reservations when component mounts
+  // Memoize the dates array
+  const datesArray = useMemo(() => getArrayOfConsecutiveDates(startDate, 30), [startDate]);
+
+  // Fetch reservations within the date range when component mounts
   useEffect(() => {
-    dispatch(getAllReservations());
-  }, [dispatch]);
+    dispatch(getReservationsInDateRange(startDate, endDate));
+  }, [dispatch, startDate, endDate]);
 
   // Wait for table to render before showing reservations
   useEffect(() => {
@@ -38,7 +44,7 @@ const MultiCalendar = () => {
     return () => clearTimeout(timer);
   }, [apartments, datesArray]);
 
-  // Filter and group reservations by apartment
+  // Filter reservations by apartment and date range
   const getReservationsForApartment = (apartmentId) => {
     if (!reservations || !Array.isArray(reservations)) return [];
 

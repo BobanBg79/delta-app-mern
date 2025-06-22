@@ -134,6 +134,31 @@ export const getAllReservations = () => async (dispatch) => {
   }
 };
 
+export const getReservationsInDateRange = (startDate, endDate) => async (dispatch) => {
+  try {
+    dispatch(setReservationsFetchStart());
+
+    // Format dates as ISO strings for the API
+    const formattedStartDate = new Date(startDate).toISOString();
+    const formattedEndDate = new Date(endDate).toISOString();
+
+    // Query API with date range parameters
+    const response = await axios.get('/api/reservations', {
+      params: {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+      },
+    });
+
+    dispatch(setReservations(response.data));
+  } catch (error) {
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message;
+    dispatch(setReservationsError(errorMessage));
+  } finally {
+    dispatch(setReservationsFetchEnd());
+  }
+};
+
 export const deleteReservation = (reservationId) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());
@@ -153,5 +178,6 @@ export default {
   createReservation,
   updateReservation,
   getAllReservations,
+  getReservationsInDateRange,
   deleteReservation,
 };
