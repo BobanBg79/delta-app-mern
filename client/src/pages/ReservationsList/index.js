@@ -8,6 +8,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import Table from 'react-bootstrap/Table';
 import Badge from 'react-bootstrap/Badge';
 import { formatDateDefault } from '../../utils/date';
+import ReservationFilters from '../../components/ReservationFilters.js';
 
 const ReservationsList = () => {
   const dispatch = useDispatch();
@@ -43,9 +44,8 @@ const ReservationsList = () => {
     return `${guest.firstName} ${guest.lastName || ''}`.trim();
   };
 
-  const formatBookingAgent = (bookingAgent) => {
-    if (!bookingAgent) return 'Direct Reservation';
-    return bookingAgent.name;
+  const onFilterSearchHandler = (start, end) => {
+    console.log(9999, start, end);
   };
 
   const getBookingAgentBadge = (bookingAgent) => {
@@ -63,6 +63,7 @@ const ReservationsList = () => {
 
   return (
     <div>
+      <ReservationFilters onSearch={onFilterSearchHandler} />
       <TableHeader
         title="Reservations"
         createEntityPath="/reservations/create"

@@ -9,7 +9,8 @@ const { check, validationResult } = require('express-validator');
 const Reservation = require('../../models/Reservation');
 const Guest = require('../../models/Guest');
 const BookingAgent = require('../../models/BookingAgent');
-const Apartment = require('../../models/Apartment');
+
+const searchEndpoint = require('./search-endpoint');
 
 // Create a validation checker middleware that stops the chain if validation fails
 const checkValidationErrors = (req, res, next) => {
@@ -105,6 +106,8 @@ router.get('/', auth, async (req, res) => {
     res.status(500).send({ errors: [{ msg: 'Server error' }] });
   }
 });
+
+router.use('/search', searchEndpoint);
 
 // @route   GET api/reservations/:reservationId
 // @desc    Get reservation by reservationId
