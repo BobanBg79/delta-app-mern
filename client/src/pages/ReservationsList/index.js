@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import TableHeader from '../../components/TableHeader';
-import { getAllReservations, searchReservations } from '../../modules/reservation/operations';
+import { searchReservations } from '../../modules/reservation/operations';
 import { useDispatch } from 'react-redux';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import Table from 'react-bootstrap/Table';
@@ -17,7 +17,6 @@ const ReservationsList = () => {
 
   // Local state
   const [reservationIdToDelete, setReservationIdToDelete] = useState();
-  const [isSearchActive, setIsSearchActive] = useState(false);
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState({});
   const [paginationData, setPaginationData] = useState({
     currentPage: 0,
@@ -53,25 +52,17 @@ const ReservationsList = () => {
     return `${guest.firstName} ${guest.lastName || ''}`.trim();
   };
 
-  const onFilterSearchHandler = async (searchCriteria) => {
-    // If searchCriteria is null (from clear button) or empty object, show all reservations
-    if (!searchCriteria || Object.keys(searchCriteria).length === 0) {
-      setIsSearchActive(false);
-      setCurrentSearchCriteria({});
-      setPaginationData({ currentPage: 0, totalPages: 0, totalCount: 0, pageSize: 20 });
-      dispatch(getAllReservations());
-      return;
-    }
-
-    // If we have any search criteria, use the search endpoint
-    setIsSearchActive(true);
-    setCurrentSearchCriteria(searchCriteria);
-
-    const result = await dispatch(searchReservations(searchCriteria, { page: 0 }));
+  const loadReservations = async (searchCriteria = {}, page = 0) => {
+    const result = await dispatch(
+      searchReservations(searchCriteria, {
+        page,
+        pageSize: paginationData.pageSize,
+      })
+    );
 
     if (result && !result.error) {
       setPaginationData({
-        currentPage: result.currentPage || 0,
+        currentPage: result.currentPage || page,
         totalPages: result.totalPages || 0,
         totalCount: result.count || 0,
         pageSize: result.pageSize || 20,
@@ -79,29 +70,17 @@ const ReservationsList = () => {
     }
   };
 
-  const handlePageChange = async (newPage) => {
-    if (isSearchActive) {
-      const result = await dispatch(
-        searchReservations(currentSearchCriteria, {
-          page: newPage,
-          pageSize: paginationData.pageSize,
-        })
-      );
+  const onFilterSearchHandler = async (searchCriteria) => {
+    // If searchCriteria is null (from clear button) or empty object, use empty criteria
+    const criteria = searchCriteria || {};
+    setCurrentSearchCriteria(criteria);
 
-      if (result && !result.error) {
-        setPaginationData((prev) => ({
-          ...prev,
-          currentPage: result.currentPage || newPage,
-        }));
-      }
-    } else {
-      // For getAllReservations, we'd need to implement pagination there too
-      // For now, we'll just update the page state
-      setPaginationData((prev) => ({
-        ...prev,
-        currentPage: newPage,
-      }));
-    }
+    // Always start from page 0 when applying new search criteria
+    await loadReservations(criteria, 0);
+  };
+
+  const handlePageChange = async (newPage) => {
+    await loadReservations(currentSearchCriteria, newPage);
   };
 
   const getBookingAgentBadge = (bookingAgent) => {
@@ -111,8 +90,9 @@ const ReservationsList = () => {
     return <Badge bg="secondary">{bookingAgent.name}</Badge>;
   };
 
+  // Load all reservations on component mount (empty search criteria = all reservations)
   useEffect(() => {
-    dispatch(getAllReservations());
+    loadReservations({}, 0);
   }, [dispatch]);
 
   if (reservationsFetching) return <div>Loading reservations...</div>;
