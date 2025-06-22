@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
@@ -9,13 +9,27 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
 
-const ReservationFilters = ({ onSearch }) => {
+const ReservationFilters = ({ onSearch, currentSearchCriteria = {} }) => {
   const [dateRange, setDateRange] = useState([null, null]);
   const [selectedApartmentId, setSelectedApartmentId] = useState('');
 
   // Get apartments from Redux store
   const { apartments: apartmentsArray = [] } = useSelector((state) => state.apartments);
 
+  // Update local state when currentSearchCriteria changes
+  useEffect(() => {
+    const { startDate, endDate, apartmentId } = currentSearchCriteria;
+
+    // Update date range
+    if (startDate && endDate) {
+      setDateRange([new Date(startDate), new Date(endDate)]);
+    } else {
+      setDateRange([null, null]);
+    }
+
+    // Update apartment selection
+    setSelectedApartmentId(apartmentId || '');
+  }, [currentSearchCriteria]);
   const handleDateRangeChange = (value) => {
     setDateRange(value);
   };

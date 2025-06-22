@@ -99,7 +99,7 @@ const ReservationsList = () => {
 
   return (
     <div>
-      <ReservationFilters onSearch={onFilterSearchHandler} />
+      <ReservationFilters onSearch={onFilterSearchHandler} currentSearchCriteria={currentSearchCriteria} />
       <TableHeader
         title="Reservations"
         createEntityPath="/reservations/create"
