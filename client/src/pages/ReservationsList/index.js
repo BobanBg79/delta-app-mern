@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import TableHeader from '../../components/TableHeader';
-import { getAllReservations } from '../../modules/reservation/operations';
+import { getAllReservations, searchReservations } from '../../modules/reservation/operations';
 import { useDispatch } from 'react-redux';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import Table from 'react-bootstrap/Table';
@@ -16,6 +16,7 @@ const ReservationsList = () => {
 
   // Local state
   const [reservationIdToDelete, setReservationIdToDelete] = useState();
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
   // Redux state
   const { reservationsFetching, reservations } = useSelector((state) => state.reservation);
@@ -44,8 +45,24 @@ const ReservationsList = () => {
     return `${guest.firstName} ${guest.lastName || ''}`.trim();
   };
 
-  const onFilterSearchHandler = (start, end) => {
-    console.log(9999, start, end);
+  const onFilterSearchHandler = (startDate, endDate) => {
+    // If both dates are null, clear filters and show all reservations
+    if (!startDate && !endDate) {
+      setIsSearchActive(false);
+      dispatch(getAllReservations());
+      return;
+    }
+
+    // If we have search criteria, use the search endpoint
+    if (startDate && endDate) {
+      setIsSearchActive(true);
+      const searchCriteria = {
+        startDate: startDate,
+        endDate: endDate,
+      };
+
+      dispatch(searchReservations(searchCriteria));
+    }
   };
 
   const getBookingAgentBadge = (bookingAgent) => {

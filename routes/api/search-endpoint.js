@@ -33,7 +33,6 @@ router.get(
   async (req, res) => {
     try {
       const { startDate, endDate, apartmentId, minAmount, maxAmount } = req.query;
-      debugger;
       // Build query object with only provided search criteria
       const query = {};
 
