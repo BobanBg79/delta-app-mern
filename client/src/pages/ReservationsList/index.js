@@ -45,24 +45,17 @@ const ReservationsList = () => {
     return `${guest.firstName} ${guest.lastName || ''}`.trim();
   };
 
-  const onFilterSearchHandler = (startDate, endDate) => {
-    // If both dates are null, clear filters and show all reservations
-    if (!startDate && !endDate) {
+  const onFilterSearchHandler = (searchCriteria) => {
+    // If searchCriteria is null (from clear button) or empty object, show all reservations
+    if (!searchCriteria || Object.keys(searchCriteria).length === 0) {
       setIsSearchActive(false);
       dispatch(getAllReservations());
       return;
     }
 
-    // If we have search criteria, use the search endpoint
-    if (startDate && endDate) {
-      setIsSearchActive(true);
-      const searchCriteria = {
-        startDate: startDate,
-        endDate: endDate,
-      };
-
-      dispatch(searchReservations(searchCriteria));
-    }
+    // If we have any search criteria, use the search endpoint
+    setIsSearchActive(true);
+    dispatch(searchReservations(searchCriteria));
   };
 
   const getBookingAgentBadge = (bookingAgent) => {
