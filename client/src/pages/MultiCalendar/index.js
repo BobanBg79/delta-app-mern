@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { StickyTable, Row, Cell } from 'react-sticky-table';
 import MulticalendarApartmentRow from './MulticalendarApartmentRow';
-import { useSelector } from 'react-redux';
+
+import { useSelector, useDispatch } from 'react-redux';
 import { getArrayOfConsecutiveDates, extractDateElements } from '../../utils/date';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { MULTICALENDAR_ELEMENTS_DIMENSIONS } from './constants';
 import TableHeader from '../../components/TableHeader';
+import { getAllReservations } from '../../modules/reservation/operations';
 
 const { dateCellWidth, apartmentNameCellWidth } = MULTICALENDAR_ELEMENTS_DIMENSIONS;
 const initialRowOffset = dateCellWidth + apartmentNameCellWidth;
 
 const MultiCalendar = () => {
+  const dispatch = useDispatch();
   const { reservations } = useSelector((state) => state.reservation);
   const { apartments } = useSelector((state) => state.apartments);
   const [tableRendered, setTableRendered] = useState(false);
@@ -20,6 +23,11 @@ const MultiCalendar = () => {
   endDate.setDate(startDate.getDate() + 30);
 
   const datesArray = getArrayOfConsecutiveDates(startDate, 30);
+
+  // Fetch all reservations when component mounts
+  useEffect(() => {
+    dispatch(getAllReservations());
+  }, [dispatch]);
 
   // Wait for table to render before showing reservations
   useEffect(() => {

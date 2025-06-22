@@ -30,8 +30,9 @@ const ReservationView = () => {
       updateEntity: updateReservation,
       resetEntity: reservationActions.resetReservation,
     },
-    onEntityUpdateSuccess: () => history.push('/reservations'),
-    onEntityCreateSuccess: () => history.push('/reservations'),
+
+    onEntityUpdateSuccess: () => history.goBack(),
+    onEntityCreateSuccess: () => history.goBack(),
   };
 
   return (
