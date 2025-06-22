@@ -169,56 +169,63 @@ export const getReservationsInDateRange = (startDate, endDate) => async (dispatc
   }
 };
 
-export const searchReservations = (searchCriteria) => async (dispatch) => {
-  try {
-    dispatch(setReservationsFetchStart());
+export const searchReservations =
+  (searchCriteria, pagination = {}) =>
+  async (dispatch) => {
+    try {
+      dispatch(setReservationsFetchStart());
 
-    // Build query parameters from search criteria
-    const params = {};
+      // Build query parameters from search criteria and pagination with defaults
+      const params = {
+        page: 0,
+        pageSize: 20,
+        sortBy: 'plannedCheckIn',
+        sortOrder: 'asc',
+        ...pagination, // Override defaults with provided pagination options
+      };
 
-    if (searchCriteria.apartmentId) {
-      params.apartmentId = searchCriteria.apartmentId;
+      if (searchCriteria.apartmentId) {
+        params.apartmentId = searchCriteria.apartmentId;
+      }
+
+      if (searchCriteria.startDate) {
+        params.startDate = new Date(searchCriteria.startDate).toISOString();
+      }
+
+      if (searchCriteria.endDate) {
+        params.endDate = new Date(searchCriteria.endDate).toISOString();
+      }
+
+      if (searchCriteria.minAmount !== undefined && searchCriteria.minAmount !== '') {
+        params.minAmount = parseFloat(searchCriteria.minAmount);
+      }
+
+      if (searchCriteria.maxAmount !== undefined && searchCriteria.maxAmount !== '') {
+        params.maxAmount = parseFloat(searchCriteria.maxAmount);
+      }
+
+      const response = await axios.get('/api/reservations/search', { params });
+
+      const { reservations } = response.data;
+
+      // Transform reservations to include guestId for frontend compatibility
+      const transformedReservations = reservations.map((reservation) => ({
+        ...reservation,
+        guestId: reservation.guest?._id || reservation.guest || '',
+      }));
+
+      dispatch(setReservations(transformedReservations));
+
+      return response.data; // Return full response including count, totalPages, and searchCriteria
+    } catch (error) {
+      const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message;
+      dispatch(setReservationsError(errorMessage));
+      dispatch(showMessageToast(errorMessage, ERROR));
+      return { error: true };
+    } finally {
+      dispatch(setReservationsFetchEnd());
     }
-
-    if (searchCriteria.startDate) {
-      params.startDate = new Date(searchCriteria.startDate).toISOString();
-    }
-
-    if (searchCriteria.endDate) {
-      params.endDate = new Date(searchCriteria.endDate).toISOString();
-    }
-
-    if (searchCriteria.minAmount !== undefined && searchCriteria.minAmount !== '') {
-      params.minAmount = parseFloat(searchCriteria.minAmount);
-    }
-
-    if (searchCriteria.maxAmount !== undefined && searchCriteria.maxAmount !== '') {
-      params.maxAmount = parseFloat(searchCriteria.maxAmount);
-    }
-
-    const response = await axios.get('/api/reservations/search', { params });
-
-    const { reservations } = response.data;
-
-    // Transform reservations to include guestId for frontend compatibility
-    const transformedReservations = reservations.map((reservation) => ({
-      ...reservation,
-      guestId: reservation.guest?._id || reservation.guest || '',
-    }));
-
-    dispatch(setReservations(transformedReservations));
-
-    return response.data; // Return full response including count and searchCriteria
-  } catch (error) {
-    const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message;
-    dispatch(setReservationsError(errorMessage));
-    dispatch(showMessageToast(errorMessage, ERROR));
-    return { error: true };
-  } finally {
-    dispatch(setReservationsFetchEnd());
-  }
-};
-
+  };
 export const deleteReservation = (reservationId) => async (dispatch) => {
   try {
     dispatch(setReservationFetchStart());

@@ -15,7 +15,7 @@ const checkValidationErrors = (req, res, next) => {
 };
 
 // @route   GET /search
-// @desc    Search reservations with multiple criteria (apartment, date range, total amount)
+// @desc    Search reservations with multiple criteria (apartment, date range, total amount) with pagination and sorting
 // @access  Private
 router.get(
   '/',
@@ -27,12 +27,29 @@ router.get(
     check('apartmentId', 'Apartment ID must be a valid MongoDB ID').optional().isMongoId(),
     check('minAmount', 'Minimum amount must be a positive number').optional().isFloat({ min: 0 }),
     check('maxAmount', 'Maximum amount must be a positive number').optional().isFloat({ min: 0 }),
+    check('page', 'Page must be a non-negative integer').optional().isInt({ min: 0 }),
+    check('pageSize', 'Page size must be a positive integer').optional().isInt({ min: 1, max: 100 }),
+    check('sortBy', 'Sort by must be a valid field')
+      .optional()
+      .isIn(['plannedCheckIn', 'plannedCheckOut', 'totalAmount', 'createdAt']),
+    check('sortOrder', 'Sort order must be asc or desc').optional().isIn(['asc', 'desc']),
     // Check validation results
     checkValidationErrors,
   ],
   async (req, res) => {
     try {
-      const { startDate, endDate, apartmentId, minAmount, maxAmount } = req.query;
+      const {
+        startDate,
+        endDate,
+        apartmentId,
+        minAmount,
+        maxAmount,
+        page = 0,
+        pageSize = 20,
+        sortBy = 'plannedCheckIn',
+        sortOrder = 'asc',
+      } = req.query;
+
       // Build query object with only provided search criteria
       const query = {};
 
@@ -77,16 +94,37 @@ router.get(
         }
       }
 
-      // Execute the query with all combined filters
+      // Convert pagination parameters
+      const pageNum = parseInt(page);
+      const pageSizeNum = parseInt(pageSize);
+      const skip = pageNum * pageSizeNum;
+
+      // Build sort object
+      const sortObj = {};
+      sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+      // Get total count for pagination info
+      const totalCount = await Reservation.countDocuments(query);
+      const totalPages = Math.ceil(totalCount / pageSizeNum);
+
+      // Execute the query with all combined filters, pagination, and sorting
       const reservations = await Reservation.find(query)
         .populate('createdBy', ['fname', 'lname'])
         .populate('apartment', ['name'])
         .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
         .populate('bookingAgent', ['name'])
-        .sort({ plannedCheckIn: 1 });
+        .sort(sortObj)
+        .skip(skip)
+        .limit(pageSizeNum);
 
       res.json({
         count: reservations.length,
+        totalCount,
+        totalPages,
+        currentPage: pageNum,
+        pageSize: pageSizeNum,
+        hasNextPage: pageNum < totalPages - 1,
+        hasPrevPage: pageNum > 0,
         searchCriteria: {
           apartmentId: apartmentId || 'Any',
           dateRange:
@@ -103,6 +141,10 @@ router.get(
                   maxAmount: maxAmount || 'Any',
                 }
               : 'Any',
+        },
+        sorting: {
+          sortBy,
+          sortOrder,
         },
         reservations,
       });
