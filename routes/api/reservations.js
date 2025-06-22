@@ -21,6 +21,73 @@ const checkValidationErrors = (req, res, next) => {
   next();
 };
 
+// @route   GET api/reservations/date-range
+// @desc    Get reservations within a specific date range (for calendar views)
+// @access  Private
+router.get(
+  '/date-range',
+  [
+    auth,
+    // Validate query parameters using express-validator
+    check('startDate', 'Start date is required').notEmpty(),
+    check('startDate', 'Start date must be a valid ISO date').isISO8601(),
+    check('endDate', 'End date is required').notEmpty(),
+    check('endDate', 'End date must be a valid ISO date').isISO8601(),
+    // Check validation results
+    checkValidationErrors,
+  ],
+  async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      // Parse dates after validation
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Additional business logic validation
+      if (start > end) {
+        return res.status(400).json({
+          errors: [{ msg: 'Start date must be before or equal to end date' }],
+        });
+      }
+
+      // Optional: Add reasonable limits to prevent excessive queries
+      const daysDifference = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (daysDifference > 365) {
+        return res.status(400).json({
+          errors: [{ msg: 'Date range cannot exceed 365 days' }],
+        });
+      }
+
+      // Filter reservations that overlap with the date range
+      const query = {
+        plannedCheckIn: { $lte: end },
+        plannedCheckOut: { $gte: start },
+      };
+
+      const reservations = await Reservation.find(query)
+        .populate('createdBy', ['fname', 'lname'])
+        .populate('apartment', ['name'])
+        .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
+        .populate('bookingAgent', ['name'])
+        .sort({ plannedCheckIn: 1 }); // Sort by check-in date for calendar display
+
+      res.json({
+        dateRange: {
+          startDate: startDate,
+          endDate: endDate,
+          totalDays: daysDifference,
+        },
+        count: reservations.length,
+        reservations,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send({ errors: [{ msg: 'Server error' }] });
+    }
+  }
+);
+
 // @route   GET api/reservations
 // @desc    Get the list of all reservations
 // @access  Private

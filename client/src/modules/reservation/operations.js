@@ -142,15 +142,25 @@ export const getReservationsInDateRange = (startDate, endDate) => async (dispatc
     const formattedStartDate = new Date(startDate).toISOString();
     const formattedEndDate = new Date(endDate).toISOString();
 
-    // Query API with date range parameters
-    const response = await axios.get('/api/reservations', {
+    // Use the new date-range endpoint
+    const response = await axios.get('/api/reservations/date-range', {
       params: {
         startDate: formattedStartDate,
         endDate: formattedEndDate,
       },
     });
 
-    dispatch(setReservations(response.data));
+    // The new endpoint returns a structured response with reservations array
+    const { reservations, dateRange, count } = response.data;
+
+    // Transform reservations to include guestId for frontend compatibility
+    const transformedReservations = reservations.map((reservation) => ({
+      ...reservation,
+      guestId: reservation.guest?._id || reservation.guest || '',
+    }));
+
+    // Dispatch the reservations array (maintaining compatibility with existing state structure)
+    dispatch(setReservations(transformedReservations));
   } catch (error) {
     const errorMessage = error.response?.data?.errors?.[0]?.msg || error.message;
     dispatch(setReservationsError(errorMessage));
