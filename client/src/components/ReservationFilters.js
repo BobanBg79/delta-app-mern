@@ -8,6 +8,7 @@ import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
+import { setHoursForSearchReservation } from '../utils/date';
 
 const ReservationFilters = ({ onSearch, currentSearchCriteria = {} }) => {
   const [dateRange, setDateRange] = useState([null, null]);
@@ -30,8 +31,10 @@ const ReservationFilters = ({ onSearch, currentSearchCriteria = {} }) => {
     // Update apartment selection
     setSelectedApartmentId(apartmentId || '');
   }, [currentSearchCriteria]);
-  const handleDateRangeChange = (value) => {
-    setDateRange(value);
+  const handleDateRangeChange = (dateRangeArr) => {
+    const normalizedDateTimeRange = setHoursForSearchReservation(dateRangeArr);
+
+    setDateRange(normalizedDateTimeRange);
   };
 
   const handleApartmentChange = (event) => {

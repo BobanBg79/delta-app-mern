@@ -33,6 +33,23 @@ export const setReservationHours = (dateRangeArr) =>
     return dateObj.getTime();
   });
 
+/**
+ * @description set time for search based on plannedCHeckIn value: first item in array is startDate
+ * for which time should be 00:00:00 and the second item is endDate which time is set to 23:59:59
+ * so that we grab in the search all reservations which plannedCheckIn is in this range
+ * @param {Array[String]} dateRangeArr
+ * @returns timestamp
+ */
+export const setHoursForSearchReservation = (dateRangeArr) =>
+  dateRangeArr.map((dateStr, index) => {
+    const dateObj = new Date(dateStr);
+    dateObj.setHours(index ? 23 : 0);
+    dateObj.setMinutes(index ? 59 : 0);
+    dateObj.setSeconds(index ? 59 : 0);
+    dateObj.setMilliseconds(index ? 999 : 0);
+    return dateObj.getTime();
+  });
+
 export const extractDateElements = (timestamp) => {
   const dateObject = new Date(timestamp);
   const dayIndex = dateObject.getDay();
