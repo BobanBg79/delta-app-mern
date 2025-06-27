@@ -59,6 +59,13 @@ const FormContainer = ({ formContainerProps, children }) => {
     setFormState(newFormData);
   };
 
+  const onBatchInputChange = (updates) => {
+    const newFormData = updates.reduce((acc, { path, value }) => {
+      return nestFieldValue(acc, path, value);
+    }, formState);
+    setFormState(newFormData);
+  };
+
   const onSubmit = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -88,6 +95,7 @@ const FormContainer = ({ formContainerProps, children }) => {
         entityIdFromUrlParam,
         onDatePickerChange,
         onInputChange,
+        onBatchInputChange,
         onSubmit,
       });
     }

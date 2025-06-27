@@ -22,6 +22,7 @@ const ReservationForm = ({
   entityIdFromUrlParam,
   onDatePickerChange,
   onInputChange,
+  onBatchInputChange,
   onSubmit,
 }) => {
   const dispatch = useDispatch();
@@ -37,6 +38,8 @@ const ReservationForm = ({
     bookingAgent = '',
     pricePerNight = '',
     totalAmount = '',
+    firstName = '',
+    lastName = '',
     reservationNotes = '',
   } = formState || {};
 
@@ -165,27 +168,6 @@ const ReservationForm = ({
             </Row>
           )}
 
-          {/* Time Selection */}
-          <Row className="mb-4">
-            <Col xs="12">
-              <h6>Expected Arrival & Departure Times</h6>
-            </Col>
-            <Col xs="6">
-              <FloatingLabel controlId="plannedArrivalTime" label="Planned arrival time" className="mb-3">
-                <Form.Control type="time" value={plannedArrivalTime} onChange={onInputChange(['plannedArrivalTime'])} />
-              </FloatingLabel>
-            </Col>
-            <Col xs="6">
-              <FloatingLabel controlId="plannedCheckoutTime" label="Planned check-out time" className="mb-3">
-                <Form.Control
-                  type="time"
-                  value={plannedCheckoutTime}
-                  onChange={onInputChange(['plannedCheckoutTime'])}
-                />
-              </FloatingLabel>
-            </Col>
-          </Row>
-
           {/* Apartment and Contact */}
           <Row className="mb-4">
             <Col xs="6">
@@ -206,23 +188,7 @@ const ReservationForm = ({
                 <Form.Control.Feedback type="invalid">Please choose apartment.</Form.Control.Feedback>
               </FloatingLabel>
             </Col>
-            <Col xs="6">
-              <FloatingLabel controlId="phoneNumber" label="Contact number" className="mb-3">
-                <Form.Control
-                  required
-                  type="text"
-                  value={phoneNumber}
-                  onChange={onInputChange(['phoneNumber'])}
-                  pattern="^\+?[\d\s\-\(\)]{7,}$"
-                  placeholder="Contact number for this reservation"
-                />
-                <Form.Control.Feedback type="invalid">Please provide a valid contact number.</Form.Control.Feedback>
-              </FloatingLabel>
-            </Col>
-          </Row>
-
-          {/* Booking Agent */}
-          <Row className="mb-4">
+            {/* Booking Agent */}
             <Col xs="6">
               <FloatingLabel label="Booking Agent (Optional)" className="mb-3">
                 <Form.Select
@@ -241,7 +207,6 @@ const ReservationForm = ({
               </FloatingLabel>
             </Col>
           </Row>
-
           {/* Pricing */}
           <Row className="mb-4">
             <Col xs="12">
@@ -282,9 +247,46 @@ const ReservationForm = ({
               </div>
             </Col>
           </Row>
+          <Row className="mb-4">
+            <Col xs="12">
+              <h6>Guest Information</h6>
+            </Col>
+
+            {/* Name Fields */}
+            <Col xs="6">
+              <FloatingLabel controlId="firstName" label="First Name" className="mb-3">
+                <Form.Control type="text" value={firstName} placeholder="First Name" disabled />
+              </FloatingLabel>
+            </Col>
+            <Col xs="6">
+              <FloatingLabel controlId="lastName" label="Last Name" className="mb-3">
+                <Form.Control type="text" value={lastName} disabled placeholder="Last Name" />
+              </FloatingLabel>
+            </Col>
+            <Col xs="6">
+              <FloatingLabel controlId="phoneNumber" label="Contact number" className="mb-3">
+                <Form.Control
+                  required
+                  type="text"
+                  value={phoneNumber}
+                  onChange={onInputChange(['phoneNumber'])}
+                  pattern="^\+?[\d\s\-\(\)]{7,}$"
+                  placeholder="Contact number for this reservation"
+                />
+                <Form.Control.Feedback type="invalid">Please provide a valid contact number.</Form.Control.Feedback>
+              </FloatingLabel>
+            </Col>
+            {/* Guest Information - NEW COMPONENT */}
+            <Col xs="12">
+              <GuestInfo formState={formState} onBatchInputChange={onBatchInputChange} />
+            </Col>
+          </Row>
 
           {/* Notes */}
           <Row className="mb-4">
+            <Col xs="12">
+              <h6>Additional Information</h6>
+            </Col>
             <Col xs="12">
               <FloatingLabel controlId="reservationNotes" label="Other requests and notes" className="mb-3">
                 <Form.Control
@@ -296,6 +298,26 @@ const ReservationForm = ({
                   placeholder="Guest needs baby crib, late night check-in, etc."
                 />
                 <Form.Text className="text-muted">{reservationNotes?.length || 0}/255 characters</Form.Text>
+              </FloatingLabel>
+            </Col>
+          </Row>
+          {/* Time Selection */}
+          <Row className="mb-4">
+            <Col xs="12">
+              <h6>Expected Arrival & Departure Times</h6>
+            </Col>
+            <Col xs="6">
+              <FloatingLabel controlId="plannedArrivalTime" label="Planned arrival time" className="mb-3">
+                <Form.Control type="time" value={plannedArrivalTime} onChange={onInputChange(['plannedArrivalTime'])} />
+              </FloatingLabel>
+            </Col>
+            <Col xs="6">
+              <FloatingLabel controlId="plannedCheckoutTime" label="Planned check-out time" className="mb-3">
+                <Form.Control
+                  type="time"
+                  value={plannedCheckoutTime}
+                  onChange={onInputChange(['plannedCheckoutTime'])}
+                />
               </FloatingLabel>
             </Col>
           </Row>
@@ -311,12 +333,6 @@ const ReservationForm = ({
           )}
         </fieldset>
       </Form>
-      {/* Guest Information - NEW COMPONENT */}
-      <Row className="mb-4">
-        <Col xs="12">
-          <GuestInfo formState={formState} onInputChange={onInputChange} />
-        </Col>
-      </Row>
     </div>
   );
 };

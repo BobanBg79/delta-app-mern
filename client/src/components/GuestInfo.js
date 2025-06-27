@@ -12,7 +12,7 @@ import { guestActions } from '../modules/guest';
 const { SUCCESS, ERROR } = messageConstants;
 const { showMessageToast } = msgOperations;
 
-const GuestInfo = ({ formState, onInputChange }) => {
+const GuestInfo = ({ formState, onBatchInputChange }) => {
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('search');
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,13 +42,22 @@ const GuestInfo = ({ formState, onInputChange }) => {
     }
   };
 
-  const handleAssignGuest = (guestId) => {
+  // Replace your current handleAssignGuest function with this:
+  const handleAssignGuest = (guest) => {
     // Update the reservation form state with the selected guest ID
-    onInputChange(['guestId'])({ target: { value: guestId } });
+    const { _id: guestId, phoneNumber, firstName, lastName } = guest;
+
+    // Use the new batch update function instead of multiple onInputChange calls
+    onBatchInputChange([
+      { path: ['guestId'], value: guestId },
+      { path: ['phoneNumber'], value: phoneNumber },
+      { path: ['firstName'], value: firstName },
+      { path: ['lastName'], value: lastName },
+    ]);
+
     setSelectedGuestId(guestId);
     dispatch(showMessageToast('Guest assigned to reservation successfully!', SUCCESS));
   };
-
   const handleGuestCreateSuccess = (newGuest) => {
     setCreatedGuest(newGuest);
     dispatch(showMessageToast('Guest created successfully!', SUCCESS));
@@ -129,7 +138,7 @@ const GuestInfo = ({ formState, onInputChange }) => {
                           <Button
                             variant={currentGuestId === guest._id ? 'success' : 'outline-primary'}
                             size="sm"
-                            onClick={() => handleAssignGuest(guest._id)}
+                            onClick={() => handleAssignGuest(guest)}
                             disabled={currentGuestId === guest._id}
                           >
                             {currentGuestId === guest._id ? 'Assigned' : 'Assign Guest'}

@@ -9,6 +9,8 @@ const ReservationModel = {
   plannedCheckoutTime: '',
   apartment: '', // ObjectId reference
   phoneNumber: '',
+  firstName: '',
+  lastName: '',
   bookingAgent: '', // ObjectId reference - now optional (empty string means direct reservation)
   pricePerNight: '',
   totalAmount: '',

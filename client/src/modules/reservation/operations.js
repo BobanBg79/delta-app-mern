@@ -21,8 +21,11 @@ export const getReservation = (reservationId) => async (dispatch) => {
     dispatch(setReservationFetchStart());
     const response = await axios.get(`/api/reservations/${reservationId}`);
     const { reservation } = response.data;
+
     if (reservation.guest) {
       reservation.guestId = reservation.guest._id || reservation.guest;
+      reservation.firstName = reservation.guest.firstName || '';
+      reservation.lastName = reservation.guest.lastName || '';
     } else {
       reservation.guestId = '';
     }
