@@ -53,12 +53,7 @@ const RolesList = () => {
                 <td>{role.isEmployeeRole ? 'Yes' : 'No'}</td>
                 <td>{role.permissions?.length || 0}</td>
                 <td>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleRoleClick(role._id)}
-                    disabled={role.name === 'ADMIN'} // Prevent admin from editing admin role
-                  >
+                  <Button variant="primary" size="sm" onClick={() => handleRoleClick(role._id)}>
                     {role.name === 'ADMIN' ? 'View' : 'Edit Permissions'}
                   </Button>
                 </td>
