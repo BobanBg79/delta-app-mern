@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
-const { requirePermission } = require('../../middleware/permission');
 const Role = require('../../models/Role');
 const Permission = require('../../models/Permission');
 
 // @route   GET api/roles
 // @desc    Get all roles (admin only)
 // @access  Private
-router.get('/', auth, requirePermission('CAN_MANAGE_ROLES'), async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const roles = await Role.find({}).populate('permissions', 'name description').sort({ name: 1 });
 
@@ -22,7 +21,7 @@ router.get('/', auth, requirePermission('CAN_MANAGE_ROLES'), async (req, res) =>
 // @route   GET api/roles/:id
 // @desc    Get single role by ID (admin only)
 // @access  Private
-router.get('/:id', auth, requirePermission('CAN_MANAGE_ROLES'), async (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
     const role = await Role.findById(req.params.id).populate('permissions', 'name description');
 
@@ -43,7 +42,7 @@ router.get('/:id', auth, requirePermission('CAN_MANAGE_ROLES'), async (req, res)
 // @route   PUT api/roles/:id
 // @desc    Update role permissions (admin only)
 // @access  Private
-router.put('/:id', auth, requirePermission('CAN_MANAGE_ROLES'), async (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
     const { permissions } = req.body;
 

@@ -70,7 +70,6 @@ const seedRoles = async () => {
       CAN_VIEW_ROLE,
       CAN_CREATE_ROLE,
       CAN_UPDATE_ROLE,
-      CAN_DELETE_ROLE,
       CAN_VIEW_EMPLOYEE,
       CAN_CREATE_EMPLOYEE,
       CAN_UPDATE_EMPLOYEE,

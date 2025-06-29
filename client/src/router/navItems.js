@@ -6,6 +6,13 @@ const navItems = [
     strict: true,
   },
   {
+    label: 'Roles',
+    path: '/roles',
+    exact: false,
+    strict: false,
+    adminOnly: true,
+  },
+  {
     label: 'Apartments',
     path: '/apartments',
     exact: false,

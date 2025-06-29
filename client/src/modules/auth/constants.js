@@ -1,8 +1,8 @@
 export const USER_ROLES = {
-  admin: 'admin',
-  owner: 'owner',
-  manager: 'manager',
-  cleaningManager: 'cleaning_manager',
-  cleaningLady: 'cleaning_lady',
-  employee: 'employee',
+  ADMIN: 'ADMIN',
+  OWNER: 'OWNER',
+  MANAGER: 'MANAGER',
+  HOST: 'HOST',
+  CLEANING_LADY: 'CLEANING_LADY',
+  HANDY_MAN: 'HANDY_MAN',
 };

@@ -1,26 +1,19 @@
-const USER_ROLES = {
-  admin: 'admin',
-  owner: 'owner',
-  manager: 'manager',
-  cleaningManager: 'cleaning_manager',
-  cleaningLady: 'cleaning_lady',
-  employee: 'employee',
+const EMPLOYEE_TYPE_ROLES = {
+  MANAGER: 'MANAGER',
+  CLEANING_LADY: 'CLEANING_LADY',
+  HOST: 'HOST',
+  HANDY_MAN: 'HANDY_MAN',
 };
 
-const { admin, owner, manager } = USER_ROLES;
-
-const CAN_EDIT_APARTMENT_DETAILS = [admin, owner, manager];
-const CAN_VIEW_APARTMENT_DETAILS = [admin, owner, manager];
-const CAN_VIEW_APARTMENT_CONTRACT_DETAILS = [admin, owner];
-const CAN_DELETE_APARTMENT = [admin, owner];
+const USER_ROLES = {
+  ADMIN: 'ADMIN',
+  OWNER: 'OWNER',
+  ...EMPLOYEE_TYPE_ROLES,
+};
 
 const accessTokenExpiresIn = '15 days';
 
 module.exports = {
   USER_ROLES,
-  CAN_EDIT_APARTMENT_DETAILS,
-  CAN_VIEW_APARTMENT_DETAILS,
-  CAN_VIEW_APARTMENT_CONTRACT_DETAILS,
-  CAN_DELETE_APARTMENT,
   accessTokenExpiresIn,
 };
