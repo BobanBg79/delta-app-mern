@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, useHistory } from 'react-router-dom';
-import { Row, Col, Button, Alert, Card, Form, Badge } from 'react-bootstrap';
+import { Row, Col, Button, Alert, Card } from 'react-bootstrap';
 import { getRole, getPermissions, updateRolePermissions } from '../../modules/role/operations';
 import { resetRole } from '../../modules/role/actions';
+import PermissionsSelector from '../../components/PermissionsSelector';
+import GroupedPermissions from '../../components/GroupedPermissions';
+
 const RoleView = () => {
   const { roleId } = useParams();
   const dispatch = useDispatch();
@@ -39,6 +42,39 @@ const RoleView = () => {
   // Memoize derived values for performance
   const canEdit = useMemo(() => role?.name !== 'ADMIN', [role?.name]);
   const appliedPermissions = useMemo(() => role?.permissions || [], [role?.permissions]);
+
+  // Helper function to extract entity from permission name
+  const getEntityFromPermission = useCallback((permissionName) => {
+    const parts = permissionName.split('_');
+    return parts[parts.length - 1]; // Last part is the entity
+  }, []);
+
+  // Group applied permissions by entity
+  const groupedAppliedPermissions = useMemo(() => {
+    if (!appliedPermissions.length) return {};
+
+    return appliedPermissions.reduce((groups, permission) => {
+      const entity = getEntityFromPermission(permission.name);
+      if (!groups[entity]) {
+        groups[entity] = [];
+      }
+      groups[entity].push(permission);
+      return groups;
+    }, {});
+  }, [appliedPermissions, getEntityFromPermission]);
+
+  // Get all unique entities from all permissions for consistent ordering
+  const allEntities = useMemo(() => {
+    if (!permissions || !permissions.length) return [];
+
+    const entities = new Set();
+    permissions.forEach((permission) => {
+      const entity = getEntityFromPermission(permission.name);
+      entities.add(entity);
+    });
+
+    return Array.from(entities).sort();
+  }, [permissions, getEntityFromPermission]);
 
   // Optimize permission change handler
   const handlePermissionChange = useCallback((permissionId, isChecked) => {
@@ -111,56 +147,24 @@ const RoleView = () => {
               <h5>Applied Permissions ({appliedPermissions.length})</h5>
             </Card.Header>
             <Card.Body>
-              {appliedPermissions.length > 0 ? (
-                <div>
-                  {appliedPermissions.map((permission) => (
-                    <div key={permission._id} className="mb-2">
-                      <Badge bg="success" className="me-2">
-                        {permission.name}
-                      </Badge>
-                      {permission.description && <small className="text-muted d-block">{permission.description}</small>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Alert variant="info">No permissions assigned to this role.</Alert>
-              )}
+              <GroupedPermissions
+                permissions={appliedPermissions}
+                showAsCheckboxes={false}
+                emptyMessage="No permissions assigned to this role."
+              />
             </Card.Body>
           </Card>
         </Col>
 
         <Col md={6}>
-          <Card>
-            <Card.Header>
-              <h5>All Available Permissions</h5>
-              {!canEdit && <small className="text-muted">ADMIN role permissions cannot be modified</small>}
-            </Card.Header>
-            <Card.Body>
-              {permissions && permissions.length > 0 ? (
-                <Form>
-                  {permissions.map((permission) => (
-                    <Form.Check
-                      key={permission._id}
-                      type="checkbox"
-                      id={`permission-${permission._id}`}
-                      label={
-                        <div>
-                          <strong>{permission.name}</strong>
-                          {permission.description && <div className="text-muted small">{permission.description}</div>}
-                        </div>
-                      }
-                      checked={selectedPermissions.includes(permission._id)}
-                      onChange={(e) => handlePermissionChange(permission._id, e.target.checked)}
-                      disabled={!canEdit || !isEditing}
-                      className="mb-3"
-                    />
-                  ))}
-                </Form>
-              ) : (
-                <Alert variant="warning">No permissions available.</Alert>
-              )}
-            </Card.Body>
-          </Card>
+          <PermissionsSelector
+            permissions={permissions}
+            selectedPermissions={selectedPermissions}
+            onPermissionChange={handlePermissionChange}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            subtitle={!canEdit ? 'ADMIN role permissions cannot be modified' : null}
+          />
         </Col>
       </Row>
     </div>
