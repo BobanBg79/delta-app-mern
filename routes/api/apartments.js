@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
-const { apartmentEditMiddleware, apartmentDeleteMiddleware } = require('../../middleware/apartmentMiddleware');
-const { check, validationResult } = require('express-validator');
+const { requirePermission } = require('../../middleware/permission');
 
 const Apartment = require('../../models/Apartment');
 
 // @route    GET api/apartments
 // @desc     Get the list of all apartments
 // @access   Private
-router.get('/', auth, async (req, res) => {
+router.get('/', [auth, requirePermission('CAN_VIEW_APARTMENT')], async (req, res) => {
   try {
     const apartments = await Apartment.find();
     res.json(apartments);
@@ -22,7 +21,7 @@ router.get('/', auth, async (req, res) => {
 // @route    GET api/apartments/:apartmentId
 // @desc     Get apartment by apartmentId
 // @access   Private
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', [auth, requirePermission('CAN_VIEW_APARTMENT')], async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     const apartment = await Apartment.findOne({ _id: apartmentId });
@@ -36,7 +35,7 @@ router.get('/:id', auth, async (req, res) => {
 // @route    POST api/apartments
 // @desc     Create apartment
 // @access   Private
-router.post('/', auth, async (req, res) => {
+router.post('/', [auth, requirePermission('CAN_CREATE_APARTMENT')], async (req, res) => {
   try {
     const { body: apartmentData } = req;
     const {
@@ -76,7 +75,7 @@ router.post('/', auth, async (req, res) => {
 // @route    PUT api/apartments/:apartmentId
 // @desc     Update apartment
 // @access   Private
-router.put('/:id', [auth, apartmentEditMiddleware], async (req, res) => {
+router.put('/:id', [auth, requirePermission('CAN_UPDATE_APARTMENT')], async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     let updatedApartment = await Apartment.findOneAndUpdate({ _id: apartmentId }, req.body, { new: true });
@@ -89,7 +88,7 @@ router.put('/:id', [auth, apartmentEditMiddleware], async (req, res) => {
 // @route    DELETE api/apartments/:apartmentId
 // @desc     Delete apartment
 // @access   Private
-router.delete('/:id', [auth, apartmentDeleteMiddleware], async (req, res) => {
+router.delete('/:id', [auth, requirePermission('CAN_DELETE_APARTMENT')], async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     await Apartment.findByIdAndDelete({ _id: apartmentId });
