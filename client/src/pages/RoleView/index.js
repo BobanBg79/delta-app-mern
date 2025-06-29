@@ -39,44 +39,7 @@ const RoleView = () => {
     }
   }, [role]);
 
-  // Memoize derived values for performance
   const canEdit = useMemo(() => role?.name !== 'ADMIN', [role?.name]);
-  const appliedPermissions = useMemo(() => role?.permissions || [], [role?.permissions]);
-
-  // Helper function to extract entity from permission name
-  const getEntityFromPermission = useCallback((permissionName) => {
-    const parts = permissionName.split('_');
-    return parts[parts.length - 1]; // Last part is the entity
-  }, []);
-
-  // Group applied permissions by entity
-  const groupedAppliedPermissions = useMemo(() => {
-    if (!appliedPermissions.length) return {};
-
-    return appliedPermissions.reduce((groups, permission) => {
-      const entity = getEntityFromPermission(permission.name);
-      if (!groups[entity]) {
-        groups[entity] = [];
-      }
-      groups[entity].push(permission);
-      return groups;
-    }, {});
-  }, [appliedPermissions, getEntityFromPermission]);
-
-  // Get all unique entities from all permissions for consistent ordering
-  const allEntities = useMemo(() => {
-    if (!permissions || !permissions.length) return [];
-
-    const entities = new Set();
-    permissions.forEach((permission) => {
-      const entity = getEntityFromPermission(permission.name);
-      entities.add(entity);
-    });
-
-    return Array.from(entities).sort();
-  }, [permissions, getEntityFromPermission]);
-
-  // Optimize permission change handler
   const handlePermissionChange = useCallback((permissionId, isChecked) => {
     setSelectedPermissions((prev) => (isChecked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)));
   }, []);
@@ -92,9 +55,7 @@ const RoleView = () => {
 
   const handleCancel = useCallback(() => {
     // Reset to original permissions
-    if (role && role.permissions) {
-      setSelectedPermissions(role.permissions.map((p) => p._id));
-    }
+    setSelectedPermissions(role.permissions.map((p) => p._id));
     setIsEditing(false);
   }, [role]);
 
@@ -144,11 +105,11 @@ const RoleView = () => {
         <Col md={6}>
           <Card>
             <Card.Header>
-              <h5>Applied Permissions ({appliedPermissions.length})</h5>
+              <h5>Applied Permissions ({role.permissions.length})</h5>
             </Card.Header>
             <Card.Body>
               <GroupedPermissions
-                permissions={appliedPermissions}
+                permissions={role.permissions}
                 showAsCheckboxes={false}
                 emptyMessage="No permissions assigned to this role."
               />
