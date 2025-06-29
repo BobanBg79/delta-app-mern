@@ -11,6 +11,8 @@ import {
   GuestView,
   GuestsList,
 } from '../pages';
+import RolesList from '../pages/RolesList';
+import RoleView from '../pages/RoleView';
 
 const PAGE_URLS = {
   loginUrl: '/login',
@@ -27,6 +29,9 @@ const PAGE_URLS = {
   guestsList: '/guests',
   guestView: '/guests/:guestId',
   guestCreate: '/guests/create',
+  // Add role management routes
+  rolesList: '/roles',
+  roleView: '/roles/:roleId',
 };
 
 const {
@@ -44,6 +49,9 @@ const {
   guestsList,
   guestView,
   guestCreate,
+  // Add these
+  rolesList,
+  roleView,
 } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
@@ -107,4 +115,20 @@ export const PROTECTED_ROUTES = {
     component: GuestView,
   },
   GUEST_VIEW: { title: 'Guest', id: 'guest', path: guestView, component: GuestView },
+  // Add role management routes (admin only)
+  ROLES_LIST: {
+    title: 'Roles Management',
+    id: 'roles_list',
+    isExact: true,
+    path: rolesList,
+    component: RolesList,
+    adminOnly: true, // We'll use this for route protection
+  },
+  ROLE_VIEW: {
+    title: 'Role Details',
+    id: 'role_view',
+    path: roleView,
+    component: RoleView,
+    adminOnly: true,
+  },
 };

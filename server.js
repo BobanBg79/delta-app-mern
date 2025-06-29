@@ -20,6 +20,10 @@ app.use('/api/apartments', require('./routes/api/apartments'));
 app.use('/api/reservations', require('./routes/api/reservations'));
 app.use('/api/guests', require('./routes/api/guests'));
 app.use('/api/booking-agents', require('./routes/api/booking-agents'));
+// Add these new routes
+app.use('/api/roles', require('./routes/api/roles'));
+app.use('/api/permissions', require('./routes/api/permissions'));
+
 // Add this debug route alongside your existing permissions debug route
 app.get('/api/debug/roles', async (req, res) => {
   try {
@@ -38,6 +42,7 @@ app.get('/api/debug/roles', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
   // Set static folder
@@ -51,11 +56,3 @@ if (process.env.NODE_ENV === 'production') {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
-
-/*
-Tasks
-Permission middleware for route protection
-User model updates to include role references
-Authentication integration with role-based access
-Frontend role management components
-*/

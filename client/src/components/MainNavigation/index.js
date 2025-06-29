@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory, useLocation, matchPath } from 'react-router-dom';
 import { authOperations } from '../../modules/auth';
 import Nav from 'react-bootstrap/Nav';
@@ -13,14 +13,31 @@ const MainNavigation = () => {
   const history = useHistory();
   const location = useLocation();
   const dispatch = useDispatch();
+
+  // Get user from Redux state
+  const user = useSelector((state) => state.auth.user);
+
   const logout = () => dispatch(authOperations.logout()).then(() => history.push('/'));
+
   useEffect(() => {
     const routeMatch = navItems.find((navItem) => matchPath(location.pathname, navItem));
     routeMatch && setActiveLink(routeMatch.path);
   }, [location]);
+
+  // Filter nav items based on user role
+  const visibleNavItems = navItems.filter((navItem) => {
+    // If item doesn't require admin access, show it to everyone
+    if (!navItem.adminOnly) {
+      return true;
+    }
+
+    // If item requires admin access, only show to admin users
+    return user?.role === 'ADMIN';
+  });
+
   return (
     <Nav activeKey={activeLink}>
-      {navItems.map(({ path, label }) => (
+      {visibleNavItems.map(({ path, label }) => (
         <Nav.Item key={`${path}-${label}`}>
           <Nav.Link as={Link} to={path} eventKey={path}>
             {label}
