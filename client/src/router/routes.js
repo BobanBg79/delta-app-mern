@@ -29,7 +29,6 @@ const PAGE_URLS = {
   guestsList: '/guests',
   guestView: '/guests/:guestId',
   guestCreate: '/guests/create',
-  // Add role management routes
   rolesList: '/roles',
   roleView: '/roles/:roleId',
 };
