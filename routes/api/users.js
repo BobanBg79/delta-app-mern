@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { accessTokenExpiresIn } = require('../../config/constants');
 const { check, validationResult } = require('express-validator');
 const auth = require('../../middleware/auth');
 const { requirePermission } = require('../../middleware/permission'); // Add permission middleware
@@ -98,6 +97,53 @@ router.get(
       console.error('Get users error:', err.message);
       res.status(500).json({
         errors: [{ msg: 'Server error while retrieving users' }],
+      });
+    }
+  }
+);
+
+// @route    GET api/users/:id
+// @desc     Get user by ID
+// @access   Private (Requires CAN_VIEW_USER permission)
+router.get(
+  '/:id',
+  auth, // First authenticate the user
+  requirePermission('CAN_VIEW_USER'), // Then check for permission
+  check('id', 'Invalid user ID').isMongoId(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findById(req.params.id)
+        .select('-password') // Exclude password field
+        .populate('role', 'name description') // Populate role with name and description
+        .populate('createdBy', 'username'); // Populate who created the user
+
+      if (!user) {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      res.json({
+        message: 'User retrieved successfully',
+        user,
+      });
+    } catch (err) {
+      console.error('Get user by ID error:', err.message);
+
+      // Handle invalid ObjectId format
+      if (err.kind === 'ObjectId') {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      res.status(500).json({
+        errors: [{ msg: 'Server error while retrieving user' }],
       });
     }
   }
