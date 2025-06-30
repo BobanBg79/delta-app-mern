@@ -35,11 +35,11 @@ const UserSchema = new mongoose.Schema(
       required: true,
       ref: 'User',
     },
-    employeeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Employee',
-      default: null,
-    },
+    // employeeId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'Employee',
+    //   default: null,
+    // },
   },
   {
     timestamps: true,

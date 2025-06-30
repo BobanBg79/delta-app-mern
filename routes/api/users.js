@@ -73,4 +73,34 @@ router.post(
   }
 );
 
+// @route    GET api/users
+// @desc     Get all users
+// @access   Private (Requires CAN_VIEW_USER permission)
+router.get(
+  '/',
+  auth, // First authenticate the user
+  requirePermission('CAN_VIEW_USER'), // Changed from CAN_VIEW_USERS to CAN_VIEW_USER
+  async (req, res) => {
+    try {
+      // Get all users and populate role information, exclude passwords
+      const users = await User.find({})
+        .select('-password') // Exclude password field
+        .populate('role', 'name description') // Populate role with name and description
+        .populate('createdBy', 'username') // Populate who created the user
+        .sort({ createdAt: -1 }); // Sort by newest first
+
+      res.json({
+        message: 'Users retrieved successfully',
+        count: users.length,
+        users,
+      });
+    } catch (err) {
+      console.error('Get users error:', err.message);
+      res.status(500).json({
+        errors: [{ msg: 'Server error while retrieving users' }],
+      });
+    }
+  }
+);
+
 module.exports = router;
