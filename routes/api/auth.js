@@ -22,11 +22,11 @@ router.get('/', auth, async (req, res) => {
 });
 
 // @route    POST api/auth
-// @desc     (Login) Authenticate user with email and password & get token
+// @desc     (Login) Authenticate user with username and password & get token
 // @access   Public
 router.post(
   '/',
-  check('email', 'Please include a valid email').isEmail(),
+  check('username', 'Please include a valid username').isEmail(),
   check('password', 'Password is required').exists(),
   async (req, res) => {
     const errors = validationResult(req);
@@ -34,10 +34,10 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     try {
-      let user = await User.findOne({ email });
+      let user = await User.findOne({ username }).populate('role');
 
       if (!user) {
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
@@ -48,11 +48,11 @@ router.post(
       if (!isMatch) {
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }
-
       const payload = {
         user: {
           id: user.id,
-          role: user.role,
+          roleId: user.role._id,
+          roleName: user.role.name,
         },
       };
 

@@ -10,8 +10,9 @@ import Col from 'react-bootstrap/Col';
 const Login = () => {
   const dispatch = useDispatch();
   const history = useHistory();
-  const [inputValues, setInputValues] = useState({ email: '', password: '' });
-  const { email, password } = inputValues;
+  const [inputValues, setInputValues] = useState({ username: '', password: '' });
+  const { username, password } = inputValues;
+
   const onInputFieldChange = (e) => {
     setInputValues({
       ...inputValues,
@@ -33,10 +34,10 @@ const Login = () => {
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
             <Form.Label>Username</Form.Label>
             <Form.Control
-              name="email"
+              name="username"
               type="email"
               placeholder="name@example.com"
-              value={email}
+              value={username}
               onChange={onInputFieldChange}
             />
           </Form.Group>

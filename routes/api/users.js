@@ -2,63 +2,69 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { USER_ROLES, accessTokenExpiresIn } = require('../../config/constants');
+const { accessTokenExpiresIn } = require('../../config/constants');
 const { check, validationResult } = require('express-validator');
+const auth = require('../../middleware/auth');
+const { requirePermission } = require('../../middleware/permission'); // Add permission middleware
 
 const User = require('../../models/User');
 
 // @route    POST api/users/register
 // @desc     Create user
-// @access   Public
+// @access   Private (Requires CAN_CREATE_USER permission)
 router.post(
   '/register',
-  check('email', 'Please include a valid email').isEmail(),
-  check('fname', 'First name is required').notEmpty(),
-  check('lname', 'Last name is required').notEmpty(),
-  check('password', 'Please enter a password with 6 or more characters').isLength({ min: 6 }),
-  check('telephone', 'Telephone is required').notEmpty(),
-  check('role', 'User role is required').custom((role) => Object.values(USER_ROLES).includes(role)),
+  auth, // First authenticate the user
+  requirePermission('CAN_CREATE_USER'), // Then check for permission
+  check('username', 'Username must be a valid email').isEmail(),
+  check(
+    'password',
+    'Password must be at least 8 characters with at least one uppercase letter and one special character'
+  )
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
+    .withMessage('Password must contain at least one uppercase letter and one special character'),
+  check('role', 'Role must be a valid ObjectId').isMongoId(),
+  check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, fname, lname, password, telephone, role } = req.body;
+    const { username, password, role, employeeId } = req.body;
 
     try {
-      let user = await User.findOne({ email });
+      let user = await User.findOne({ username });
 
       if (user) {
         return res.status(400).json({ errors: [{ msg: 'User already exists' }] });
       }
 
-      user = new User({
-        email,
-        fname,
-        lname,
+      const userData = {
+        username,
         password,
-        telephone,
         role,
-      });
+        createdBy: req?.user?.id, // Use the authenticated user's ID
+      };
+
+      // Only add employeeId if it's provided
+      if (employeeId) {
+        userData.employeeId = employeeId;
+      }
+
+      user = new User(userData);
 
       const salt = await bcrypt.genSalt(10);
-
       user.password = await bcrypt.hash(password, salt);
 
       await user.save();
 
-      const payload = {
-        user: {
-          id: user.id,
-          role: user.role,
-        },
-      };
-
-      jwt.sign(payload, process.env.JSON_WT_SECRET, { expiresIn: accessTokenExpiresIn }, (err, token) => {
-        if (err) throw err;
-        const { password, ...responseUser } = user._doc;
-        res.json({ token, user: responseUser });
+      // Don't generate a token for the new user, just return success
+      const { password: _, ...responseUser } = user._doc;
+      res.status(201).json({
+        message: 'User created successfully',
+        user: responseUser,
       });
     } catch (err) {
       console.error(err.message);

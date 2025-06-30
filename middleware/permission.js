@@ -9,14 +9,14 @@ const requirePermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
       // Ensure user is authenticated (should be set by auth middleware)
-      if (!req.user || !req.user.role) {
+      if (!req.user || !req.user.roleId) {
         return res.status(401).json({
           errors: [{ msg: 'User role not found' }],
         });
       }
 
       // Get user's role with populated permissions
-      const userRole = await Role.findOne({ name: req.user.role }).populate('permissions', 'name');
+      const userRole = await Role.findOne({ _id: req.user.roleId }).populate('permissions', 'name');
 
       if (!userRole) {
         return res.status(403).json({

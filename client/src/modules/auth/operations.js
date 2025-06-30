@@ -50,7 +50,10 @@ const registerUser = (data) => async (dispatch) => {
 const login = (data) => async (dispatch) => {
   dispatch(loginAttempt());
   try {
-    const response = await axios.post('/api/auth', data);
+    const response = await axios.post('/api/auth', {
+      username: data.username, // Now this matches the form field
+      password: data.password,
+    });
     dispatch(loginSuccess(response.data));
     dispatch(showMessageToast('Successfully logged in', SUCCESS));
   } catch (err) {
