@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema(
     role: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Role',
     },
     // employeeId: {
     //   type: mongoose.Schema.Types.ObjectId,
