@@ -13,7 +13,7 @@ const ProtectedRoute = ({ component: Component, id, token, loading, user, adminO
       }
 
       // Check if route requires admin access and user is not admin
-      if (adminOnly && user?.role !== 'ADMIN') {
+      if (adminOnly && user?.role?.name !== 'ADMIN') {
         return <Redirect to={{ pathname: '/', state: { from: props.location } }} />;
       }
 

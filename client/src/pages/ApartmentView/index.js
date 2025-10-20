@@ -24,7 +24,7 @@ const ApartmentView = () => {
   // redux state
   const { apartment, fetching } = useSelector((state) => state.apartment);
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
-  const userCanEditApartment = CAN_EDIT_APARTMENT_DETAILS.includes(userRole);
+  const userCanEditApartment = CAN_EDIT_APARTMENT_DETAILS.includes(userRole.name);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);

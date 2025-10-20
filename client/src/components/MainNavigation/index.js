@@ -32,7 +32,7 @@ const MainNavigation = () => {
     }
 
     // If item requires admin access, only show to admin users
-    return user?.role === 'ADMIN';
+    return user?.role?.name === 'ADMIN';
   });
 
   return (
