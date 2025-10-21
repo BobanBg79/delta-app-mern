@@ -10,6 +10,7 @@ configureAxios(store);
 store.dispatch(authOperations.authenticateUser());
 
 function App() {
+  console.log(1111);
   return (
     <Provider store={store}>
       <div className="App">
