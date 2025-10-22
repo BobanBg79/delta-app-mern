@@ -5,6 +5,7 @@ import ApartmentsTable from './ApartmentsTable';
 import { useDispatch } from 'react-redux';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import TableHeader from '../../components/TableHeader';
+import { USER_PERMISSIONS } from '../../constants';
 
 const ApartmentsList = () => {
   const dispatch = useDispatch();
@@ -24,7 +25,12 @@ const ApartmentsList = () => {
 
   return (
     <div>
-      <TableHeader title="Apartments" createEntityPath="/apartments/create" createEntityLabel="Create apartment" />
+      <TableHeader
+        title="Apartments"
+        createEntityPath="/apartments/create"
+        createEntityLabel="Create apartment"
+        createPermission={USER_PERMISSIONS.CAN_CREATE_APARTMENT}
+      />
       {apartments.length ? (
         <>
           <ApartmentsTable apartments={apartments} showModal={showModal} />

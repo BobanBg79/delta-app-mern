@@ -8,14 +8,15 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import { getApartment, createApartment, updateApartment } from '../../modules/apartment/operations';
-import { apartmentConstants, apartmentActions } from '../../modules/apartment';
+import { apartmentActions } from '../../modules/apartment';
 import ApartmentModel from './ApartmentModel';
 import ParkingDetails from './ParkingDetails';
 import AddressDetails from './AddressDetails';
 import ApartmentFeatures from './ApartmentFeatures';
 import RentContractDetails from './RentContractDetails';
+import { hasPermission } from '../../utils/permissions';
+import { USER_PERMISSIONS } from '../../constants';
 
-const { CAN_EDIT_APARTMENT_DETAILS } = apartmentConstants;
 
 const ApartmentView = () => {
   const { apartmentId } = useParams();
@@ -24,7 +25,8 @@ const ApartmentView = () => {
   // redux state
   const { apartment, fetching } = useSelector((state) => state.apartment);
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
-  const userCanEditApartment = CAN_EDIT_APARTMENT_DETAILS.includes(userRole.name);
+  const userPermissions = userRole?.permissions || [];
+  const userCanEditApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_APARTMENT);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);

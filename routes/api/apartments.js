@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const { requirePermission } = require('../../middleware/permission');
 
 const Apartment = require('../../models/Apartment');
 
@@ -33,8 +34,8 @@ router.get('/:id', auth, async (req, res) => {
 
 // @route    POST api/apartments
 // @desc     Create apartment
-// @access   Private
-router.post('/', auth, async (req, res) => {
+// @access   Private (requires CAN_CREATE_APARTMENT permission)
+router.post('/', auth, requirePermission('CAN_CREATE_APARTMENT'), async (req, res) => {
   try {
     const { body: apartmentData } = req;
     const {
