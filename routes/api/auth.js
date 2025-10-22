@@ -23,7 +23,8 @@ router.get('/', auth, async (req, res) => {
           select: 'name -_id',
           model: 'Permission',
         },
-      });
+      })
+      .lean();
 
     // Transform permissions from objects to strings
     if (user.role && user.role.permissions) {
@@ -90,12 +91,13 @@ router.post(
       jwt.sign(payload, process.env.JSON_WT_SECRET, { expiresIn: '15 days' }, (err, token) => {
         if (err) throw err;
 
-        // Transform permissions from objects to strings
-        if (user.role && user.role.permissions) {
-          user.role.permissions = user.role.permissions.map((permission) => permission.name);
+        // Convert to plain object and transform permissions
+        const userObj = user.toObject();
+        if (userObj.role && userObj.role.permissions) {
+          userObj.role.permissions = userObj.role.permissions.map((permission) => permission.name);
         }
 
-        const { password, ...responseUser } = user._doc;
+        const { password, ...responseUser } = userObj;
         res.json({ token, user: responseUser });
       });
     } catch (err) {
