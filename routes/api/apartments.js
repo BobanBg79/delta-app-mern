@@ -20,8 +20,8 @@ router.get('/', auth, requirePermission('CAN_VIEW_APARTMENT'), async (req, res) 
 
 // @route    GET api/apartments/:apartmentId
 // @desc     Get apartment by apartmentId
-// @access   Private
-router.get('/:id', auth, async (req, res) => {
+// @access   Private (requires CAN_VIEW_APARTMENT permission)
+router.get('/:id', auth, requirePermission('CAN_VIEW_APARTMENT'), async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     const apartment = await Apartment.findOne({ _id: apartmentId });
@@ -74,8 +74,8 @@ router.post('/', auth, requirePermission('CAN_CREATE_APARTMENT'), async (req, re
 
 // @route    PUT api/apartments/:apartmentId
 // @desc     Update apartment
-// @access   Private
-router.put('/:id', auth, async (req, res) => {
+// @access   Private (requires CAN_UPDATE_APARTMENT permission)
+router.put('/:id', auth, requirePermission('CAN_UPDATE_APARTMENT'), async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     let updatedApartment = await Apartment.findOneAndUpdate({ _id: apartmentId }, req.body, { new: true });
@@ -87,8 +87,8 @@ router.put('/:id', auth, async (req, res) => {
 
 // @route    DELETE api/apartments/:apartmentId
 // @desc     Delete apartment
-// @access   Private
-router.delete('/:id', auth, async (req, res) => {
+// @access   Private (requires CAN_DELETE_APARTMENT permission)
+router.delete('/:id', auth, requirePermission('CAN_DELETE_APARTMENT'), async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
     await Apartment.findByIdAndDelete({ _id: apartmentId });

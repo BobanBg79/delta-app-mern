@@ -4,17 +4,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { faEye } from '@fortawesome/free-solid-svg-icons';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
-import { apartmentConstants } from '../../modules/apartment';
 import Tooltip from 'react-bootstrap/Tooltip';
 import { useHistory } from 'react-router-dom';
-
-const { CAN_DELETE_APARTMENT } = apartmentConstants;
+import { hasPermission } from '../../utils/permissions';
+import { USER_PERMISSIONS } from '../../constants';
 
 const TableActionDropdown = ({ apartmentId, showModal }) => {
   //   const dispatch = useDispatch();
   const history = useHistory();
   // redux state
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
+  const userPermissions = userRole?.permissions || [];
+  const userCanViewApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_APARTMENT);
+  const userCanDeleteApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DELETE_APARTMENT);
   // methods
   const goToApartmentDetails = () => history.push(`/apartments/${apartmentId}`);
   const renderTooltip = (props) => (
@@ -36,11 +38,13 @@ const TableActionDropdown = ({ apartmentId, showModal }) => {
     <Dropdown onClick={(e) => e.stopPropagation()}>
       <Dropdown.Toggle variant="secondary" className="apartments-list-action-dropdown" />
       <Dropdown.Menu>
-        <Dropdown.Item onClick={goToApartmentDetails}>
-          <FontAwesomeIcon icon={faEye} />
-          <span>Details</span>
-        </Dropdown.Item>
-        {CAN_DELETE_APARTMENT.includes(userRole) ? (
+        {userCanViewApartment && (
+          <Dropdown.Item onClick={goToApartmentDetails}>
+            <FontAwesomeIcon icon={faEye} />
+            <span>Details</span>
+          </Dropdown.Item>
+        )}
+        {userCanDeleteApartment ? (
           <div>{renderDeleteButton()}</div>
         ) : (
           <OverlayTrigger placement="left" delay={{ show: 250, hide: 400 }} overlay={renderTooltip}>

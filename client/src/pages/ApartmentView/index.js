@@ -26,7 +26,8 @@ const ApartmentView = () => {
   const { apartment, fetching } = useSelector((state) => state.apartment);
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
   const userPermissions = userRole?.permissions || [];
-  const userCanEditApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_APARTMENT);
+  const userCanCreateApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_APARTMENT);
+  const userCanUpdateApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_UPDATE_APARTMENT);
   // local state
   const [isEditable, setIsEditable] = useState(!apartmentId);
   const [formState, setFormState] = useState(apartment || ApartmentModel);
@@ -77,11 +78,11 @@ const ApartmentView = () => {
 
   return (
     <div className="form-container">
-      {userCanEditApartment && (
+      {(apartmentId ? userCanUpdateApartment : userCanCreateApartment) && (
         <Row className="form-heading">
           <Col>
             <h1>{apartmentId ? apartment && apartment.name : 'Create new apartment'}</h1>
-            {apartmentId && (
+            {apartmentId && userCanUpdateApartment && (
               <>
                 {isEditable ? (
                   <Button onClick={cancelEditing} variant="danger" className="mx-2">
@@ -119,7 +120,7 @@ const ApartmentView = () => {
             <ParkingDetails parking={parking} onInputChange={onInputChange} />
             <ApartmentFeatures apartmentFeatures={apartmentFeatures} onInputChange={onInputChange} />
             <RentContractDetails rentContractDetails={rentContractDetails} onInputChange={onInputChange} />
-            {userCanEditApartment && (
+            {((apartmentId && userCanUpdateApartment) || (!apartmentId && userCanCreateApartment)) && (
               <Button variant="primary" type="submit">
                 Submit
               </Button>
