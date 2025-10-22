@@ -7,6 +7,7 @@ const auth = require('../../middleware/auth');
 const { requirePermission } = require('../../middleware/permission'); // Add permission middleware
 
 const User = require('../../models/User');
+const Role = require('../../models/Role');
 
 // @route    POST api/users/register
 // @desc     Create user
@@ -16,6 +17,8 @@ router.post(
   auth, // First authenticate the user
   requirePermission('CAN_CREATE_USER'), // Then check for permission
   check('username', 'Username must be a valid email').isEmail(),
+  check('fname', 'First name is required').notEmpty().trim(),
+  check('lname', 'Last name is required').notEmpty().trim(),
   check(
     'password',
     'Password must be at least 8 characters with at least one uppercase letter and one special character'
@@ -23,7 +26,7 @@ router.post(
     .isLength({ min: 8 })
     .matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
     .withMessage('Password must contain at least one uppercase letter and one special character'),
-  check('role', 'Role must be a valid ObjectId').isMongoId(),
+  check('role', 'Role name is required').notEmpty().isString(),
   check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
     const errors = validationResult(req);
@@ -31,20 +34,32 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, password, role, employeeId } = req.body;
+    const { username, password, fname, lname, role, employeeId } = req.body;
 
     try {
+      // Check if user already exists
       let user = await User.findOne({ username });
 
       if (user) {
         return res.status(400).json({ errors: [{ msg: 'User already exists' }] });
       }
 
+      // Find the role by name in the database
+      const roleFromDB = await Role.findOne({ name: role.toUpperCase() });
+
+      if (!roleFromDB) {
+        return res.status(400).json({
+          errors: [{ msg: `Role '${role}' not found in database` }]
+        });
+      }
+
       const userData = {
         username,
         password,
-        role,
-        createdBy: req?.user?.id, // Use the authenticated user's ID
+        fname,
+        lname,
+        role: roleFromDB._id, // Use the role ID from database
+        createdBy: req.user.id, // Use the authenticated user's ID
       };
 
       // Only add employeeId if it's provided

@@ -17,7 +17,7 @@ router.get('/', auth, async (req, res) => {
       .select('-password')
       .populate({
         path: 'role',
-        select: 'name permissions isEmployeeRole -_id',
+        select: 'name permissions isEmployeeRole',
         populate: {
           path: 'permissions',
           select: 'name -_id',
@@ -55,14 +55,14 @@ router.post(
     try {
       let user = await User.findOne({ username }).populate({
         path: 'role',
-        select: 'name permissions isEmployeeRole -_id',
+        select: 'name permissions isEmployeeRole',
         populate: {
           path: 'permissions',
           select: 'name -_id',
           model: 'Permission',
         },
       });
-
+      
       if (!user) {
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }
@@ -72,10 +72,17 @@ router.post(
       if (!isMatch) {
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }
+
+      // Ensure role is populated and has an _id
+      if (!user.role || !user.role._id) {
+        console.error('User role not properly populated:', user.role);
+        return res.status(500).json({ errors: [{ msg: 'User role configuration error' }] });
+      }
+
       const payload = {
         user: {
           id: user.id,
-          roleId: user.role._id,
+          roleId: user.role._id.toString(), // Convert ObjectId to string for JWT
           roleName: user.role.name,
         },
       };
