@@ -4,33 +4,43 @@ import { connect } from 'react-redux';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
-const ProtectedRoute = ({ component: Component, id, token, loading, user, adminOnly, ...rest }) => (
-  <Route
-    {...rest}
-    render={(props) => {
-      if (!token) {
-        return <Redirect to={{ pathname: '/login', state: { from: props.location } }} />;
-      }
+const ProtectedRoute = ({ component: Component, id, token, loading, user, requiredPermission, ...rest }) => {
+  // Helper function to check if user has the required permission
+  const hasPermission = (userPermissions, requiredPerm) => {
+    if (!requiredPerm) return true; // No permission required
+    if (!userPermissions || !Array.isArray(userPermissions)) return false;
+    return userPermissions.includes(requiredPerm);
+  };
 
-      // Check if route requires admin access and user is not admin
-      if (adminOnly && user?.role?.name !== 'ADMIN') {
-        return <Redirect to={{ pathname: '/', state: { from: props.location } }} />;
-      }
+  return (
+    <Route
+      {...rest}
+      render={(props) => {
+        if (!token) {
+          return <Redirect to={{ pathname: '/login', state: { from: props.location } }} />;
+        }
+        debugger
+        // Check if user has required permission
+        const userPermissions = user?.role?.permissions || [];
+        if (!hasPermission(userPermissions, requiredPermission)) {
+          return <Redirect to={{ pathname: '/', state: { from: props.location } }} />;
+        }
 
-      return loading ? (
-        <Row>
-          <Col xs md="6" className="mx-auto">
-            <h1>Loading</h1>
-          </Col>
-        </Row>
-      ) : (
-        <div id={id} className="page-wrapper">
-          <Component {...props} />
-        </div>
-      );
-    }}
-  />
-);
+        return loading ? (
+          <Row>
+            <Col xs md="6" className="mx-auto">
+              <h1>Loading</h1>
+            </Col>
+          </Row>
+        ) : (
+          <div id={id} className="page-wrapper">
+            <Component {...props} />
+          </div>
+        );
+      }}
+    />
+  );
+};
 
 const mapState = (state) => {
   const { token, loading, user } = state.auth;

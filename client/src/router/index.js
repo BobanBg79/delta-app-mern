@@ -21,7 +21,7 @@ const RouterWrapper = () => {
                 path={route.path}
                 component={route.component}
                 id={route.id}
-                adminOnly={route.adminOnly}
+                requiredPermission={route.requiredPermission}
               />
             ))}
           </Switch>
