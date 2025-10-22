@@ -6,6 +6,8 @@ import { getRole, getPermissions, updateRolePermissions } from '../../modules/ro
 import { resetRole } from '../../modules/role/actions';
 import PermissionsSelector from '../../components/PermissionsSelector';
 import GroupedPermissions from '../../components/GroupedPermissions';
+import { hasPermission } from '../../utils/permissions';
+import { USER_PERMISSIONS } from '../../constants';
 
 const RoleView = () => {
   const { roleId } = useParams();
@@ -19,14 +21,9 @@ const RoleView = () => {
 
   // Ensure only admin can access this page
   useEffect(() => {
-    if (user && user.role?.name !== 'ADMIN') {
-      history.push('/');
-      return;
-    }
-
     dispatch(getRole(roleId));
     dispatch(getPermissions());
-
+ 
     return () => {
       dispatch(resetRole());
     };
@@ -39,7 +36,11 @@ const RoleView = () => {
     }
   }, [role]);
 
-  const canEdit = useMemo(() => role?.name !== 'ADMIN', [role?.name]);
+  const canEdit = useMemo(() => {
+    const userPermissions = user?.role?.permissions || [];
+    return hasPermission(userPermissions, USER_PERMISSIONS.CAN_UPDATE_ROLE) && role?.name !== 'ADMIN';
+  }, [user?.role?.permissions, role?.name]);
+  
   const handlePermissionChange = useCallback((permissionId, isChecked) => {
     setSelectedPermissions((prev) => (isChecked ? [...prev, permissionId] : prev.filter((id) => id !== permissionId)));
   }, []);

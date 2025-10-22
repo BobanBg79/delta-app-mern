@@ -6,6 +6,7 @@ import Nav from 'react-bootstrap/Nav';
 import { Link } from 'react-router-dom';
 import Button from 'react-bootstrap/Button';
 import navItems from '../../router/navItems';
+import { hasPermission } from '../../utils/permissions';
 import './styles.scss';
 
 const MainNavigation = () => {
@@ -24,15 +25,10 @@ const MainNavigation = () => {
     routeMatch && setActiveLink(routeMatch.path);
   }, [location]);
 
-  // Filter nav items based on user role
+  // Filter nav items based on user permissions
   const visibleNavItems = navItems.filter((navItem) => {
-    // If item doesn't require admin access, show it to everyone
-    if (!navItem.adminOnly) {
-      return true;
-    }
-
-    // If item requires admin access, only show to admin users
-    return user?.role?.name === 'ADMIN';
+    const userPermissions = user?.role?.permissions || [];
+    return hasPermission(userPermissions, navItem.requiredPermission);
   });
 
   return (

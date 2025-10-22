@@ -13,11 +13,6 @@ const RolesList = () => {
 
   // Ensure only admin can access this page
   useEffect(() => {
-    if (user && user.role?.name !== 'ADMIN') {
-      history.push('/');
-      return;
-    }
-
     dispatch(getRoles());
   }, [dispatch, user, history]);
 

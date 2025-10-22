@@ -3,15 +3,9 @@ import { Route, Redirect } from 'react-router-dom';
 import { connect } from 'react-redux';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import { hasPermission } from '../utils/permissions';
 
 const ProtectedRoute = ({ component: Component, id, token, loading, user, requiredPermission, ...rest }) => {
-  // Helper function to check if user has the required permission
-  const hasPermission = (userPermissions, requiredPerm) => {
-    if (!requiredPerm) return true; // No permission required
-    if (!userPermissions || !Array.isArray(userPermissions)) return false;
-    return userPermissions.includes(requiredPerm);
-  };
-
   return (
     <Route
       {...rest}
@@ -19,7 +13,7 @@ const ProtectedRoute = ({ component: Component, id, token, loading, user, requir
         if (!token) {
           return <Redirect to={{ pathname: '/login', state: { from: props.location } }} />;
         }
-        debugger
+        
         // Check if user has required permission
         const userPermissions = user?.role?.permissions || [];
         if (!hasPermission(userPermissions, requiredPermission)) {
