@@ -85,15 +85,49 @@ router.put('/:id', auth, requirePermission('CAN_UPDATE_APARTMENT'), async (req, 
   }
 });
 
-// @route    DELETE api/apartments/:apartmentId
-// @desc     Delete apartment
+// @route    PUT api/apartments/:apartmentId/deactivate
+// @desc     Deactivate apartment (set isActive to false)
 // @access   Private (requires CAN_DELETE_APARTMENT permission)
-router.delete('/:id', auth, requirePermission('CAN_DELETE_APARTMENT'), async (req, res) => {
+router.put('/:id/deactivate', auth, requirePermission('CAN_DELETE_APARTMENT'), async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
-    await Apartment.findByIdAndDelete({ _id: apartmentId });
-    res.status(200).json({ msg: 'Apartment is successfully deleted' });
+
+    // Find the apartment first to get its current statusHistory
+    const apartment = await Apartment.findById(apartmentId);
+
+    if (!apartment) {
+      return res.status(404).json({ msg: 'Apartment not found' });
+    }
+
+    if (!apartment.isActive) {
+      return res.status(400).json({ msg: 'Apartment is already inactive' });
+    }
+
+    // Deactivate: set isActive to false and update statusHistory
+    const updatedStatusHistory = [
+      ...apartment.statusHistory,
+      {
+        status: 'inactive',
+        reason: 'deactivated',
+        deactivatedAt: new Date()
+      }
+    ];
+
+    const updatedApartment = await Apartment.findByIdAndUpdate(
+      apartmentId,
+      {
+        isActive: false,
+        statusHistory: updatedStatusHistory
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      msg: 'Apartment is successfully deactivated',
+      apartment: updatedApartment
+    });
   } catch (error) {
+    console.error(error.message);
     res.status(500).send('Server error');
   }
 });

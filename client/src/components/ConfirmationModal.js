@@ -15,18 +15,18 @@ const ConfirmationModal = ({ closeModal, apartmentId }) => {
   return (
     <Modal show={true} onHide={closeModal}>
       <Modal.Header closeButton>
-        <Modal.Title>Delete apartment</Modal.Title>
+        <Modal.Title>Deactivate apartment</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        This will permanently delete apartment.
-        <div>Are you sure you want to do that?</div>
+        This will set the apartment status to inactive. The apartment will not be deleted and all reservations will remain intact.
+        <div>Are you sure you want to deactivate this apartment?</div>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={closeModal}>
           Cancel
         </Button>
-        <Button variant="danger" onClick={onDelete}>
-          Delete apartment
+        <Button variant="warning" onClick={onDelete}>
+          Deactivate apartment
         </Button>
       </Modal.Footer>
     </Modal>

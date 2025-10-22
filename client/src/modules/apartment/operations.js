@@ -54,12 +54,13 @@ export const updateApartment = (apartmentId, data) => async (dispatch) => {
 export const deleteApartment = (apartmentId) => async (dispatch) => {
   try {
     dispatch(setApartmentFetchStart());
-    await axios.delete(`api/apartments/${apartmentId}`);
-    dispatch(showMessageToast('Apartment has been permanently deleted!', SUCCESS));
+    await axios.put(`api/apartments/${apartmentId}/deactivate`);
+    dispatch(showMessageToast('Apartment has been deactivated successfully!', SUCCESS));
   } catch (error) {
-    const { response: { statusText } = {} } = error;
-    dispatch(showMessageToast(statusText || 'Apartment cannot be deleted', ERROR));
-    dispatch(setApartmentError(statusText || error.message));
+    const { response: { data, statusText } = {} } = error;
+    const errorMsg = data?.msg || statusText || 'Apartment cannot be deactivated';
+    dispatch(showMessageToast(errorMsg, ERROR));
+    dispatch(setApartmentError(errorMsg));
   } finally {
     dispatch(setApartmentFetchEnd());
   }
