@@ -7,8 +7,8 @@ const Apartment = require('../../models/Apartment');
 
 // @route    GET api/apartments
 // @desc     Get the list of all apartments
-// @access   Private
-router.get('/', auth, async (req, res) => {
+// @access   Private (requires CAN_VIEW_APARTMENT permission)
+router.get('/', auth, requirePermission('CAN_VIEW_APARTMENT'), async (req, res) => {
   try {
     const apartments = await Apartment.find();
     res.json(apartments);
