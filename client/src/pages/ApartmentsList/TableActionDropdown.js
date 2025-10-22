@@ -9,7 +9,7 @@ import { useHistory } from 'react-router-dom';
 import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 
-const TableActionDropdown = ({ apartmentId, showModal }) => {
+const TableActionDropdown = ({ apartmentId, showModal, isActive }) => {
   //   const dispatch = useDispatch();
   const history = useHistory();
   // redux state
@@ -19,18 +19,24 @@ const TableActionDropdown = ({ apartmentId, showModal }) => {
   const userCanDeleteApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DELETE_APARTMENT);
   // methods
   const goToApartmentDetails = () => history.push(`/apartments/${apartmentId}`);
-  const renderTooltip = (props) => (
-    <Tooltip id="button-tooltip" {...props}>
-      User with this role cannot delete apartment
-    </Tooltip>
-  );
+  const renderTooltip = (props) => {
+    let message = 'User with this role cannot deactivate apartment';
+    if (!isActive) {
+      message = 'Apartment is already inactive';
+    }
+    return (
+      <Tooltip id="button-tooltip" {...props}>
+        {message}
+      </Tooltip>
+    );
+  };
 
   const onDeleteAttempt = () => showModal(apartmentId);
 
   const renderDeleteButton = (disabled = false) => (
     <Dropdown.Item onClick={onDeleteAttempt} disabled={disabled}>
       <FontAwesomeIcon icon={faTrashCan} />
-      <span>Delete</span>
+      <span>Deactivate</span>
     </Dropdown.Item>
   );
 
@@ -44,7 +50,7 @@ const TableActionDropdown = ({ apartmentId, showModal }) => {
             <span>Details</span>
           </Dropdown.Item>
         )}
-        {userCanDeleteApartment ? (
+        {userCanDeleteApartment && isActive ? (
           <div>{renderDeleteButton()}</div>
         ) : (
           <OverlayTrigger placement="left" delay={{ show: 250, hide: 400 }} overlay={renderTooltip}>

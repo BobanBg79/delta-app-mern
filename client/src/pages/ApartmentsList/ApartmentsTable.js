@@ -64,7 +64,7 @@ const ApartmentsTable = ({ apartments, showModal }) => {
                 <Badge bg={isActive ? 'success' : 'danger'}>{isActive ? 'Active' : 'Inactive'}</Badge>
               </td>
               <td className="action-cell">
-                <TableActionDropdown apartmentId={_id} showModal={showModal} />
+                <TableActionDropdown apartmentId={_id} showModal={showModal} isActive={isActive} />
               </td>
             </tr>
           );
