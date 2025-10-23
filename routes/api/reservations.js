@@ -7,10 +7,18 @@ const reservationDatesCheck = require('../../middleware/reservations/reservation
 const reservationExistsCheck = require('../../middleware/reservations/reservationExistsCheck');
 const { check, validationResult } = require('express-validator');
 const Reservation = require('../../models/Reservation');
-const Guest = require('../../models/Guest');
 const BookingAgent = require('../../models/BookingAgent');
 
 const searchEndpoint = require('./search-endpoint');
+
+// Import modular reservation update components
+const { reservationUpdateValidators } = require('./reservations/validators/reservationValidators');
+const {
+  validateGuestUpdate,
+  validateBookingAgentUpdate,
+  validatePricingUpdate,
+} = require('./reservations/middleware/reservationChecks');
+const { updateReservation } = require('./reservations/handlers/updateReservation');
 
 // Create a validation checker middleware that stops the chain if validation fails
 const checkValidationErrors = (req, res, next) => {
@@ -270,166 +278,32 @@ router.post(
   }
 );
 
-// @route    PUT api/reservations/:id
-// @desc     Update reservation
+// @route    PATCH api/reservations/:id
+// @desc     Update reservation (modular approach with separated concerns)
 // @access   Private
-router.put(
+router.patch(
   '/:id',
   [
-    // Phase 1: Basic middleware
-    auth, // 1. Authorization
-    reservationsGuestCheck, // 2. Guest validation
-    reservationExistsCheck, // 3. does reservation we want to update exists in db at all
-    // Phase 3: Input validation (optional for PUT since not all fields may be updated)
-    check('plannedCheckIn', 'Planned check-in date must be valid').optional().isISO8601(),
-    check('plannedCheckOut', 'Planned check-out date must be valid').optional().isISO8601(),
-    check('apartment', 'Apartment selection must be valid').optional().isMongoId(),
-    check('phoneNumber', 'Contact number is required').optional().notEmpty(),
-    check('phoneNumber', 'Please provide a valid phone number')
-      .optional()
-      .matches(/^\+?[\d\s\-\(\)]{7,}$/),
-    check('bookingAgent')
-      .optional()
-      .custom((value) => {
-        // Allow null, undefined, or empty string (for direct reservations)
-        if (value === null || value === undefined || value === '') {
-          return true;
-        }
-        // If a value is provided, it must be a valid MongoDB ObjectId
-        if (typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)) {
-          return true;
-        }
-        throw new Error('Booking agent must be a valid ID');
-      }),
-    check('pricePerNight', 'Price per night must be a positive number').optional().isFloat({ min: 0.01 }),
-    check('totalAmount', 'Total amount must be a positive number').optional().isFloat({ min: 0.01 }),
-    check('guestId').optional({ values: 'falsy' }).isMongoId().withMessage('Guest ID must be a valid ID'),
-    // Phase 4: Check validation results (stops here if validation fails)
+    // Phase 1: Authentication & Basic checks
+    auth,
+    reservationsGuestCheck,
+    reservationExistsCheck,
+
+    // Phase 2: Input validation (all fields optional for partial updates)
+    ...reservationUpdateValidators,
     checkValidationErrors,
-    // Phase 5: Date validation and overbooking check
-    // (Will skip if dates not provided, full validation if dates are provided)
+
+    // Phase 3: Date validation and overbooking check (if dates provided)
     reservationDatesCheck,
-    // Phase 6: Main handler
+
+    // Phase 4: Business logic validations
+    validateGuestUpdate,
+    validateBookingAgentUpdate,
+    validatePricingUpdate,
+
+    // Phase 5: Handler
   ],
-  async (req, res) => {
-    try {
-      const updateData = req.body;
-      console.log('Updating reservation with data:', updateData);
-
-      // Get the existing reservation from middleware (already fetched and validated)
-      let reservation = req.existingReservation;
-
-      // Date validations were handled by reservationDatesCheck middleware
-      // If dates were provided and validated, we can access: req.validatedDates
-
-      // Handle guestId update - map to guest field
-      if (updateData.guestId !== undefined) {
-        if (updateData.guestId && updateData.guestId.trim() !== '') {
-          // Validate guest exists
-          const guest = await Guest.findById(updateData.guestId);
-          if (!guest) {
-            return res.status(400).json({
-              errors: [
-                { msg: 'Selected guest not found. Please assign another guest or leave it empty in reservation form' },
-              ],
-            });
-          }
-          updateData.guest = updateData.guestId;
-        } else {
-          // Clear guest assignment
-          updateData.guest = null;
-        }
-        delete updateData.guestId; // Remove guestId from updateData
-      }
-
-      // Clean up bookingAgent field
-      if (
-        updateData.bookingAgent !== undefined &&
-        (!updateData.bookingAgent || updateData.bookingAgent.trim() === '')
-      ) {
-        updateData.bookingAgent = null;
-      }
-
-      // Verify booking agent exists if provided
-      if (updateData.bookingAgent && updateData.bookingAgent.trim() !== '') {
-        const agentExists = await BookingAgent.findById(updateData.bookingAgent);
-        if (!agentExists) {
-          return res.status(400).json({
-            errors: [{ msg: 'Selected booking agent does not exist' }],
-          });
-        }
-      }
-
-      // Validate pricing if being updated
-      if (updateData.pricePerNight !== undefined || updateData.totalAmount !== undefined) {
-        const finalPricePerNight = parseFloat(updateData.pricePerNight || reservation.pricePerNight);
-        const finalTotalAmount = parseFloat(updateData.totalAmount || reservation.totalAmount);
-
-        if (!finalPricePerNight || finalPricePerNight <= 0) {
-          return res.status(400).json({
-            errors: [{ msg: 'Price per night must be a positive number greater than 0' }],
-          });
-        }
-
-        if (!finalTotalAmount || finalTotalAmount <= 0) {
-          return res.status(400).json({
-            errors: [{ msg: 'Total amount must be a positive number greater than 0' }],
-          });
-        }
-
-        // Calculate nights for pricing validation
-        let nights;
-        if (req.validatedDates) {
-          // Dates were updated and validated by middleware
-          nights = req.validatedDates.nights;
-        } else {
-          // Use existing reservation dates
-          nights = Math.ceil((reservation.plannedCheckOut - reservation.plannedCheckIn) / (1000 * 60 * 60 * 24));
-        }
-
-        // Validate that pricing is reasonable
-        const expectedTotal = finalPricePerNight * nights;
-        const tolerance = Math.max(1, expectedTotal * 0.05); // 5% tolerance or minimum 1 unit
-
-        if (Math.abs(expectedTotal - finalTotalAmount) > tolerance) {
-          return res.status(400).json({
-            errors: [
-              {
-                msg: `Total amount (${finalTotalAmount}) does not match price per night (${finalPricePerNight}) × ${nights} nights. Expected approximately ${expectedTotal.toFixed(
-                  2
-                )}`,
-              },
-            ],
-          });
-        }
-      }
-
-      // Update the reservation
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] !== undefined) {
-          reservation[key] = updateData[key];
-        }
-      });
-
-      await reservation.save();
-
-      // Populate the updated reservation for response
-      await reservation.populate([
-        { path: 'createdBy', select: 'fname lname' },
-        { path: 'apartment', select: 'name' },
-        { path: 'guest', select: 'firstName lastName phoneNumber' },
-        { path: 'bookingAgent', select: 'name' },
-      ]);
-
-      res.json({
-        msg: 'Reservation successfully updated',
-        reservation,
-      });
-    } catch (error) {
-      console.error('Reservation update error:', error.message);
-      res.status(500).send({ errors: [{ msg: 'Server error' }] });
-    }
-  }
+  updateReservation
 );
 
 // @route    DELETE api/reservations/:reservationId

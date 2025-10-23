@@ -105,7 +105,7 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
       delete transformedData.guestId;
     }
 
-    const response = await axios.put(`/api/reservations/${reservationId}`, transformedData);
+    const response = await axios.patch(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
     if (reservation.guest) {
       reservation.guestId = reservation.guest._id || reservation.guest;
