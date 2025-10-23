@@ -18,6 +18,19 @@ const MulticalendarApartmentRow = ({
     event.stopPropagation();
     onReservationClick(reservation);
   };
+
+  const isEarlyCheckIn = (reservation) => {
+    if (!reservation.plannedArrivalTime) return false;
+    const [hours] = reservation.plannedArrivalTime.split(':').map(Number);
+    return hours < 14;
+  };
+
+  const isLateCheckOut = (reservation) => {
+    if (!reservation.plannedCheckoutTime) return false;
+    const [hours] = reservation.plannedCheckoutTime.split(':').map(Number);
+    return hours > 11;
+  };
+
   const calculateReservationDisplay = (reservation) => {
     const checkIn = new Date(reservation.plannedCheckIn);
     const checkOut = new Date(reservation.plannedCheckOut);
@@ -58,6 +71,8 @@ const MulticalendarApartmentRow = ({
       {reservations?.map((reservation, index) => {
         const display = calculateReservationDisplay(reservation);
         const reservationKey = `${reservation._id || index}-${reservation.plannedCheckIn}`;
+        const earlyCheckIn = isEarlyCheckIn(reservation);
+        const lateCheckOut = isLateCheckOut(reservation);
 
         return (
           <div
@@ -67,10 +82,12 @@ const MulticalendarApartmentRow = ({
               left: display.leftPosition,
               width: display.width,
               minWidth: `${dateCellWidth - 2}px`, // Ensure minimum visibility
+              borderLeft: earlyCheckIn ? '4px solid #dc3545' : undefined,
+              borderRight: lateCheckOut ? '4px solid #dc3545' : undefined,
             }}
             title={`${formatDateDefault(reservation.plannedCheckIn)} - ${formatDateDefault(
               reservation.plannedCheckOut
-            )}`}
+            )}${earlyCheckIn ? ' - Early Check-in' : ''}${lateCheckOut ? ' - Late Check-out' : ''}`}
             onClick={handleReservationClick(reservation)}
           >
             <span className="reservation-dates">
