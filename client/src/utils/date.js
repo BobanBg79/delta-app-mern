@@ -100,3 +100,9 @@ export const getDifferenceInDays = (timestamp1, timestamp2) => {
   const millisecondsInADay = hoursInDay * minutesInHour * secondsInMinute * millisecondsInSecond;
   return Math.round(diffInMilliseconds / millisecondsInADay);
 };
+
+export const isToday = (timestamp) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+};

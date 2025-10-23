@@ -1,34 +1,41 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StickyTable, Row, Cell } from 'react-sticky-table';
+import { useHistory } from 'react-router-dom';
 import MulticalendarApartmentRow from './MulticalendarApartmentRow';
 import { useSelector, useDispatch } from 'react-redux';
-import { getArrayOfConsecutiveDates, extractDateElements } from '../../utils/date';
+import { getArrayOfConsecutiveDates, extractDateElements, isToday } from '../../utils/date';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { MULTICALENDAR_ELEMENTS_DIMENSIONS } from './constants';
 import TableHeader from '../../components/TableHeader';
 import { getReservationsInDateRange } from '../../modules/reservation/operations';
+import ReservationQuickView from '../../components/ReservationQuickView';
 
 const { dateCellWidth, apartmentNameCellWidth } = MULTICALENDAR_ELEMENTS_DIMENSIONS;
 const initialRowOffset = dateCellWidth + apartmentNameCellWidth;
 
 const MultiCalendar = () => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const { reservations } = useSelector((state) => state.reservation);
   const { apartments } = useSelector((state) => state.apartments);
   const [tableRendered, setTableRendered] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState(null);
 
   // Use useMemo to memoize date objects
+  // Start 2 days before today, show 30 days into the future (32 days total)
   const dateRange = useMemo(() => {
+    const today = new Date();
     const start = new Date();
+    start.setDate(today.getDate() - 2); // Start 2 days before today
     const end = new Date();
-    end.setDate(start.getDate() + 30);
+    end.setDate(today.getDate() + 30); // End 30 days in the future
     return { startDate: start, endDate: end };
   }, []);
 
   const { startDate, endDate } = dateRange;
 
-  // Memoize the dates array
-  const datesArray = useMemo(() => getArrayOfConsecutiveDates(startDate, 30), [startDate]);
+  // Memoize the dates array (32 days total: 2 before + today + 29 more = 32 days)
+  const datesArray = useMemo(() => getArrayOfConsecutiveDates(startDate, 32), [startDate]);
 
   // Fetch reservations within the date range when component mounts
   useEffect(() => {
@@ -67,6 +74,21 @@ const MultiCalendar = () => {
     });
   };
 
+  const handleReservationClick = (reservation) => {
+    setSelectedReservation(reservation);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedReservation(null);
+  };
+
+  const handleViewDetails = () => {
+    if (selectedReservation) {
+      history.push(`/reservations/${selectedReservation._id}`);
+      setSelectedReservation(null);
+    }
+  };
+
   return (
     <div>
       <TableHeader
@@ -84,7 +106,14 @@ const MultiCalendar = () => {
               {datesArray.map((timestamp) => {
                 const { dayOfWeekShort, dayOfTheMonth } = extractDateElements(timestamp);
                 return (
-                  <Cell key={timestamp} className="date-label-cell" style={{ width: `${dateCellWidth}px` }}>
+                  <Cell
+                    key={timestamp}
+                    className="date-label-cell"
+                    style={{
+                      width: `${dateCellWidth}px`,
+                      backgroundColor: isToday(timestamp) ? '#d4edda' : 'transparent',
+                    }}
+                  >
                     <div className="date-label">
                       {dayOfWeekShort} <br /> {dayOfTheMonth}
                     </div>
@@ -105,12 +134,21 @@ const MultiCalendar = () => {
                   reservations={tableRendered ? apartmentReservations : []} // Only show reservations after table renders
                   initialRowOffset={initialRowOffset}
                   tableRendered={tableRendered}
+                  onReservationClick={handleReservationClick}
                 />
               );
             })}
           </StickyTable>
         </div>
       </div>
+
+      {selectedReservation && (
+        <ReservationQuickView
+          reservation={selectedReservation}
+          onClose={handleCloseModal}
+          onViewDetails={handleViewDetails}
+        />
+      )}
     </div>
   );
 };

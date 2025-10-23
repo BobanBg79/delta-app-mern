@@ -1,5 +1,4 @@
 import { Row, Cell } from 'react-sticky-table';
-import { useHistory } from 'react-router-dom';
 import { formatDateDefault, getDifferenceInDays } from '../../utils/date';
 import { MULTICALENDAR_ELEMENTS_DIMENSIONS } from './constants';
 
@@ -12,13 +11,12 @@ const MulticalendarApartmentRow = ({
   calendarEndDate,
   reservations,
   initialRowOffset,
+  onReservationClick,
 }) => {
-  const history = useHistory();
-
-  const handleReservationClick = (reservationId) => (event) => {
+  const handleReservationClick = (reservation) => (event) => {
     event.preventDefault();
     event.stopPropagation();
-    history.push(`/reservations/${reservationId}`);
+    onReservationClick(reservation);
   };
   const calculateReservationDisplay = (reservation) => {
     const checkIn = new Date(reservation.plannedCheckIn);
@@ -73,7 +71,7 @@ const MulticalendarApartmentRow = ({
             title={`${formatDateDefault(reservation.plannedCheckIn)} - ${formatDateDefault(
               reservation.plannedCheckOut
             )}`}
-            onClick={handleReservationClick(reservation._id)}
+            onClick={handleReservationClick(reservation)}
           >
             <span className="reservation-dates">
               {display.isPartial && <span className="partial-indicator">...</span>}
