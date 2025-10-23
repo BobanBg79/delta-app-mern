@@ -4,9 +4,9 @@ import FormContainer from '../../components/Form/FormContainer';
 import ReservationForm from './ReservationForm';
 import ReservationModel from './ReservationModel';
 import { getReservation, createReservation, updateReservation } from '../../modules/reservation/operations';
-import { reservationConstants, reservationActions } from '../../modules/reservation';
-
-const { CAN_EDIT_RESERVATION_DETAILS } = reservationConstants;
+import { reservationActions } from '../../modules/reservation';
+import { hasPermission } from '../../utils/permissions';
+import { USER_PERMISSIONS } from '../../constants';
 
 const ReservationView = () => {
   const { reservationId } = useParams();
@@ -14,7 +14,12 @@ const ReservationView = () => {
 
   const { reservation, fetching } = useSelector((state) => state.reservation);
   const { user: { role: userRole, _id: userId } = {} } = useSelector((state) => state.auth);
-  const userCanEditReservation = CAN_EDIT_RESERVATION_DETAILS.includes(userRole);
+  const userPermissions = userRole?.permissions || [];
+
+  // Check for appropriate permission based on mode (create vs update)
+  const userCanCreateReservation = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_RESERVATION);
+  const userCanUpdateReservation = hasPermission(userPermissions, USER_PERMISSIONS.CAN_UPDATE_RESERVATION);
+  const editEntityPermission = reservationId ? userCanUpdateReservation : userCanCreateReservation;
 
   const formContainerProps = {
     userId,
@@ -23,7 +28,7 @@ const ReservationView = () => {
     entityModel: ReservationModel,
     entityFetching: fetching,
     entityIdFromUrlParam: reservationId,
-    editEntityPermission: userCanEditReservation,
+    editEntityPermission,
     entityReduxActions: {
       getEntity: getReservation,
       createEntity: createReservation,

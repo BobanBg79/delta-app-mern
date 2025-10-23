@@ -8,6 +8,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import ReservationFilters from '../../components/ReservationFilters.js';
 import Pagination from '../../components/Pagination';
 import ReservationListTable from './ReservationListTable';
+import { USER_PERMISSIONS } from '../../constants';
 
 const ReservationsList = () => {
   const dispatch = useDispatch();
@@ -77,6 +78,7 @@ const ReservationsList = () => {
         title="Reservations"
         createEntityPath="/reservations/create"
         createEntityLabel="Create reservation"
+        createPermission={USER_PERMISSIONS.CAN_CREATE_RESERVATION}
       />
       {reservations.length ? (
         <>

@@ -119,7 +119,11 @@ const ApartmentView = () => {
             <AddressDetails address={address} onInputChange={onInputChange} />
             <ParkingDetails parking={parking} onInputChange={onInputChange} />
             <ApartmentFeatures apartmentFeatures={apartmentFeatures} onInputChange={onInputChange} />
-            <RentContractDetails rentContractDetails={rentContractDetails} onInputChange={onInputChange} />
+            <RentContractDetails
+              rentContractDetails={rentContractDetails}
+              onInputChange={onInputChange}
+              canView={apartmentId ? userCanUpdateApartment : userCanCreateApartment}
+            />
             {((apartmentId && userCanUpdateApartment) || (!apartmentId && userCanCreateApartment)) && (
               <Button variant="primary" type="submit">
                 Submit

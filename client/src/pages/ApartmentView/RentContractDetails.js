@@ -2,15 +2,10 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import { useSelector } from 'react-redux';
-import { apartmentConstants } from '../../modules/apartment';
 
-const { CAN_VIEW_APARTMENT_CONTRACT_DETAILS } = apartmentConstants;
-
-const RentContractDetails = ({ rentContractDetails, onInputChange }) => {
-  const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
+const RentContractDetails = ({ rentContractDetails, onInputChange, canView }) => {
   const { monthlyRent, paymentPeriod, ownerName, ownerPhone } = rentContractDetails;
-  if (!CAN_VIEW_APARTMENT_CONTRACT_DETAILS.includes(userRole)) return null;
+  if (!canView) return null;
   return (
     <Row>
       <Col xs="12">
