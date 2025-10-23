@@ -11,6 +11,7 @@ import 'rsuite/dist/rsuite.min.css';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { getAllBookingAgents } from '../../modules/bookingAgents/operations';
 import GuestInfo from '../../components/GuestInfo';
+import { sortEntitiesForDropdown, shouldDisableOption, formatDropdownLabel } from '../../utils/dropdown';
 
 const { active, canceled, noshow } = RESERVATION_STATUSES;
 
@@ -76,7 +77,7 @@ const ReservationForm = ({
 
   // Load booking agents on component mount
   useEffect(() => {
-    dispatch(getAllBookingAgents(true));
+    dispatch(getAllBookingAgents(false)); // Load all booking agents (including inactive)
   }, [dispatch]);
 
   const handleTotalAmountChange = (event) => {
@@ -179,9 +180,9 @@ const ReservationForm = ({
                   aria-label="apartment name"
                 >
                   <option value="">Select apartment</option>
-                  {apartmentsArray.map(({ name, _id }) => (
-                    <option key={_id} value={_id}>
-                      {name}
+                  {sortEntitiesForDropdown(apartmentsArray, 'isActive').map(({ name, _id, isActive }) => (
+                    <option key={_id} value={_id} disabled={shouldDisableOption({ _id, isActive }, apartment, 'isActive')}>
+                      {formatDropdownLabel(name, isActive)}
                     </option>
                   ))}
                 </Form.Select>
@@ -198,9 +199,9 @@ const ReservationForm = ({
                   disabled={bookingAgentsFetching}
                 >
                   <option value="">Direct Reservation (No Agent)</option>
-                  {bookingAgentsArray.map(({ name, _id }) => (
-                    <option key={_id} value={_id}>
-                      {name}
+                  {sortEntitiesForDropdown(bookingAgentsArray, 'active').map(({ name, _id, active }) => (
+                    <option key={_id} value={_id} disabled={shouldDisableOption({ _id, active }, bookingAgent, 'active')}>
+                      {formatDropdownLabel(name, active)}
                     </option>
                   ))}
                 </Form.Select>

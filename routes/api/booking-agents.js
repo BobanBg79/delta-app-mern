@@ -106,7 +106,7 @@ router.post(
 );
 
 // @route    PUT api/booking-agents/:id
-// @desc     Update booking agent
+// @desc     Update booking agent (all fields required)
 // @access   Private
 router.put(
   '/:id',
@@ -116,6 +116,7 @@ router.put(
     check('name', 'Agent name must be between 2 and 100 characters').isLength({ min: 2, max: 100 }),
     check('commission', 'Commission must be a number').isNumeric(),
     check('commission', 'Commission must be between 0 and 100').isFloat({ min: 0, max: 100 }),
+    check('active', 'Active status is required').isBoolean(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -132,18 +133,20 @@ router.put(
         return res.status(404).json({ errors: [{ msg: 'Booking agent not found' }] });
       }
 
-      // Check if another agent with same name exists
-      const existingAgent = await BookingAgent.findOne({
-        name: name.trim(),
-        _id: { $ne: agentId },
-      });
-
-      if (existingAgent) {
-        return res.status(409).json({
-          errors: [{ msg: `Another booking agent with name "${name}" already exists` }],
+      // Only check for duplicate name if the name is being changed
+      if (name.trim() !== bookingAgent.name) {
+        const existingAgent = await BookingAgent.findOne({
+          name: name.trim(),
         });
+
+        if (existingAgent) {
+          return res.status(409).json({
+            errors: [{ msg: `Another booking agent with name "${name}" already exists` }],
+          });
+        }
       }
 
+      // Update all fields
       bookingAgent.name = name.trim();
       bookingAgent.commission = parseFloat(commission);
       bookingAgent.active = active;

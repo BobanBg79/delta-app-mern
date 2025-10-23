@@ -117,8 +117,8 @@ router.get('/:id', auth, async (req, res) => {
     const { id: reservationId } = req.params;
     const reservation = await Reservation.findById(reservationId)
       .populate('createdBy', ['fname', 'lname'])
-      .populate('guest', ['firstName', 'lastName'])
-      .populate('bookingAgent', ['name']); // Will be null for direct reservations
+      .populate('guest', ['firstName', 'lastName']);
+      // bookingAgent and apartment are NOT populated - form only needs the IDs
 
     if (!reservation) {
       return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });

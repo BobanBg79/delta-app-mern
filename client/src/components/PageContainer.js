@@ -9,8 +9,8 @@ const PageContainer = ({ children }) => {
 
   useEffect(() => {
     // Load initial data needed throughout the app
-    dispatch(getAllApartments());
-    dispatch(getAllBookingAgents(true)); // Load active booking agents for dropdown
+    dispatch(getAllApartments()); // Load all apartments (including inactive)
+    dispatch(getAllBookingAgents(false)); // Load all booking agents (including inactive)
   }, [dispatch]);
 
   return (
