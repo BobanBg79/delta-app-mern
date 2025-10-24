@@ -97,6 +97,53 @@ router.get(
   }
 );
 
+// @route   GET api/reservations/monthly-stats
+// @desc    Get monthly statistics for reservations checking in during the current month
+// @access  Private
+router.get('/monthly-stats', auth, async (req, res) => {
+  try {
+    // Get current month's start and end dates
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    // Find all active reservations that check in during this month
+    const reservations = await Reservation.find({
+      status: 'active',
+      plannedCheckIn: {
+        $gte: startOfMonth,
+        $lte: endOfMonth,
+      },
+    });
+
+    // Calculate statistics
+    let totalNights = 0;
+    let totalIncome = 0;
+
+    reservations.forEach((reservation) => {
+      const checkIn = new Date(reservation.plannedCheckIn);
+      const checkOut = new Date(reservation.plannedCheckOut);
+      const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+
+      totalNights += nights;
+      totalIncome += reservation.totalAmount || 0;
+    });
+
+    res.json({
+      month: now.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      totalReservations: reservations.length,
+      totalNights,
+      totalIncome: Math.round(totalIncome * 100) / 100, // Round to 2 decimals
+    });
+  } catch (error) {
+    console.error('Monthly stats error:', error.message);
+    res.status(500).send({ errors: [{ msg: 'Server error' }] });
+  }
+});
+
 // @route   GET api/reservations
 // @desc    Get the list of all reservations
 // @access  Private
