@@ -8,6 +8,10 @@ const app = express();
 // Connect Database
 connectDB();
 
+// Start background jobs (cron jobs)
+const { startAccountBalanceValidation } = require('./jobs/accountBalanceValidation');
+startAccountBalanceValidation();
+
 app.use(express.json());
 
 if (process.env.NODE_ENV !== 'production') {
@@ -20,6 +24,8 @@ app.use('/api/apartments', require('./routes/api/apartments'));
 app.use('/api/reservations', require('./routes/api/reservations'));
 app.use('/api/guests', require('./routes/api/guests'));
 app.use('/api/booking-agents', require('./routes/api/booking-agents'));
+app.use('/api/payments', require('./routes/api/payments'));
+app.use('/api/accounting', require('./routes/api/accounting'));
 // Add these new routes
 app.use('/api/roles', require('./routes/api/roles'));
 app.use('/api/permissions', require('./routes/api/permissions'));

@@ -16,6 +16,7 @@ const connectDB = async () => {
     // Auto-seed permissions and roles after successful connection
     await seedPermissions();
     await seedRoles();
+    await seedKonto();
   } catch (err) {
     console.error(err.message);
     // Exit process with failure
@@ -40,6 +41,57 @@ const seedPermissions = async () => {
     console.log(`✅ Successfully seeded ${allPermissions.length} permissions`);
   } catch (error) {
     console.error('❌ Error seeding permissions:', error.message);
+  }
+};
+
+const seedKonto = async () => {
+  try {
+    const Konto = require('../models/konto/Konto');
+    const Apartment = require('../models/Apartment');
+    const User = require('../models/User');
+    const chartOfAccounts = require('../models/konto/chartOfAccounts');
+
+    const existingKontoCount = await Konto.countDocuments();
+    if (existingKontoCount > 0) {
+      console.log('✅ Konto accounts already exist, skipping seed...');
+      return;
+    }
+
+    // Load all apartments and users for reference mapping
+    const apartments = await Apartment.find({});
+    const users = await User.find({});
+
+    const apartmentMap = {};
+    apartments.forEach(apt => {
+      apartmentMap[apt.name] = apt._id;
+    });
+
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.fname] = user._id; // Map by first name
+    });
+
+    // Enrich chartOfAccounts with apartmentId and employeeId references
+    const enrichedKontos = chartOfAccounts.map(konto => {
+      const enriched = { ...konto };
+
+      // Add apartmentId if apartmentName exists
+      if (konto.apartmentName && apartmentMap[konto.apartmentName]) {
+        enriched.apartmentId = apartmentMap[konto.apartmentName];
+      }
+
+      // Add employeeId if employeeName exists
+      if (konto.employeeName && userMap[konto.employeeName]) {
+        enriched.employeeId = userMap[konto.employeeName];
+      }
+
+      return enriched;
+    });
+
+    await Konto.insertMany(enrichedKontos);
+    console.log(`✅ Successfully seeded ${enrichedKontos.length} konto accounts`);
+  } catch (error) {
+    console.error('❌ Error seeding konto:', error.message);
   }
 };
 
