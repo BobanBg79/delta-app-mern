@@ -16,6 +16,7 @@ const connectDB = async () => {
     // Auto-seed permissions and roles after successful connection
     await seedPermissions();
     await seedRoles();
+    await updateAdminRolePermissions(); // Update ADMIN role with new permissions
     await seedKonto();
   } catch (err) {
     console.error(err.message);
@@ -28,17 +29,26 @@ const seedPermissions = async () => {
   try {
     const Permission = require('../models/Permission');
 
-    const existingCount = await Permission.countDocuments();
-    if (existingCount > 0) {
-      console.log('✅ Permissions already exist, skipping seed...');
+    // Get all permissions that should exist
+    const allPermissions = Permission.getAllPermissions();
+
+    // Get existing permissions
+    const existingPermissions = await Permission.find({}).select('name');
+    const existingNames = existingPermissions.map(p => p.name);
+
+    // Find new permissions that don't exist yet
+    const newPermissions = allPermissions.filter(name => !existingNames.includes(name));
+
+    if (newPermissions.length === 0) {
+      console.log(`✅ All ${allPermissions.length} permissions already exist, skipping seed...`);
       return;
     }
 
-    const allPermissions = Permission.getAllPermissions();
-    const permissionDocs = allPermissions.map((name) => ({ name }));
-
+    // Insert only new permissions
+    const permissionDocs = newPermissions.map((name) => ({ name }));
     await Permission.insertMany(permissionDocs);
-    console.log(`✅ Successfully seeded ${allPermissions.length} permissions`);
+    console.log(`✅ Successfully added ${newPermissions.length} new permissions (Total: ${allPermissions.length})`);
+    console.log(`   New permissions: ${newPermissions.join(', ')}`);
   } catch (error) {
     console.error('❌ Error seeding permissions:', error.message);
   }
@@ -119,6 +129,50 @@ const seedKonto = async () => {
   }
 };
 
+const updateAdminRolePermissions = async () => {
+  try {
+    const Role = require('../models/Role');
+    const Permission = require('../models/Permission');
+
+    // Find ADMIN role
+    const adminRole = await Role.findOne({ name: 'ADMIN' }).populate('permissions');
+    if (!adminRole) {
+      console.log('⚠️  ADMIN role not found, skipping permission update...');
+      return;
+    }
+
+    // Get all current permissions
+    const allPermissions = await Permission.find({});
+    const allPermissionIds = allPermissions.map(p => p._id.toString());
+
+    // Get current ADMIN permissions
+    const currentAdminPermissionIds = adminRole.permissions.map(p => p._id.toString());
+
+    // Find missing permissions
+    const missingPermissionIds = allPermissionIds.filter(
+      id => !currentAdminPermissionIds.includes(id)
+    );
+
+    if (missingPermissionIds.length === 0) {
+      console.log(`✅ ADMIN role already has all ${allPermissions.length} permissions`);
+      return;
+    }
+
+    // Update ADMIN role with all permissions
+    adminRole.permissions = allPermissions.map(p => p._id);
+    await adminRole.save();
+
+    const missingPermissionNames = allPermissions
+      .filter(p => missingPermissionIds.includes(p._id.toString()))
+      .map(p => p.name);
+
+    console.log(`✅ Updated ADMIN role with ${missingPermissionIds.length} new permissions`);
+    console.log(`   New permissions: ${missingPermissionNames.join(', ')}`);
+  } catch (error) {
+    console.error('❌ Error updating ADMIN role permissions:', error.message);
+  }
+};
+
 const seedRoles = async () => {
   try {
     const Role = require('../models/Role');
@@ -164,6 +218,11 @@ const seedRoles = async () => {
     }, {});
 
     // Define role permissions using destructured constants
+    // Get KONTO permissions
+    const kontoPermissions = allPermissions
+      .filter(p => p.name.includes('KONTO'))
+      .map(p => p.name);
+
     const rolePermissions = {
       ADMIN: [
         // Full access except CAN_DELETE_ROLE (system roles cannot be deleted)
@@ -186,6 +245,8 @@ const seedRoles = async () => {
         CAN_CREATE_RESERVATION,
         CAN_UPDATE_RESERVATION,
         CAN_DELETE_RESERVATION,
+        // Add all KONTO permissions dynamically
+        ...kontoPermissions,
       ],
       OWNER: [
         // Full access except role and user management entirely

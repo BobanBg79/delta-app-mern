@@ -187,6 +187,26 @@ router.get('/konto/:code', auth, requirePermission('CAN_VIEW_KONTO'), async (req
   }
 });
 
+// @route    GET api/accounting/konto/:code/transactions
+// @desc     Get transactions for specific konto
+// @access   Private
+router.get('/konto/:code/transactions', auth, requirePermission('CAN_VIEW_KONTO'), async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const result = await KontoService.getKontoTransactions(code, parseInt(limit), parseInt(offset));
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('Error fetching konto transactions:', error);
+    res.status(500).json({
+      errors: [error.message]
+    });
+  }
+});
+
 // @route    PATCH api/accounting/konto/:code/deactivate
 // @desc     Deactivate konto
 // @access   Private (Admin only)
@@ -203,6 +223,44 @@ router.patch('/konto/:code/deactivate', auth, requirePermission('CAN_DEACTIVATE_
 
   } catch (error) {
     console.error('Error deactivating konto:', error);
+    res.status(500).json({
+      errors: [error.message]
+    });
+  }
+});
+
+// ====================================
+// TRANSACTION ENDPOINTS
+// ====================================
+
+// @route    GET api/accounting/transaction/:id
+// @desc     Get transaction details with related transactions
+// @access   Private
+router.get('/transaction/:id', auth, requirePermission('CAN_VIEW_KONTO'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Transaction = require('../../models/Transaction');
+
+    // Get the transaction
+    const transaction = await Transaction.findById(id);
+    if (!transaction) {
+      return res.status(404).json({
+        errors: ['Transaction not found']
+      });
+    }
+
+    // Get all related transactions in the same group (double-entry)
+    const relatedTransactions = await Transaction.find({
+      groupId: transaction.groupId
+    }).sort({ type: -1 }); // debit first, then credit
+
+    res.json({
+      transaction,
+      relatedTransactions
+    });
+
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
     res.status(500).json({
       errors: [error.message]
     });

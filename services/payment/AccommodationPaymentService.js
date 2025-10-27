@@ -46,7 +46,7 @@ class AccommodationPaymentService {
       }
 
       // 2. Get user's cash register (find konto by employeeId)
-      const user = await User.findById(createdBy).session(session);
+      const user = await User.findById(createdBy).populate('role').session(session);
       if (!user) {
         throw new Error('User not found');
       }
@@ -58,7 +58,7 @@ class AccommodationPaymentService {
       }).session(session);
 
       if (!cashRegister) {
-        throw new Error(`Cash register not found for user ${user.fname} ${user.lname}`);
+        throw new Error(`Cash register not found for user ${user.fname} ${user.lname} with role: ${user.role.name}`);
       }
 
       // 3. Get revenue account for apartment

@@ -204,6 +204,40 @@ class KontoService {
     }
     return konto;
   }
+
+  /**
+   * Get transactions for a specific konto
+   *
+   * @param {String} kontoCode - Konto code
+   * @param {Number} limit - Max number of transactions to return
+   * @param {Number} offset - Number of transactions to skip
+   * @returns {Object} { transactions, total, hasMore }
+   */
+  async getKontoTransactions(kontoCode, limit = 50, offset = 0) {
+    // Validate konto exists
+    const konto = await Konto.findOne({ code: kontoCode });
+    if (!konto) {
+      throw new Error(`Konto ${kontoCode} not found`);
+    }
+
+    // Get total count
+    const total = await Transaction.countDocuments({ kontoCode });
+
+    // Get transactions with pagination
+    const transactions = await Transaction.find({ kontoCode })
+      .sort({ transactionDate: -1, createdAt: -1 }) // Most recent first
+      .skip(offset)
+      .limit(limit)
+      .lean();
+
+    return {
+      transactions,
+      total,
+      hasMore: offset + limit < total,
+      limit,
+      offset
+    };
+  }
 }
 
 module.exports = new KontoService();

@@ -44,6 +44,13 @@ const navItems = [
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_RESERVATION,
   },
   {
+    label: 'Accounting',
+    path: '/accounting',
+    exact: false,
+    strict: false,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
+  },
+  {
     label: 'Test',
     path: '/test',
     exact: false,

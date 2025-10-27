@@ -13,6 +13,9 @@ import {
 } from '../pages';
 import RolesList from '../pages/RolesList';
 import RoleView from '../pages/RoleView';
+import Accounting from '../pages/Accounting';
+import KontoDetails from '../pages/Accounting/KontoDetails';
+import TransactionDetails from '../pages/Accounting/TransactionDetails';
 import { USER_PERMISSIONS } from '../constants';
 
 const PAGE_URLS = {
@@ -32,6 +35,9 @@ const PAGE_URLS = {
   guestCreate: '/guests/create',
   rolesList: '/roles',
   roleView: '/roles/:roleId',
+  accounting: '/accounting',
+  kontoDetails: '/accounting/konto/:code',
+  transactionDetails: '/accounting/transaction/:id',
 };
 
 const {
@@ -52,6 +58,9 @@ const {
   // Add these
   rolesList,
   roleView,
+  accounting,
+  kontoDetails,
+  transactionDetails,
 } = PAGE_URLS;
 
 export const PUBLIC_ROUTES = {
@@ -161,5 +170,28 @@ export const PROTECTED_ROUTES = {
     path: roleView,
     component: RoleView,
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_ROLE,
+  },
+  // Accounting routes
+  ACCOUNTING: {
+    title: 'Accounting',
+    id: 'accounting',
+    isExact: true,
+    path: accounting,
+    component: Accounting,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
+  },
+  KONTO_DETAILS: {
+    title: 'Konto Details',
+    id: 'konto_details',
+    path: kontoDetails,
+    component: KontoDetails,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
+  },
+  TRANSACTION_DETAILS: {
+    title: 'Transaction Details',
+    id: 'transaction_details',
+    path: transactionDetails,
+    component: TransactionDetails,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
   },
 };
