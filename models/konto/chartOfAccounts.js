@@ -8,51 +8,8 @@ const chartOfAccounts = [
   // ====================================
 
   // 10X - Employee Cash Registers
-  {
-    code: '101',
-    name: 'Cash Register - Boban',
-    type: 'asset',
-    isCashRegister: true,
-    employeeName: 'Boban',
-    currentBalance: 0,
-    description: 'Cash register for employee Boban'
-  },
-  {
-    code: '102',
-    name: 'Cash Register - Ognjen',
-    type: 'asset',
-    isCashRegister: true,
-    employeeName: 'Ognjen',
-    currentBalance: 0,
-    description: 'Cash register for employee Ognjen'
-  },
-  {
-    code: '103',
-    name: 'Cash Register - Marinko',
-    type: 'asset',
-    isCashRegister: true,
-    employeeName: 'Marinko',
-    currentBalance: 0,
-    description: 'Cash register for employee Marinko'
-  },
-  {
-    code: '104',
-    name: 'Cash Register - Petra',
-    type: 'asset',
-    isCashRegister: true,
-    employeeName: 'Petra',
-    currentBalance: 0,
-    description: 'Cash register for employee Petra'
-  },
-  {
-    code: '105',
-    name: 'Cash Register - Elizabeta',
-    type: 'asset',
-    isCashRegister: true,
-    employeeName: 'Elizabeta',
-    currentBalance: 0,
-    description: 'Cash register for employee Elizabeta'
-  },
+  // NOTE: Cash registers are now auto-generated during seed based on user roles
+  // (CLEANING_LADY, HOST, MANAGER, OWNER)
 
   // 11X - Bank Accounts
   {

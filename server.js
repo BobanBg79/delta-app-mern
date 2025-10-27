@@ -9,8 +9,8 @@ const app = express();
 connectDB();
 
 // Start background jobs (cron jobs)
-const { startAccountBalanceValidation } = require('./jobs/accountBalanceValidation');
-startAccountBalanceValidation();
+// const { startAccountBalanceValidation } = require('./jobs/accountBalanceValidation');
+// startAccountBalanceValidation();
 
 app.use(express.json());
 

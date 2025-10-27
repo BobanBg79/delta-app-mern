@@ -59,34 +59,58 @@ const seedKonto = async () => {
 
     // Load all apartments and users for reference mapping
     const apartments = await Apartment.find({});
-    const users = await User.find({});
+    const users = await User.find({}).populate('role');
+
+    console.log(`📊 Found ${apartments.length} apartments and ${users.length} users`);
 
     const apartmentMap = {};
     apartments.forEach(apt => {
       apartmentMap[apt.name] = apt._id;
     });
 
-    const userMap = {};
+    // Enrich chartOfAccounts with apartmentId references (skip cash registers - we'll create them dynamically)
+    const enrichedKontos = chartOfAccounts
+      .filter(konto => !konto.isCashRegister) // Skip hardcoded cash registers
+      .map(konto => {
+        const enriched = { ...konto };
+
+        // Add apartmentId if apartmentName exists
+        if (konto.apartmentName && apartmentMap[konto.apartmentName]) {
+          enriched.apartmentId = apartmentMap[konto.apartmentName];
+        }
+
+        return enriched;
+      });
+
+    console.log(`📋 Base kontos from chartOfAccounts: ${enrichedKontos.length}`);
+
+    // Dynamically create cash register kontos for users with specific roles
+    const CASH_REGISTER_ROLES = ['CLEANING_LADY', 'HOST', 'MANAGER', 'OWNER'];
+    let cashRegisterCode = 101; // Starting code for cash registers
+
+    console.log(`\n🔍 Checking users for cash register creation...`);
     users.forEach(user => {
-      userMap[user.fname] = user._id; // Map by first name
+      const roleName = user.role?.name;
+      console.log(`   User: ${user.fname} ${user.lname}, Role: ${roleName || 'NO ROLE'}`);
+
+      if (roleName && CASH_REGISTER_ROLES.includes(roleName)) {
+        const cashRegisterKonto = {
+          code: String(cashRegisterCode++),
+          name: `Cash Register - ${user.fname} ${user.lname}`,
+          type: 'asset',
+          isCashRegister: true,
+          employeeId: user._id,
+          employeeName: `${user.fname} ${user.lname}`,
+          currentBalance: 0,
+          description: `Cash register for employee ${user.fname} ${user.lname}`
+        };
+
+        enrichedKontos.push(cashRegisterKonto);
+        console.log(`   💰 Created cash register for ${user.fname} ${user.lname} (${roleName})`);
+      }
     });
 
-    // Enrich chartOfAccounts with apartmentId and employeeId references
-    const enrichedKontos = chartOfAccounts.map(konto => {
-      const enriched = { ...konto };
-
-      // Add apartmentId if apartmentName exists
-      if (konto.apartmentName && apartmentMap[konto.apartmentName]) {
-        enriched.apartmentId = apartmentMap[konto.apartmentName];
-      }
-
-      // Add employeeId if employeeName exists
-      if (konto.employeeName && userMap[konto.employeeName]) {
-        enriched.employeeId = userMap[konto.employeeName];
-      }
-
-      return enriched;
-    });
+    console.log(`\n📦 Total kontos to insert: ${enrichedKontos.length}\n`);
 
     await Konto.insertMany(enrichedKontos);
     console.log(`✅ Successfully seeded ${enrichedKontos.length} konto accounts`);
