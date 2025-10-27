@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
 import { formatDateDefault, getDifferenceInDays } from '../utils/date';
+import PaymentForm from './PaymentForm';
 
 const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+
   if (!reservation) return null;
 
   const checkInDate = new Date(reservation.plannedCheckIn);
@@ -31,6 +35,7 @@ const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
   };
 
   return (
+    <>
     <Modal show={true} onHide={onClose} centered>
       <Modal.Header closeButton>
         <Modal.Title style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
@@ -92,11 +97,26 @@ const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
+        <Button variant="success" onClick={() => setShowPaymentForm(true)}>
+          Add Payment
+        </Button>
         <Button variant="primary" onClick={onViewDetails}>
           View Full Details
         </Button>
       </Modal.Footer>
     </Modal>
+    {showPaymentForm && (
+      <PaymentForm
+        reservation={reservation}
+        onClose={() => setShowPaymentForm(false)}
+        onSuccess={(result) => {
+          console.log('Payment created successfully:', result);
+          setShowPaymentForm(false);
+          // Optionally refresh reservation data or show success message
+        }}
+      />
+    )}
+    </>
   );
 };
 
