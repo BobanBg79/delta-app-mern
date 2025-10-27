@@ -50,6 +50,7 @@ const seedKonto = async () => {
     const Apartment = require('../models/Apartment');
     const User = require('../models/User');
     const chartOfAccounts = require('../models/konto/chartOfAccounts');
+    const { CASH_REGISTER_ROLES } = require('../constants/userRoles');
 
     const existingKontoCount = await Konto.countDocuments();
     if (existingKontoCount > 0) {
@@ -85,7 +86,6 @@ const seedKonto = async () => {
     console.log(`📋 Base kontos from chartOfAccounts: ${enrichedKontos.length}`);
 
     // Dynamically create cash register kontos for users with specific roles
-    const CASH_REGISTER_ROLES = ['CLEANING_LADY', 'HOST', 'MANAGER', 'OWNER'];
     let cashRegisterCode = 101; // Starting code for cash registers
 
     console.log(`\n🔍 Checking users for cash register creation...`);

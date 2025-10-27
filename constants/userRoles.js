@@ -13,7 +13,16 @@ const USER_ROLES = {
   ...EMPLOYEE_TYPE_ROLES,
 };
 
+// Roles that require a cash register konto
+const CASH_REGISTER_ROLES = [
+  USER_ROLES.OWNER,
+  USER_ROLES.MANAGER,
+  USER_ROLES.HOST,
+  USER_ROLES.CLEANING_LADY
+];
+
 module.exports = {
   EMPLOYEE_TYPE_ROLES,
-  USER_ROLES
+  USER_ROLES,
+  CASH_REGISTER_ROLES
 };

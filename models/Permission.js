@@ -10,7 +10,7 @@ const PermissionSchema = new mongoose.Schema(
       validate: {
         validator: function (v) {
           // Validate CAN_{OPERATION}_{ENTITY} format
-          return /^CAN_(VIEW|CREATE|UPDATE|DELETE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION)$/.test(v);
+          return /^CAN_(VIEW|CREATE|UPDATE|DELETE|DEACTIVATE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO)$/.test(v);
         },
         message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY}',
       },
@@ -33,9 +33,18 @@ PermissionSchema.pre('findOneAndDelete', function () {
 // Static method to get all possible permissions
 PermissionSchema.statics.getAllPermissions = function () {
   const operations = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'];
-  const entities = ['USER', 'ROLE', 'EMPLOYEE', 'APARTMENT', 'RESERVATION'];
+  const entities = ['USER', 'ROLE', 'EMPLOYEE', 'APARTMENT', 'RESERVATION', 'KONTO'];
 
-  return operations.flatMap((op) => entities.map((entity) => `CAN_${op}_${entity}`));
+  const standardPermissions = operations.flatMap((op) =>
+    entities.map((entity) => `CAN_${op}_${entity}`)
+  );
+
+  // Add special permissions
+  const specialPermissions = [
+    'CAN_DEACTIVATE_KONTO'
+  ];
+
+  return [...standardPermissions, ...specialPermissions];
 };
 
 module.exports = mongoose.model('Permission', PermissionSchema);

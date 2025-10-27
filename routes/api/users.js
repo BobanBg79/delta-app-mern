@@ -8,6 +8,8 @@ const { requirePermission } = require('../../middleware/permission'); // Add per
 
 const User = require('../../models/User');
 const Role = require('../../models/Role');
+const KontoService = require('../../services/accounting/KontoService');
+const { CASH_REGISTER_ROLES } = require('../../constants/userRoles');
 
 // @route    POST api/users/register
 // @desc     Create user
@@ -74,11 +76,31 @@ router.post(
 
       await user.save();
 
+      // Auto-create cash register if user role requires it
+      let cashRegister = null;
+      if (CASH_REGISTER_ROLES.includes(roleFromDB.name)) {
+        try {
+          cashRegister = await KontoService.createCashRegisterForUser(user._id);
+          console.log(`✅ Auto-created cash register for new user: ${user.fname} ${user.lname}`);
+        } catch (cashRegisterError) {
+          console.error('Failed to create cash register for user:', cashRegisterError.message);
+          // Rollback user creation if cash register creation fails
+          await User.findByIdAndDelete(user._id);
+          return res.status(500).json({
+            errors: ['User creation failed: Could not create required cash register']
+          });
+        }
+      }
+
       // Don't generate a token for the new user, just return success
       const { password: _, ...responseUser } = user._doc;
       res.status(201).json({
         message: 'User created successfully',
         user: responseUser,
+        cashRegister: cashRegister ? {
+          code: cashRegister.code,
+          name: cashRegister.name
+        } : null
       });
     } catch (err) {
       console.error(err.message);
