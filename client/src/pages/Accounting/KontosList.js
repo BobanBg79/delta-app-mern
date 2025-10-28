@@ -1,8 +1,9 @@
 // client/src/pages/Accounting/KontosList.js
 import { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
-import { Table, Alert, Spinner, Form, Badge } from 'react-bootstrap';
+import { Container, Table, Alert, Spinner, Form, Badge, Button } from 'react-bootstrap';
 import { getAllKontos } from '../../modules/accounting/kontoOperations';
+import Breadcrumbs from '../../components/Breadcrumbs';
 
 const KontosList = () => {
   const history = useHistory();
@@ -10,6 +11,11 @@ const KontosList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [includeInactive, setIncludeInactive] = useState(false);
+
+  const breadcrumbItems = [
+    { label: 'Accounting', path: '/accounting' },
+    { label: 'Chart of Accounts', path: null }
+  ];
 
   useEffect(() => {
     fetchKontos();
@@ -68,9 +74,22 @@ const KontosList = () => {
   }
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4>Chart of Accounts ({kontos.length})</h4>
+    <Container fluid className="py-4">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          Chart of Accounts
+          <Badge bg="secondary" className="ms-2">
+            {kontos.length}
+          </Badge>
+        </h2>
+        <Button variant="secondary" onClick={() => history.push('/accounting')}>
+          Back to Accounting
+        </Button>
+      </div>
+
+      <div className="d-flex justify-content-end mb-3">
         <Form.Check
           type="checkbox"
           label="Show inactive kontos"
@@ -129,7 +148,7 @@ const KontosList = () => {
           </tbody>
         </Table>
       )}
-    </div>
+    </Container>
   );
 };
 

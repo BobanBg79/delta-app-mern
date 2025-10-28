@@ -14,7 +14,9 @@ import {
 import RolesList from '../pages/RolesList';
 import RoleView from '../pages/RoleView';
 import Accounting from '../pages/Accounting';
+import KontosList from '../pages/Accounting/KontosList';
 import KontoDetails from '../pages/Accounting/KontoDetails';
+import TransactionsList from '../pages/Accounting/TransactionsList';
 import TransactionDetails from '../pages/Accounting/TransactionDetails';
 import { USER_PERMISSIONS } from '../constants';
 
@@ -36,7 +38,9 @@ const PAGE_URLS = {
   rolesList: '/roles',
   roleView: '/roles/:roleId',
   accounting: '/accounting',
+  kontosList: '/accounting/kontos',
   kontoDetails: '/accounting/konto/:code',
+  transactionsList: '/accounting/transactions',
   transactionDetails: '/accounting/transaction/:id',
 };
 
@@ -59,7 +63,9 @@ const {
   rolesList,
   roleView,
   accounting,
+  kontosList,
   kontoDetails,
+  transactionsList,
   transactionDetails,
 } = PAGE_URLS;
 
@@ -180,11 +186,27 @@ export const PROTECTED_ROUTES = {
     component: Accounting,
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
   },
+  KONTOS_LIST: {
+    title: 'Chart of Accounts',
+    id: 'kontos_list',
+    isExact: true,
+    path: kontosList,
+    component: KontosList,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
+  },
   KONTO_DETAILS: {
     title: 'Konto Details',
     id: 'konto_details',
     path: kontoDetails,
     component: KontoDetails,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
+  },
+  TRANSACTIONS_LIST: {
+    title: 'Transactions',
+    id: 'transactions_list',
+    isExact: true,
+    path: transactionsList,
+    component: TransactionsList,
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_KONTO,
   },
   TRANSACTION_DETAILS: {

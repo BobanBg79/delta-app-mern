@@ -233,6 +233,34 @@ router.patch('/konto/:code/deactivate', auth, requirePermission('CAN_DEACTIVATE_
 // TRANSACTION ENDPOINTS
 // ====================================
 
+// @route    GET api/accounting/transactions
+// @desc     Get all transactions with pagination
+// @access   Private
+router.get('/transactions', auth, requirePermission('CAN_VIEW_KONTO'), async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    const Transaction = require('../../models/Transaction');
+
+    const total = await Transaction.countDocuments();
+    const transactions = await Transaction.find({})
+      .sort({ transactionDate: -1, createdAt: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .lean();
+
+    res.json({
+      transactions,
+      total,
+      hasMore: parseInt(offset) + parseInt(limit) < total,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ errors: [error.message] });
+  }
+});
+
 // @route    GET api/accounting/transaction/:id
 // @desc     Get transaction details with related transactions
 // @access   Private

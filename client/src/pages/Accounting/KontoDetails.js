@@ -1,8 +1,9 @@
 // client/src/pages/Accounting/KontoDetails.js
 import { useState, useEffect } from 'react';
 import { useParams, useHistory } from 'react-router-dom';
-import { Card, Alert, Spinner, Badge, Button, Row, Col, Table } from 'react-bootstrap';
+import { Card, Alert, Spinner, Badge, Button, Row, Col, Table, Container } from 'react-bootstrap';
 import { getKontoByCode, getKontoTransactions } from '../../modules/accounting/kontoOperations';
+import Breadcrumbs from '../../components/Breadcrumbs';
 
 const KontoDetails = () => {
   const { code } = useParams();
@@ -13,6 +14,12 @@ const KontoDetails = () => {
   const [transactionsMeta, setTransactionsMeta] = useState({ total: 0, hasMore: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const breadcrumbItems = [
+    { label: 'Accounting', path: '/accounting' },
+    { label: 'Chart of Accounts', path: '/accounting/kontos' },
+    { label: `Konto ${code}`, path: null }
+  ];
 
   useEffect(() => {
     fetchKontoDetails();
@@ -73,31 +80,44 @@ const KontoDetails = () => {
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" />
-        <p className="mt-2">Loading konto details...</p>
-      </div>
+      <Container fluid className="py-4">
+        <Breadcrumbs items={breadcrumbItems} />
+        <div className="text-center py-5">
+          <Spinner animation="border" />
+          <p className="mt-2">Loading konto details...</p>
+        </div>
+      </Container>
     );
   }
 
   if (error) {
     return (
-      <Alert variant="danger">
-        <Alert.Heading>Error</Alert.Heading>
-        {error}
-      </Alert>
+      <Container fluid className="py-4">
+        <Breadcrumbs items={breadcrumbItems} />
+        <Alert variant="danger">
+          <Alert.Heading>Error</Alert.Heading>
+          {error}
+        </Alert>
+      </Container>
     );
   }
 
   if (!konto) {
-    return <Alert variant="warning">Konto not found</Alert>;
+    return (
+      <Container fluid className="py-4">
+        <Breadcrumbs items={breadcrumbItems} />
+        <Alert variant="warning">Konto not found</Alert>
+      </Container>
+    );
   }
 
   return (
-    <div>
+    <Container fluid className="py-4">
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3>Konto Details</h3>
-        <Button variant="secondary" onClick={() => history.push('/accounting')}>
+        <h2>Konto Details</h2>
+        <Button variant="secondary" onClick={() => history.push('/accounting/kontos')}>
           Back to Chart of Accounts
         </Button>
       </div>
@@ -298,7 +318,7 @@ const KontoDetails = () => {
           )}
         </Card.Body>
       </Card>
-    </div>
+    </Container>
   );
 };
 

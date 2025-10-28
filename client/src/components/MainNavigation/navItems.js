@@ -23,6 +23,12 @@ const navItems = [
     exact: false,
     strict: false,
   },
+  {
+    label: 'Accounting',
+    path: '/accounting',
+    exact: false,
+    strict: false,
+  },
 ];
 
 export default navItems;
