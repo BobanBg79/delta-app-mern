@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button';
 import Badge from 'react-bootstrap/Badge';
 import { formatDateDefault, getDifferenceInDays } from '../utils/date';
 import PaymentForm from './PaymentForm';
+import PaymentStatus from './PaymentStatus';
 
 const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -89,6 +90,16 @@ const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
             <div>
               <strong>Additional Information:</strong>
               <div style={{ marginTop: '4px', whiteSpace: 'pre-wrap' }}>{reservation.reservationNotes}</div>
+            </div>
+          )}
+
+          {/* Payment Status */}
+          {reservation._id && (
+            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>
+              <PaymentStatus
+                reservationId={reservation._id}
+                totalAmount={reservation.totalAmount || 0}
+              />
             </div>
           )}
         </div>

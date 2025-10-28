@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
@@ -11,6 +11,8 @@ import 'rsuite/dist/rsuite.min.css';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { getAllBookingAgents } from '../../modules/bookingAgents/operations';
 import GuestInfo from '../../components/GuestInfo';
+import PaymentStatus from '../../components/PaymentStatus';
+import PaymentForm from '../../components/PaymentForm';
 import { sortEntitiesForDropdown, shouldDisableOption, formatDropdownLabel } from '../../utils/dropdown';
 
 const { active, canceled, noshow } = RESERVATION_STATUSES;
@@ -27,6 +29,7 @@ const ReservationForm = ({
   onSubmit,
 }) => {
   const dispatch = useDispatch();
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   const {
     status = 'active',
@@ -42,6 +45,7 @@ const ReservationForm = ({
     firstName = '',
     lastName = '',
     reservationNotes = '',
+    _id: reservationId = null,
   } = formState || {};
 
   // Redux state
@@ -283,6 +287,32 @@ const ReservationForm = ({
             </Col>
           </Row>
 
+          {/* Payment Status - Only show for existing reservations */}
+          {entityIdFromUrlParam && reservationId && (
+            <Row className="mb-4">
+              <Col xs="12">
+                <h6>Payment Information</h6>
+              </Col>
+              <Col xs="12">
+                <div className="p-3 bg-light rounded">
+                  <PaymentStatus
+                    reservationId={reservationId}
+                    totalAmount={parseFloat(totalAmount) || 0}
+                  />
+                  <div className="mt-3">
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => setShowPaymentForm(true)}
+                    >
+                      Add Payment
+                    </Button>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
           {/* Notes */}
           <Row className="mb-4">
             <Col xs="12">
@@ -334,6 +364,20 @@ const ReservationForm = ({
           )}
         </fieldset>
       </Form>
+
+      {/* Payment Form Modal */}
+      {showPaymentForm && reservationId && (
+        <PaymentForm
+          reservation={formState}
+          onClose={() => setShowPaymentForm(false)}
+          onSuccess={(result) => {
+            console.log('Payment created successfully:', result);
+            setShowPaymentForm(false);
+            // Optionally trigger a refresh of payment status
+            // You could add a callback prop to refresh the parent component
+          }}
+        />
+      )}
     </div>
   );
 };
