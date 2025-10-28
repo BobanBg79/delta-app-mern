@@ -14,62 +14,76 @@ class TransactionService {
 
   /**
    * Create transactions for accommodation payment (cash)
+   * Allocates revenue across multiple fiscal months based on reservation dates
    *
    * @param {Object} data
    * @param {Object} data.payment - AccommodationPayment document
    * @param {Object} data.cashRegister - Konto document (cash register)
    * @param {Object} data.revenueAccount - Konto document (revenue)
    * @param {String} data.apartmentName - Apartment name for description
+   * @param {Array} data.monthlyAllocations - Array of { fiscalYear, fiscalMonth, amount }
    * @param {Object} data.session - Mongoose session for transaction
    * @returns {Array} Created transactions
    */
   async createPaymentTransactions(data) {
-    const { payment, cashRegister, revenueAccount, apartmentName, session } = data;
+    const { payment, cashRegister, revenueAccount, apartmentName, monthlyAllocations, session } = data;
 
     const groupId = new mongoose.Types.ObjectId();
-    const { fiscalYear, fiscalMonth } = getFiscalPeriod(payment.transactionDate);
+    const { fiscalYear: paymentFiscalYear, fiscalMonth: paymentFiscalMonth } = getFiscalPeriod(payment.transactionDate);
 
     // Prepare transactions
-    const transactionsToCreate = [
-      // Transaction 1: Cash Register (Asset - Debit increases)
-      {
+    const transactionsToCreate = [];
+
+    // Transaction 1: Cash Register (Asset - Debit increases)
+    // This transaction is recorded in the fiscal period when payment was received
+    transactionsToCreate.push({
+      transactionDate: payment.transactionDate,
+      fiscalYear: paymentFiscalYear,
+      fiscalMonth: paymentFiscalMonth,
+      description: `Cash payment received - ${cashRegister.name} (${apartmentName})`,
+      amount: payment.amount,
+      kontoCode: cashRegister.code,
+      kontoName: cashRegister.name,
+      type: 'revenue',
+      debit: payment.amount,
+      credit: 0,
+      groupId,
+      sourceType: TRANSACTION_SOURCE_TYPES.ACCOMMODATION_PAYMENT,
+      sourceId: payment._id,
+      createdBy: payment.createdBy,
+      note: payment.note,
+      documentNumber: payment.documentNumber
+    });
+
+    // Transactions 2+: Revenue Account (Revenue - Credit increases)
+    // Multiple transactions, one per fiscal month where nights occurred
+    let totalCreditAmount = 0;
+
+    for (const allocation of monthlyAllocations) {
+      const monthName = new Date(allocation.fiscalYear, allocation.fiscalMonth - 1, 1)
+        .toLocaleString('en-US', { month: 'short', year: 'numeric' });
+
+      transactionsToCreate.push({
         transactionDate: payment.transactionDate,
-        fiscalYear,
-        fiscalMonth,
-        description: `Cash payment received - ${cashRegister.name} (${apartmentName})`,
-        amount: payment.amount,
-        kontoCode: cashRegister.code,
-        kontoName: cashRegister.name,
-        type: 'revenue',
-        debit: payment.amount,
-        credit: 0,
-        groupId,
-        sourceType: TRANSACTION_SOURCE_TYPES.ACCOMMODATION_PAYMENT,
-        sourceId: payment._id,
-        createdBy: payment.createdBy,
-        note: payment.note,
-        documentNumber: payment.documentNumber
-      },
-      // Transaction 2: Revenue Account (Revenue - Credit increases)
-      {
-        transactionDate: payment.transactionDate,
-        fiscalYear,
-        fiscalMonth,
-        description: `Accommodation revenue - ${apartmentName}`,
-        amount: payment.amount,
+        fiscalYear: allocation.fiscalYear,
+        fiscalMonth: allocation.fiscalMonth,
+        description: `Accommodation revenue - ${apartmentName} (${monthName})`,
+        amount: allocation.amount,
         kontoCode: revenueAccount.code,
         kontoName: revenueAccount.name,
         type: 'revenue',
         debit: 0,
-        credit: payment.amount,
+        credit: allocation.amount,
         groupId,
         sourceType: TRANSACTION_SOURCE_TYPES.ACCOMMODATION_PAYMENT,
         sourceId: payment._id,
         createdBy: payment.createdBy,
         note: payment.note,
         documentNumber: payment.documentNumber
-      }
-    ];
+      });
+
+      totalCreditAmount += allocation.amount;
+    }
 
     // Validate double-entry bookkeeping
     validateDoubleEntry(transactionsToCreate);
@@ -79,7 +93,7 @@ class TransactionService {
 
     // Update Konto balances
     await this._updateKontoBalance(cashRegister, payment.amount, 0, session);
-    await this._updateKontoBalance(revenueAccount, 0, payment.amount, session);
+    await this._updateKontoBalance(revenueAccount, 0, totalCreditAmount, session);
 
     return createdTransactions;
   }
