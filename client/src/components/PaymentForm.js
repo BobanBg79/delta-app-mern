@@ -1,10 +1,11 @@
 // client/src/components/PaymentForm.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Alert from 'react-bootstrap/Alert';
-import { createCashPayment } from '../modules/payment/operations';
+import Spinner from 'react-bootstrap/Spinner';
+import { createCashPayment, getPaymentsByReservation } from '../modules/payment/operations';
 
 const PaymentForm = ({ reservation, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -15,7 +16,57 @@ const PaymentForm = ({ reservation, onClose, onSuccess }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [loadingPaymentStatus, setLoadingPaymentStatus] = useState(true);
   const [error, setError] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [overpaymentWarning, setOverpaymentWarning] = useState(null);
+
+  // Fetch existing payment status on mount
+  useEffect(() => {
+    const fetchPaymentStatus = async () => {
+      if (!reservation._id) {
+        setLoadingPaymentStatus(false);
+        return;
+      }
+
+      try {
+        const data = await getPaymentsByReservation(reservation._id);
+        setPaymentStatus(data);
+      } catch (err) {
+        console.error('Error fetching payment status:', err);
+        // Don't block the form if we can't fetch status
+      } finally {
+        setLoadingPaymentStatus(false);
+      }
+    };
+
+    fetchPaymentStatus();
+  }, [reservation._id]);
+
+  // Check for overpayment when amount changes
+  useEffect(() => {
+    const amount = parseFloat(formData.amount);
+    if (!amount || amount <= 0 || !paymentStatus) {
+      setOverpaymentWarning(null);
+      return;
+    }
+
+    const totalReservation = parseFloat(reservation.totalAmount) || 0;
+    const totalPaid = paymentStatus.totalPaid || 0;
+    const newTotal = totalPaid + amount;
+
+    if (newTotal > totalReservation) {
+      const overpayment = (newTotal - totalReservation).toFixed(2);
+      setOverpaymentWarning(
+        `Warning: This payment will result in an overpayment of ${overpayment} EUR. ` +
+        `Total reservation amount: ${totalReservation.toFixed(2)} EUR. ` +
+        `Already paid: ${totalPaid.toFixed(2)} EUR. ` +
+        `Total after this payment: ${newTotal.toFixed(2)} EUR.`
+      );
+    } else {
+      setOverpaymentWarning(null);
+    }
+  }, [formData.amount, paymentStatus, reservation.totalAmount]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -80,6 +131,15 @@ const PaymentForm = ({ reservation, onClose, onSuccess }) => {
             </Alert>
           )}
 
+          {overpaymentWarning && (
+            <Alert variant="warning">
+              <strong>Overpayment Warning</strong>
+              <div style={{ marginTop: '8px', fontSize: '0.9rem' }}>
+                {overpaymentWarning}
+              </div>
+            </Alert>
+          )}
+
           <div style={{ marginBottom: '12px' }}>
             <strong>Reservation:</strong> {reservation.apartment?.name || '-'}
             <br />
@@ -88,6 +148,22 @@ const PaymentForm = ({ reservation, onClose, onSuccess }) => {
               : 'No guest assigned'}
             <br />
             <strong>Total Amount:</strong> {reservation.totalAmount ? `${reservation.totalAmount} EUR` : '-'}
+            {loadingPaymentStatus ? (
+              <>
+                <br />
+                <Spinner animation="border" size="sm" className="me-2" />
+                <small>Loading payment status...</small>
+              </>
+            ) : paymentStatus && (
+              <>
+                <br />
+                <strong>Already Paid:</strong> {paymentStatus.totalPaid ? `${paymentStatus.totalPaid.toFixed(2)} EUR` : '0.00 EUR'}
+                <br />
+                <strong>Remaining:</strong> {
+                  ((parseFloat(reservation.totalAmount) || 0) - (paymentStatus.totalPaid || 0)).toFixed(2)
+                } EUR
+              </>
+            )}
           </div>
 
           <Form.Group className="mb-3">
