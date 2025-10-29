@@ -33,7 +33,8 @@ const PAYMENT_METHODS = {
   CASH: 'cash',
   BANK_TRANSFER: 'bank_transfer',
   CARD: 'card',
-  MIXED: 'mixed'
+  MIXED: 'mixed',
+  CASH_REFUND: 'cash_refund'
 };
 
 /**

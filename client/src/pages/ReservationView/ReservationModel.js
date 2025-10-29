@@ -16,6 +16,7 @@ const ReservationModel = {
   totalAmount: '',
   guestId: '',
   reservationNotes: '',
+  refund: null, // Optional refund data when updating reservation with overpayment
 };
 
 export default ReservationModel;

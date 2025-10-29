@@ -5,18 +5,23 @@ import Spinner from 'react-bootstrap/Spinner';
 import Badge from 'react-bootstrap/Badge';
 import { getPaymentsByReservation } from '../modules/payment/operations';
 
-const PaymentStatus = ({ reservationId, totalAmount }) => {
+const PaymentStatus = ({ reservationId, totalAmount, paymentInfo: externalPaymentInfo }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paymentInfo, setPaymentInfo] = useState(null);
 
-  useEffect(() => {
-    const fetchPaymentStatus = async () => {
-      if (!reservationId) {
-        setLoading(false);
-        return;
-      }
+  // If payment info is provided externally, use it
+  const shouldFetchData = !externalPaymentInfo && reservationId;
+  const activePaymentInfo = externalPaymentInfo || paymentInfo;
+  const isLoading = externalPaymentInfo ? false : loading;
 
+  useEffect(() => {
+    if (!shouldFetchData) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchPaymentStatus = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -31,9 +36,9 @@ const PaymentStatus = ({ reservationId, totalAmount }) => {
     };
 
     fetchPaymentStatus();
-  }, [reservationId]);
+  }, [reservationId, shouldFetchData]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="d-flex align-items-center" style={{ fontSize: '0.9rem' }}>
         <Spinner animation="border" size="sm" className="me-2" />
@@ -50,11 +55,11 @@ const PaymentStatus = ({ reservationId, totalAmount }) => {
     );
   }
 
-  if (!paymentInfo) {
+  if (!activePaymentInfo) {
     return null;
   }
 
-  const { totalPaid } = paymentInfo;
+  const { totalPaid } = activePaymentInfo;
   const total = totalAmount || 0;
   const remaining = total - totalPaid;
   const percentage = total > 0 ? Math.round((totalPaid / total) * 100) : 0;
@@ -91,9 +96,9 @@ const PaymentStatus = ({ reservationId, totalAmount }) => {
           <strong className={totalPaid > 0 ? 'text-success' : ''}>{totalPaid.toFixed(2)} EUR</strong>
         </div>
         <div className="d-flex justify-content-between">
-          <span>Remaining:</span>
+          <span>{remaining < 0 ? 'Overpayment:' : 'Remaining:'}</span>
           <strong className={remaining > 0 ? 'text-danger' : remaining < 0 ? 'text-info' : 'text-success'}>
-            {remaining.toFixed(2)} EUR
+            {remaining < 0 ? Math.abs(remaining).toFixed(2) : remaining.toFixed(2)} EUR
           </strong>
         </div>
 

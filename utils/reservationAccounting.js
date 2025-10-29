@@ -205,9 +205,96 @@ function calculateMonthlyAllocation(reservation, newPaymentAmount, existingTrans
   };
 }
 
+/**
+ * Calculate how to allocate a refund across fiscal months (reverse chronologically)
+ * Refunds are allocated in reverse - latest months are reduced first
+ *
+ * @param {Object} reservation - Reservation object
+ * @param {Number} refundAmount - Amount to refund
+ * @param {Array} existingTransactions - Array of existing Transaction documents for this reservation
+ * @returns {Object} { allocations: Array, totalReservation: Number, totalPaid: Number, totalAfterRefund: Number }
+ *
+ * @example
+ * Reservation: Oct(400) + Nov(3000) + Dec(1400) = 4,800 EUR
+ * Already paid: 4,800 EUR → Oct(400) + Nov(3000) + Dec(1400) - fully paid
+ * Refund: 1,500 EUR
+ *
+ * Result: {
+ *   allocations: [
+ *     { fiscalYear: 2025, fiscalMonth: 12, amount: 1400 }, // Dec fully refunded
+ *     { fiscalYear: 2025, fiscalMonth: 11, amount: 100 }   // Nov partially refunded
+ *   ],
+ *   totalReservation: 4800,
+ *   totalPaid: 4800,
+ *   totalAfterRefund: 3300
+ * }
+ */
+function calculateRefundAllocation(reservation, refundAmount, existingTransactions = []) {
+  // Step 1: Calculate total monthly revenue breakdown
+  const monthlyRevenue = calculateMonthlyRevenue(reservation);
+  const totalReservation = monthlyRevenue.reduce((sum, month) => sum + month.amount, 0);
+
+  // Step 2: Calculate already paid per month from existing transactions
+  const paidByMonth = aggregatePaidByMonth(existingTransactions);
+
+  // Step 3: Build paid amounts by month (for reverse allocation)
+  const paidPerMonth = monthlyRevenue.map(month => {
+    const key = `${month.fiscalYear}-${month.fiscalMonth}`;
+    const paid = paidByMonth[key] || 0;
+    return {
+      fiscalYear: month.fiscalYear,
+      fiscalMonth: month.fiscalMonth,
+      totalAmount: month.amount,
+      paid: paid
+    };
+  });
+
+  // Step 4: Allocate refund in REVERSE chronological order (latest months first)
+  let remainingRefund = refundAmount;
+  const allocations = [];
+
+  // Reverse iterate through months
+  for (let i = paidPerMonth.length - 1; i >= 0; i--) {
+    if (remainingRefund <= 0) break;
+
+    const month = paidPerMonth[i];
+    const refundableAmount = Math.min(month.paid, remainingRefund);
+
+    if (refundableAmount > 0) {
+      allocations.push({
+        fiscalYear: month.fiscalYear,
+        fiscalMonth: month.fiscalMonth,
+        amount: parseFloat(refundableAmount.toFixed(2)) // Round to 2 decimal places
+      });
+      remainingRefund -= refundableAmount;
+    }
+  }
+
+  // Reverse allocations array to be chronological (oldest first) for transaction creation
+  allocations.reverse();
+
+  // Calculate totals
+  const totalPaid = Object.values(paidByMonth).reduce((sum, amount) => sum + amount, 0);
+  const totalAfterRefund = totalPaid - refundAmount;
+
+  // Validation: Cannot refund more than paid
+  if (refundAmount > totalPaid) {
+    throw new Error(`Cannot refund ${refundAmount.toFixed(2)} EUR. Only ${totalPaid.toFixed(2)} EUR has been paid.`);
+  }
+
+  return {
+    allocations,
+    totalReservation,
+    totalPaid,
+    totalAfterRefund,
+    refundAmount
+  };
+}
+
 module.exports = {
   calculateNightsByMonth,
   calculateMonthlyRevenue,
   aggregatePaidByMonth,
-  calculateMonthlyAllocation
+  calculateMonthlyAllocation,
+  calculateRefundAllocation
 };

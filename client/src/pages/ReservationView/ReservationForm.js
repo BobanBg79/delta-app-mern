@@ -10,9 +10,13 @@ import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { getAllBookingAgents } from '../../modules/bookingAgents/operations';
+import { getPaymentsByReservation } from '../../modules/payment/operations';
+import { updateReservation } from '../../modules/reservation/operations';
 import GuestInfo from '../../components/GuestInfo';
 import PaymentStatus from '../../components/PaymentStatus';
 import PaymentForm from '../../components/PaymentForm';
+import RefundForm from '../../components/RefundForm';
+import OverpaymentConfirmationModal from '../../components/OverpaymentConfirmationModal';
 import { sortEntitiesForDropdown, shouldDisableOption, formatDropdownLabel } from '../../utils/dropdown';
 
 const { active, canceled, noshow } = RESERVATION_STATUSES;
@@ -30,6 +34,11 @@ const ReservationForm = ({
 }) => {
   const dispatch = useDispatch();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState(null);
+  const [loadingPaymentInfo, setLoadingPaymentInfo] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(null);
+  const [showOverpaymentModal, setShowOverpaymentModal] = useState(false);
+  const [showRefundForm, setShowRefundForm] = useState(false);
 
   const {
     status = 'active',
@@ -84,6 +93,28 @@ const ReservationForm = ({
     dispatch(getAllBookingAgents(false)); // Load all booking agents (including inactive)
   }, [dispatch]);
 
+  // Fetch payment info for existing reservations
+  useEffect(() => {
+    const fetchPaymentInfo = async () => {
+      if (!reservationId) {
+        setPaymentInfo(null);
+        return;
+      }
+
+      try {
+        setLoadingPaymentInfo(true);
+        const data = await getPaymentsByReservation(reservationId);
+        setPaymentInfo(data);
+      } catch (err) {
+        console.error('Error fetching payment info:', err);
+      } finally {
+        setLoadingPaymentInfo(false);
+      }
+    };
+
+    fetchPaymentInfo();
+  }, [reservationId]);
+
   const handleTotalAmountChange = (event) => {
     const value = parseFloat(event.target.value) || 0;
 
@@ -95,6 +126,75 @@ const ReservationForm = ({
         target: { value: calculatedPerNight },
       };
       onInputChange(['pricePerNight'])(syntheticEvent);
+    }
+  };
+
+  // Custom submit handler that checks for overpayment
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    // Check if this is an update to an existing reservation with payments
+    if (entityIdFromUrlParam && paymentInfo) {
+      const newTotalAmount = parseFloat(totalAmount) || 0;
+      const totalPaid = paymentInfo.totalPaid || 0;
+      const overpaymentAmount = totalPaid - newTotalAmount;
+
+      // If there's overpayment, pause and show confirmation modal
+      if (overpaymentAmount > 0) {
+        setPendingSubmit(event);
+        setShowOverpaymentModal(true);
+        return; // Don't submit yet!
+      }
+    }
+
+    // No overpayment or new reservation - submit normally
+    onSubmit(event);
+  };
+
+  // Handler when user chooses to create refund
+  const handleCreateRefund = () => {
+    setShowOverpaymentModal(false);
+    setShowRefundForm(true);
+  };
+
+  // Handler when user chooses to continue without refund
+  const handleContinueWithoutRefund = async () => {
+    setShowOverpaymentModal(false);
+    // Submit without refund data
+    if (pendingSubmit) {
+      onSubmit(pendingSubmit);
+      setPendingSubmit(null);
+    }
+  };
+
+  // Handler when user cancels the update
+  const handleCancelUpdate = () => {
+    setShowOverpaymentModal(false);
+    setPendingSubmit(null);
+  };
+
+  // Handler when refund form is submitted
+  const handleRefundSuccess = async (refundData) => {
+    setShowRefundForm(false);
+
+    // Submit with refund data - update formState with refund and submit
+    if (pendingSubmit) {
+      // Create updated formState with refund data
+      const formStateWithRefund = {
+        ...formState,
+        refund: refundData
+      };
+
+      // Manually call updateReservation with refund data
+      dispatch(updateReservation(reservationId, formStateWithRefund))
+        .then((response) => {
+          if (!response?.error) {
+            // Navigate back on success (same as FormContainer does)
+            window.history.back();
+          }
+        });
+
+      setPendingSubmit(null);
     }
   };
 
@@ -118,7 +218,7 @@ const ReservationForm = ({
 
   return (
     <div>
-      <Form noValidate validated={validated} id="reservation-form-view" onSubmit={onSubmit}>
+      <Form noValidate validated={validated} id="reservation-form-view" onSubmit={handleSubmit}>
         <fieldset disabled={!isEditable}>
           {/* Date Selection */}
           <Row className="mb-4">
@@ -298,6 +398,7 @@ const ReservationForm = ({
                   <PaymentStatus
                     reservationId={reservationId}
                     totalAmount={parseFloat(totalAmount) || 0}
+                    paymentInfo={paymentInfo}
                   />
                   <div className="mt-3">
                     <Button
@@ -373,9 +474,35 @@ const ReservationForm = ({
           onSuccess={(result) => {
             console.log('Payment created successfully:', result);
             setShowPaymentForm(false);
-            // Optionally trigger a refresh of payment status
-            // You could add a callback prop to refresh the parent component
+            // Refresh payment info after creating payment
+            if (reservationId) {
+              getPaymentsByReservation(reservationId).then(setPaymentInfo).catch(console.error);
+            }
           }}
+        />
+      )}
+
+      {/* Overpayment Confirmation Modal */}
+      {showOverpaymentModal && paymentInfo && (
+        <OverpaymentConfirmationModal
+          overpaymentAmount={(paymentInfo.totalPaid || 0) - (parseFloat(totalAmount) || 0)}
+          onCreateRefund={handleCreateRefund}
+          onContinueWithoutRefund={handleContinueWithoutRefund}
+          onCancel={handleCancelUpdate}
+        />
+      )}
+
+      {/* Refund Form Modal */}
+      {showRefundForm && paymentInfo && (
+        <RefundForm
+          reservation={formState}
+          suggestedAmount={(paymentInfo.totalPaid || 0) - (parseFloat(totalAmount) || 0)}
+          totalPaid={paymentInfo.totalPaid || 0}
+          onClose={() => {
+            setShowRefundForm(false);
+            setPendingSubmit(null);
+          }}
+          onSuccess={handleRefundSuccess}
         />
       )}
     </div>

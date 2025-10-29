@@ -105,6 +105,9 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
       delete transformedData.guestId;
     }
 
+    // Keep refund data if present (will be null for non-refund updates)
+    // Backend will handle refund creation if refund object exists
+
     const response = await axios.patch(`/api/reservations/${reservationId}`, transformedData);
     const { reservation } = response.data;
     if (reservation.guest) {
