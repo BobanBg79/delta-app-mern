@@ -1,11 +1,13 @@
-// client/src/components/PaymentStatus.js
+// client/src/components/ReservationPaymentStatus.js
 import { useState, useEffect } from 'react';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
 import Badge from 'react-bootstrap/Badge';
+import ListGroup from 'react-bootstrap/ListGroup';
 import { getPaymentsByReservation } from '../modules/payment/operations';
+import { formatDateDefault } from '../utils/date';
 
-const PaymentStatus = ({ reservationId, totalAmount, paymentInfo: externalPaymentInfo }) => {
+const ReservationPaymentStatus = ({ reservationId, totalAmount, paymentInfo: externalPaymentInfo }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paymentInfo, setPaymentInfo] = useState(null);
@@ -59,7 +61,7 @@ const PaymentStatus = ({ reservationId, totalAmount, paymentInfo: externalPaymen
     return null;
   }
 
-  const { totalPaid } = activePaymentInfo;
+  const { totalPaid, payments } = activePaymentInfo;
   const total = totalAmount || 0;
   const remaining = total - totalPaid;
   const percentage = total > 0 ? Math.round((totalPaid / total) * 100) : 0;
@@ -121,8 +123,53 @@ const PaymentStatus = ({ reservationId, totalAmount, paymentInfo: externalPaymen
           </div>
         )}
       </div>
+
+      {/* Payment History */}
+      {payments && payments.length > 0 && (
+        <div className="mt-3">
+          <strong className="d-block mb-2" style={{ fontSize: '0.9rem' }}>Payment History:</strong>
+          <ListGroup variant="flush" style={{ fontSize: '0.85rem' }}>
+            {payments.map((payment) => {
+              const cashierName = payment.createdBy
+                ? `${payment.createdBy.fname} ${payment.createdBy.lname}`
+                : 'Unknown';
+              const paymentDate = payment.transactionDate
+                ? formatDateDefault(new Date(payment.transactionDate).getTime())
+                : '-';
+              const isRefund = payment.paymentMethod === 'cash_refund';
+
+              return (
+                <ListGroup.Item
+                  key={payment._id}
+                  className="px-0 py-2"
+                  style={{ border: 'none', borderBottom: '1px solid #dee2e6' }}
+                >
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div className="flex-grow-1">
+                      <div className="d-flex align-items-center gap-2">
+                        <strong className={isRefund ? 'text-danger' : 'text-success'}>
+                          {isRefund ? '-' : '+'}{payment.amount.toFixed(2)} EUR
+                        </strong>
+                        {isRefund && <Badge bg="danger" style={{ fontSize: '0.7rem' }}>Refund</Badge>}
+                      </div>
+                      <div className="text-muted" style={{ fontSize: '0.8rem' }}>
+                        {paymentDate} • {cashierName}
+                      </div>
+                      {payment.note && (
+                        <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+                          {payment.note}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+        </div>
+      )}
     </div>
   );
 };
 
-export default PaymentStatus;
+export default ReservationPaymentStatus;

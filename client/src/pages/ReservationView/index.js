@@ -2,6 +2,7 @@ import { useSelector } from 'react-redux';
 import { useParams, useHistory } from 'react-router-dom';
 import FormContainer from '../../components/Form/FormContainer';
 import ReservationForm from './ReservationForm';
+import ReservationPaymentSection from './ReservationPaymentSection';
 import ReservationModel from './ReservationModel';
 import { getReservation, createReservation, updateReservation } from '../../modules/reservation/operations';
 import { reservationActions } from '../../modules/reservation';
@@ -41,9 +42,12 @@ const ReservationView = () => {
   };
 
   return (
-    <FormContainer formContainerProps={formContainerProps}>
-      <ReservationForm />
-    </FormContainer>
+    <>
+      <FormContainer formContainerProps={formContainerProps}>
+        <ReservationForm />
+        <ReservationPaymentSection />
+      </FormContainer>
+    </>
   );
 };
 

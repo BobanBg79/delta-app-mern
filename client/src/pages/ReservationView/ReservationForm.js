@@ -13,8 +13,6 @@ import { getAllBookingAgents } from '../../modules/bookingAgents/operations';
 import { getPaymentsByReservation } from '../../modules/payment/operations';
 import { updateReservation } from '../../modules/reservation/operations';
 import GuestInfo from '../../components/GuestInfo';
-import PaymentStatus from '../../components/PaymentStatus';
-import PaymentForm from '../../components/PaymentForm';
 import RefundForm from '../../components/RefundForm';
 import OverpaymentConfirmationModal from '../../components/OverpaymentConfirmationModal';
 import { sortEntitiesForDropdown, shouldDisableOption, formatDropdownLabel } from '../../utils/dropdown';
@@ -33,9 +31,7 @@ const ReservationForm = ({
   onSubmit,
 }) => {
   const dispatch = useDispatch();
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState(null);
-  const [loadingPaymentInfo, setLoadingPaymentInfo] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(null);
   const [showOverpaymentModal, setShowOverpaymentModal] = useState(false);
   const [showRefundForm, setShowRefundForm] = useState(false);
@@ -93,7 +89,7 @@ const ReservationForm = ({
     dispatch(getAllBookingAgents(false)); // Load all booking agents (including inactive)
   }, [dispatch]);
 
-  // Fetch payment info for existing reservations
+  // Fetch payment info for existing reservations (used for refund logic)
   useEffect(() => {
     const fetchPaymentInfo = async () => {
       if (!reservationId) {
@@ -102,13 +98,10 @@ const ReservationForm = ({
       }
 
       try {
-        setLoadingPaymentInfo(true);
         const data = await getPaymentsByReservation(reservationId);
         setPaymentInfo(data);
       } catch (err) {
         console.error('Error fetching payment info:', err);
-      } finally {
-        setLoadingPaymentInfo(false);
       }
     };
 
@@ -387,33 +380,6 @@ const ReservationForm = ({
             </Col>
           </Row>
 
-          {/* Payment Status - Only show for existing reservations */}
-          {entityIdFromUrlParam && reservationId && (
-            <Row className="mb-4">
-              <Col xs="12">
-                <h6>Payment Information</h6>
-              </Col>
-              <Col xs="12">
-                <div className="p-3 bg-light rounded">
-                  <PaymentStatus
-                    reservationId={reservationId}
-                    totalAmount={parseFloat(totalAmount) || 0}
-                    paymentInfo={paymentInfo}
-                  />
-                  <div className="mt-3">
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => setShowPaymentForm(true)}
-                    >
-                      Add Payment
-                    </Button>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          )}
-
           {/* Notes */}
           <Row className="mb-4">
             <Col xs="12">
@@ -465,22 +431,6 @@ const ReservationForm = ({
           )}
         </fieldset>
       </Form>
-
-      {/* Payment Form Modal */}
-      {showPaymentForm && reservationId && (
-        <PaymentForm
-          reservation={formState}
-          onClose={() => setShowPaymentForm(false)}
-          onSuccess={(result) => {
-            console.log('Payment created successfully:', result);
-            setShowPaymentForm(false);
-            // Refresh payment info after creating payment
-            if (reservationId) {
-              getPaymentsByReservation(reservationId).then(setPaymentInfo).catch(console.error);
-            }
-          }}
-        />
-      )}
 
       {/* Overpayment Confirmation Modal */}
       {showOverpaymentModal && paymentInfo && (
