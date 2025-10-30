@@ -11,6 +11,11 @@ const { getFiscalPeriod } = require('../models/konto/kontoBalanceLogic');
  * @returns {Array} Array of { fiscalYear, fiscalMonth, nights, startDate, endDate }
  *
  * @example
+ * Input: checkIn = 2025-10-30, checkOut = 2025-11-01
+ * Output: [
+ *   { fiscalYear: 2025, fiscalMonth: 10, nights: 2, startDate: 2025-10-30, endDate: 2025-10-31 }
+ * ]
+ *
  * Input: checkIn = 2025-10-28, checkOut = 2025-12-15
  * Output: [
  *   { fiscalYear: 2025, fiscalMonth: 10, nights: 4, startDate: 2025-10-28, endDate: 2025-10-31 },
@@ -21,43 +26,48 @@ const { getFiscalPeriod } = require('../models/konto/kontoBalanceLogic');
 function calculateNightsByMonth(checkIn, checkOut) {
   const nightsByMonth = [];
 
-  // Ensure we're working with Date objects
-  const startDate = new Date(checkIn);
-  const endDate = new Date(checkOut);
+  // Ensure we're working with Date objects normalized to start of day
+  const reservationStart = new Date(checkIn);
+  const reservationEnd = new Date(checkOut);
+  reservationStart.setHours(0, 0, 0, 0);
+  reservationEnd.setHours(0, 0, 0, 0);
 
   // Validate dates
-  if (startDate >= endDate) {
+  if (reservationStart >= reservationEnd) {
     throw new Error('Check-in date must be before check-out date');
   }
 
-  // Current date we're processing
-  let currentDate = new Date(startDate);
+  // Calculate total nights in reservation
+  const totalNights = Math.floor((reservationEnd - reservationStart) / (1000 * 60 * 60 * 24));
 
-  // Group nights by month
-  while (currentDate < endDate) {
-    const { fiscalYear, fiscalMonth } = getFiscalPeriod(currentDate);
-
-    // Find last day of current month OR check-out date (whichever comes first)
-    const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-    const monthEndDate = lastDayOfMonth < endDate ? lastDayOfMonth : new Date(endDate);
-    monthEndDate.setHours(0, 0, 0, 0); // Normalize to start of day
-
-    // Calculate nights in this month
-    const monthStartDate = new Date(currentDate);
-    const nightsInMonth = Math.ceil((monthEndDate - monthStartDate) / (1000 * 60 * 60 * 24));
-
-    if (nightsInMonth > 0) {
-      nightsByMonth.push({
+  // Iterate through each night and assign to appropriate month
+  let currentNightDate = new Date(reservationStart);
+  
+  for (let nightIndex = 0; nightIndex < totalNights; nightIndex++) {
+    const { fiscalYear, fiscalMonth } = getFiscalPeriod(currentNightDate);
+    
+    // Find existing month in array or create new one
+    let monthData = nightsByMonth.find(m => m.fiscalYear === fiscalYear && m.fiscalMonth === fiscalMonth);
+    
+    if (!monthData) {
+      monthData = {
         fiscalYear,
         fiscalMonth,
-        nights: nightsInMonth,
-        startDate: new Date(monthStartDate),
-        endDate: new Date(monthEndDate)
-      });
+        nights: 0,
+        startDate: new Date(currentNightDate),
+        endDate: new Date(currentNightDate)
+      };
+      nightsByMonth.push(monthData);
     }
-
-    // Move to first day of next month
-    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    
+    // Increment nights count
+    monthData.nights++;
+    
+    // Update end date to current date (represents last night in this month)
+    monthData.endDate = new Date(currentNightDate);
+    
+    // Move to next night
+    currentNightDate.setDate(currentNightDate.getDate() + 1);
   }
 
   return nightsByMonth;
