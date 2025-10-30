@@ -217,57 +217,52 @@ function calculateMonthlyAllocation(reservation, newPaymentAmount, existingTrans
 
 /**
  * Calculate how to allocate a refund across fiscal months (reverse chronologically)
- * Refunds are allocated in reverse - latest months are reduced first
+ * Refunds are allocated based on EXISTING PAYMENTS, not current reservation dates
+ * This handles shortened reservations correctly - refunds come from latest paid months first
  *
- * @param {Object} reservation - Reservation object
+ * @param {Object} reservation - Reservation object (used only for validation)
  * @param {Number} refundAmount - Amount to refund
  * @param {Array} existingTransactions - Array of existing Transaction documents for this reservation
  * @returns {Object} { allocations: Array, totalReservation: Number, totalPaid: Number, totalAfterRefund: Number }
  *
  * @example
- * Reservation: Oct(400) + Nov(3000) + Dec(1400) = 4,800 EUR
- * Already paid: 4,800 EUR → Oct(400) + Nov(3000) + Dec(1400) - fully paid
- * Refund: 1,500 EUR
+ * Scenario: Original reservation had Oct(200€) + Nov(200€) payments
+ * Reservation shortened to Oct only, need 200€ refund from Nov
+ * Existing transactions: Oct(200€) + Nov(200€)
  *
  * Result: {
  *   allocations: [
- *     { fiscalYear: 2025, fiscalMonth: 12, amount: 1400 }, // Dec fully refunded
- *     { fiscalYear: 2025, fiscalMonth: 11, amount: 100 }   // Nov partially refunded
+ *     { fiscalYear: 2025, fiscalMonth: 11, amount: 200 } // Nov refunded
  *   ],
- *   totalReservation: 4800,
- *   totalPaid: 4800,
- *   totalAfterRefund: 3300
+ *   totalPaid: 400,
+ *   totalAfterRefund: 200
  * }
  */
 function calculateRefundAllocation(reservation, refundAmount, existingTransactions = []) {
-  // Step 1: Calculate total monthly revenue breakdown
-  const monthlyRevenue = calculateMonthlyRevenue(reservation);
-  const totalReservation = monthlyRevenue.reduce((sum, month) => sum + month.amount, 0);
-
-  // Step 2: Calculate already paid per month from existing transactions
+  // Step 1: Calculate paid amounts by month from existing transactions (ignore current reservation dates)
   const paidByMonth = aggregatePaidByMonth(existingTransactions);
+  
+  // Step 2: Convert to array and sort by fiscal period (latest first for refunding)
+  const paidMonths = Object.entries(paidByMonth)
+    .map(([key, amount]) => {
+      const [fiscalYear, fiscalMonth] = key.split('-').map(Number);
+      return {
+        fiscalYear,
+        fiscalMonth,
+        paid: amount,
+        sortKey: fiscalYear * 100 + fiscalMonth // For sorting
+      };
+    })
+    .filter(month => month.paid > 0)
+    .sort((a, b) => b.sortKey - a.sortKey); // Descending - latest months first
 
-  // Step 3: Build paid amounts by month (for reverse allocation)
-  const paidPerMonth = monthlyRevenue.map(month => {
-    const key = `${month.fiscalYear}-${month.fiscalMonth}`;
-    const paid = paidByMonth[key] || 0;
-    return {
-      fiscalYear: month.fiscalYear,
-      fiscalMonth: month.fiscalMonth,
-      totalAmount: month.amount,
-      paid: paid
-    };
-  });
-
-  // Step 4: Allocate refund in REVERSE chronological order (latest months first)
+  // Step 3: Allocate refund from latest months first (LIFO)
   let remainingRefund = refundAmount;
   const allocations = [];
 
-  // Reverse iterate through months
-  for (let i = paidPerMonth.length - 1; i >= 0; i--) {
+  for (const month of paidMonths) {
     if (remainingRefund <= 0) break;
 
-    const month = paidPerMonth[i];
     const refundableAmount = Math.min(month.paid, remainingRefund);
 
     if (refundableAmount > 0) {
@@ -280,12 +275,21 @@ function calculateRefundAllocation(reservation, refundAmount, existingTransactio
     }
   }
 
-  // Reverse allocations array to be chronological (oldest first) for transaction creation
-  allocations.reverse();
+  // Step 4: Sort allocations chronologically (oldest first) for transaction creation
+  allocations.sort((a, b) => {
+    const sortKeyA = a.fiscalYear * 100 + a.fiscalMonth;
+    const sortKeyB = b.fiscalYear * 100 + b.fiscalMonth;
+    return sortKeyA - sortKeyB;
+  });
 
   // Calculate totals
   const totalPaid = Object.values(paidByMonth).reduce((sum, amount) => sum + amount, 0);
   const totalAfterRefund = totalPaid - refundAmount;
+  
+  // Calculate current reservation total (for reporting)
+  const currentReservationTotal = reservation.plannedCheckIn && reservation.plannedCheckOut 
+    ? calculateMonthlyRevenue(reservation).reduce((sum, month) => sum + month.amount, 0)
+    : 0;
 
   // Validation: Cannot refund more than paid
   if (refundAmount > totalPaid) {
@@ -294,7 +298,7 @@ function calculateRefundAllocation(reservation, refundAmount, existingTransactio
 
   return {
     allocations,
-    totalReservation,
+    totalReservation: currentReservationTotal, // Current (possibly shortened) reservation
     totalPaid,
     totalAfterRefund,
     refundAmount

@@ -143,6 +143,7 @@ class TransactionService {
 
     // Transactions 2+: Revenue Account (Revenue - Debit decreases)
     // Multiple transactions, one per fiscal month being refunded
+    // IMPORTANT: Each transaction uses the fiscal period of the month being refunded
     let totalDebitAmount = 0;
 
     for (const allocation of monthlyAllocations) {
@@ -151,8 +152,8 @@ class TransactionService {
 
       transactionsToCreate.push({
         transactionDate: payment.transactionDate,
-        fiscalYear: allocation.fiscalYear,
-        fiscalMonth: allocation.fiscalMonth,
+        fiscalYear: allocation.fiscalYear,    // Use allocation's fiscal year
+        fiscalMonth: allocation.fiscalMonth,  // Use allocation's fiscal month
         description: `Accommodation refund - ${apartmentName} (${monthName})`,
         amount: allocation.amount,
         kontoCode: revenueAccount.code,
