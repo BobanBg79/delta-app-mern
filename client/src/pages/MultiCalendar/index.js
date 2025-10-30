@@ -121,23 +121,33 @@ const MultiCalendar = () => {
                 );
               })}
             </Row>
-            {apartments.map((apartment) => {
-              const apartmentReservations = getReservationsForApartment(apartment._id);
+            {apartments
+              .slice() // Create a shallow copy to avoid mutating the original array
+              .sort((a, b) => {
+                // Primary sort: alphabetically by apartment name
+                const nameCompare = a.name.localeCompare(b.name);
+                if (nameCompare !== 0) return nameCompare;
+                
+                // Secondary sort: by _id for stable ordering if names are identical
+                return a._id.localeCompare(b._id);
+              })
+              .map((apartment) => {
+                const apartmentReservations = getReservationsForApartment(apartment._id);
 
-              return (
-                <MulticalendarApartmentRow
-                  key={apartment._id}
-                  apartmentName={apartment.name}
-                  datesArray={datesArray}
-                  calendarStartDate={startDate}
-                  calendarEndDate={endDate}
-                  reservations={tableRendered ? apartmentReservations : []} // Only show reservations after table renders
-                  initialRowOffset={initialRowOffset}
-                  tableRendered={tableRendered}
-                  onReservationClick={handleReservationClick}
-                />
-              );
-            })}
+                return (
+                  <MulticalendarApartmentRow
+                    key={apartment._id}
+                    apartmentName={apartment.name}
+                    datesArray={datesArray}
+                    calendarStartDate={startDate}
+                    calendarEndDate={endDate}
+                    reservations={tableRendered ? apartmentReservations : []} // Only show reservations after table renders
+                    initialRowOffset={initialRowOffset}
+                    tableRendered={tableRendered}
+                    onReservationClick={handleReservationClick}
+                  />
+                );
+              })}
           </StickyTable>
         </div>
       </div>
