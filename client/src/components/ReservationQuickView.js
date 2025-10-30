@@ -8,6 +8,7 @@ import PaymentStatus from './PaymentStatus';
 
 const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [refreshPaymentStatus, setRefreshPaymentStatus] = useState(0); // Counter to trigger PaymentStatus refresh
 
   if (!reservation) return null;
 
@@ -99,6 +100,7 @@ const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
               <PaymentStatus
                 reservationId={reservation._id}
                 totalAmount={reservation.totalAmount || 0}
+                key={refreshPaymentStatus} // Force re-render when payment is added
               />
             </div>
           )}
@@ -123,7 +125,8 @@ const ReservationQuickView = ({ reservation, onClose, onViewDetails }) => {
         onSuccess={(result) => {
           console.log('Payment created successfully:', result);
           setShowPaymentForm(false);
-          // Optionally refresh reservation data or show success message
+          // Refresh PaymentStatus component by updating the key
+          setRefreshPaymentStatus(prev => prev + 1);
         }}
       />
     )}

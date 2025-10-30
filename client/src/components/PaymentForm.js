@@ -5,9 +5,16 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
+import { useDispatch } from 'react-redux';
 import { createCashPayment, getPaymentsByReservation } from '../modules/payment/operations';
+import messageOperations from '../modules/message/operations';
+import messageConstants from '../modules/message/constants';
+
+const { SUCCESS } = messageConstants;
+const { showMessageToast } = messageOperations;
 
 const PaymentForm = ({ reservation, onClose, onSuccess }) => {
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     amount: '',
     transactionDate: new Date().toISOString().split('T')[0], // Today's date
@@ -103,6 +110,11 @@ const PaymentForm = ({ reservation, onClose, onSuccess }) => {
       };
 
       const result = await createCashPayment(paymentData);
+
+      // Show success toast message
+      const amount = parseFloat(formData.amount).toFixed(2);
+      const apartmentName = reservation.apartment?.name || 'apartment';
+      dispatch(showMessageToast(`Payment of ${amount} EUR successfully added for ${apartmentName}`, SUCCESS));
 
       // Success callback
       if (onSuccess) {
