@@ -1,0 +1,326 @@
+{
+  "info": {
+    "name": "Apartment Cleanings",
+    "_postman_id": "apartment-cleanings-collection",
+    "description": "API endpoints for managing apartment cleaning assignments",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Create Cleaning Assignment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"apartmentId\": \"{{apartmentId}}\",\n  \"assignedTo\": \"{{cleaningLadyUserId}}\",\n  \"scheduledStartTime\": \"2025-11-06T10:00:00.000Z\",\n  \"hourlyRate\": 5,\n  \"notes\": \"Deep cleaning required after 2-week stay\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"]
+        },
+        "description": "Create a new cleaning assignment. Only OWNER/MANAGER can create. Required permission: CAN_CREATE_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Scheduled Cleaning",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"assignedTo\": \"{{cleaningLadyUserId}}\",\n  \"scheduledStartTime\": \"2025-11-06T11:00:00.000Z\",\n  \"hourlyRate\": 6,\n  \"notes\": \"Updated notes\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/{{cleaningId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "{{cleaningId}}"]
+        },
+        "description": "Update a scheduled cleaning. Can only update scheduled (not completed or cancelled). Only OWNER/MANAGER. Required permission: CAN_UPDATE_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Scheduled Cleaning",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"cancelled\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/{{cleaningId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "{{cleaningId}}"]
+        },
+        "description": "Cancel a scheduled cleaning by setting status to cancelled. When cancelling, no other fields can be updated. Only OWNER/MANAGER. Required permission: CAN_UPDATE_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Complete Cleaning",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hoursSpent\": 3.5,\n  \"actualEndTime\": \"2025-11-06T14:30:00.000Z\",\n  \"completedBy\": \"{{cleaningLadyUserId}}\",\n  \"notes\": \"Apartment thoroughly cleaned. Replaced towels and linens.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/{{cleaningId}}/complete",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "{{cleaningId}}", "complete"]
+        },
+        "description": "Complete a cleaning. CLEANING_LADY can complete only own assignments, OWNER/MANAGER can complete any. Required permission: CAN_COMPLETE_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Completed Cleaning",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/{{cleaningId}}/cancel-completed",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "{{cleaningId}}", "cancel-completed"]
+        },
+        "description": "Cancel a completed cleaning (deactivate). Only OWNER/MANAGER. Required permission: CAN_DEACTIVATE_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Cleanings",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"]
+        },
+        "description": "Get all cleanings without filters. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleanings - Filter by Apartment",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings?apartmentId={{apartmentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"],
+          "query": [
+            {
+              "key": "apartmentId",
+              "value": "{{apartmentId}}"
+            }
+          ]
+        },
+        "description": "Get cleanings for specific apartment. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleanings - Filter by Assigned User",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings?assignedTo={{cleaningLadyUserId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"],
+          "query": [
+            {
+              "key": "assignedTo",
+              "value": "{{cleaningLadyUserId}}"
+            }
+          ]
+        },
+        "description": "Get cleanings assigned to specific user (cleaning lady). Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleanings - Filter by Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings?status=scheduled",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"],
+          "query": [
+            {
+              "key": "status",
+              "value": "scheduled",
+              "description": "Options: scheduled, completed, cancelled"
+            }
+          ]
+        },
+        "description": "Get cleanings by status (scheduled, completed, cancelled). Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleanings - Filter by Date Range",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings?startDate=2025-11-01T00:00:00.000Z&endDate=2025-11-30T23:59:59.999Z",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2025-11-01T00:00:00.000Z"
+            },
+            {
+              "key": "endDate",
+              "value": "2025-11-30T23:59:59.999Z"
+            }
+          ]
+        },
+        "description": "Get cleanings within date range based on scheduledStartTime. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleanings - Multiple Filters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings?apartmentId={{apartmentId}}&status=scheduled&startDate=2025-11-01T00:00:00.000Z&endDate=2025-11-30T23:59:59.999Z",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings"],
+          "query": [
+            {
+              "key": "apartmentId",
+              "value": "{{apartmentId}}"
+            },
+            {
+              "key": "status",
+              "value": "scheduled"
+            },
+            {
+              "key": "startDate",
+              "value": "2025-11-01T00:00:00.000Z"
+            },
+            {
+              "key": "endDate",
+              "value": "2025-11-30T23:59:59.999Z"
+            }
+          ]
+        },
+        "description": "Get cleanings with multiple filters combined. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cleaning by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/{{cleaningId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "{{cleaningId}}"]
+        },
+        "description": "Get single cleaning by ID with full details including populated references. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Tomorrow's Checkouts (Report)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/apartment-cleanings/reports/tomorrow-checkouts",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "apartment-cleanings", "reports", "tomorrow-checkouts"]
+        },
+        "description": "Get all reservations with checkout tomorrow - useful for scheduling cleanings. Only OWNER/MANAGER. Required permission: CAN_VIEW_CLEANING"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "RESERVATION_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "apartmentId",
+      "value": "APARTMENT_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "cleaningLadyUserId",
+      "value": "CLEANING_LADY_USER_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "cleaningId",
+      "value": "CLEANING_ID_HERE",
+      "type": "string"
+    }
+  ]
+}

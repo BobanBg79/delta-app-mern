@@ -6,6 +6,7 @@
  */
 const TRANSACTION_SOURCE_TYPES = {
   ACCOMMODATION_PAYMENT: 'accommodation_payment',
+  CLEANING: 'cleaning',
   EXPENSE: 'expense',
   TRANSFER: 'transfer',
   ADJUSTMENT: 'adjustment',

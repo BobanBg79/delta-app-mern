@@ -212,6 +212,12 @@ const seedRoles = async () => {
       CAN_CREATE_RESERVATION,
       CAN_UPDATE_RESERVATION,
       CAN_DELETE_RESERVATION,
+      CAN_VIEW_CLEANING,
+      CAN_CREATE_CLEANING,
+      CAN_UPDATE_CLEANING,
+      CAN_DELETE_CLEANING,
+      CAN_COMPLETE_CLEANING,
+      CAN_DEACTIVATE_CLEANING,
     } = Permission.getAllPermissions().reduce((acc, perm) => {
       acc[perm] = perm;
       return acc;
@@ -245,6 +251,12 @@ const seedRoles = async () => {
         CAN_CREATE_RESERVATION,
         CAN_UPDATE_RESERVATION,
         CAN_DELETE_RESERVATION,
+        CAN_VIEW_CLEANING,
+        CAN_CREATE_CLEANING,
+        CAN_UPDATE_CLEANING,
+        CAN_DELETE_CLEANING,
+        CAN_COMPLETE_CLEANING,
+        CAN_DEACTIVATE_CLEANING,
         // Add all KONTO permissions dynamically
         ...kontoPermissions,
       ],
@@ -262,6 +274,12 @@ const seedRoles = async () => {
         CAN_CREATE_RESERVATION,
         CAN_UPDATE_RESERVATION,
         CAN_DELETE_RESERVATION,
+        CAN_VIEW_CLEANING,
+        CAN_CREATE_CLEANING,
+        CAN_UPDATE_CLEANING,
+        CAN_DELETE_CLEANING,
+        CAN_COMPLETE_CLEANING,
+        CAN_DEACTIVATE_CLEANING,
       ],
       MANAGER: [
         // Employee and reservation management
@@ -274,6 +292,11 @@ const seedRoles = async () => {
         CAN_CREATE_RESERVATION,
         CAN_UPDATE_RESERVATION,
         CAN_DELETE_RESERVATION,
+        CAN_VIEW_CLEANING,
+        CAN_CREATE_CLEANING,
+        CAN_UPDATE_CLEANING,
+        CAN_COMPLETE_CLEANING,
+        CAN_DEACTIVATE_CLEANING,
       ],
       HOST: [
         // Basic reservation and apartment management
@@ -282,16 +305,20 @@ const seedRoles = async () => {
         CAN_VIEW_RESERVATION,
         CAN_CREATE_RESERVATION,
         CAN_UPDATE_RESERVATION,
+        CAN_VIEW_CLEANING,
       ],
       CLEANING_LADY: [
         // View apartments and reservations for cleaning schedule
         CAN_VIEW_APARTMENT,
         CAN_VIEW_RESERVATION,
+        CAN_VIEW_CLEANING,
+        CAN_COMPLETE_CLEANING, // Can complete own assignments
       ],
       HANDY_MAN: [
         // View apartments for maintenance
         CAN_VIEW_APARTMENT,
         CAN_VIEW_RESERVATION,
+        CAN_VIEW_CLEANING, // Can see cleaning schedule to coordinate maintenance
       ],
     };
 

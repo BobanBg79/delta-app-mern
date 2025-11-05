@@ -9,10 +9,12 @@ const PermissionSchema = new mongoose.Schema(
       immutable: true,
       validate: {
         validator: function (v) {
-          // Validate CAN_{OPERATION}_{ENTITY} format
-          return /^CAN_(VIEW|CREATE|UPDATE|DELETE|DEACTIVATE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO)$/.test(v);
+          // Validate CAN_{OPERATION}_{ENTITY} format or special permissions
+          const standardPattern = /^CAN_(VIEW|CREATE|UPDATE|DELETE|DEACTIVATE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO|CLEANING)$/;
+          const specialPermissions = /^CAN_(DEACTIVATE_KONTO|COMPLETE_CLEANING|DEACTIVATE_CLEANING)$/;
+          return standardPattern.test(v) || specialPermissions.test(v);
         },
-        message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY}',
+        message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY} or be a special permission',
       },
     },
   },
@@ -33,7 +35,7 @@ PermissionSchema.pre('findOneAndDelete', function () {
 // Static method to get all possible permissions
 PermissionSchema.statics.getAllPermissions = function () {
   const operations = ['VIEW', 'CREATE', 'UPDATE', 'DELETE'];
-  const entities = ['USER', 'ROLE', 'EMPLOYEE', 'APARTMENT', 'RESERVATION', 'KONTO'];
+  const entities = ['USER', 'ROLE', 'EMPLOYEE', 'APARTMENT', 'RESERVATION', 'KONTO', 'CLEANING'];
 
   const standardPermissions = operations.flatMap((op) =>
     entities.map((entity) => `CAN_${op}_${entity}`)
@@ -41,7 +43,9 @@ PermissionSchema.statics.getAllPermissions = function () {
 
   // Add special permissions
   const specialPermissions = [
-    'CAN_DEACTIVATE_KONTO'
+    'CAN_DEACTIVATE_KONTO',
+    'CAN_COMPLETE_CLEANING',
+    'CAN_DEACTIVATE_CLEANING'
   ];
 
   return [...standardPermissions, ...specialPermissions];

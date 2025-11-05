@@ -26,6 +26,7 @@ app.use('/api/guests', require('./routes/api/guests'));
 app.use('/api/booking-agents', require('./routes/api/booking-agents'));
 app.use('/api/payments', require('./routes/api/payments'));
 app.use('/api/accounting', require('./routes/api/accounting'));
+app.use('/api/apartment-cleanings', require('./routes/api/apartment-cleanings'));
 // Add these new routes
 app.use('/api/roles', require('./routes/api/roles'));
 app.use('/api/permissions', require('./routes/api/permissions'));

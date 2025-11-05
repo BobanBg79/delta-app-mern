@@ -1,0 +1,371 @@
+// services/CleaningService.js
+
+const mongoose = require('mongoose');
+const ApartmentCleaning = require('../models/ApartmentCleaning');
+const User = require('../models/User');
+const Reservation = require('../models/Reservation');
+const { USER_ROLES } = require('../constants/userRoles');
+
+class CleaningService {
+
+  /**
+   * Create a new cleaning assignment
+   * Only OWNER/MANAGER can create
+   *
+   * @param {Object} cleaningData
+   * @param {ObjectId} cleaningData.reservationId - Reservation ID
+   * @param {ObjectId} cleaningData.apartmentId - Apartment ID
+   * @param {ObjectId} cleaningData.assignedTo - User ID to assign (CLEANING_LADY role)
+   * @param {ObjectId} cleaningData.assignedBy - User ID who is assigning
+   * @param {Date} cleaningData.scheduledStartTime - When cleaning should start
+   * @param {Number} cleaningData.hourlyRate - Optional hourly rate (defaults to config)
+   * @param {String} cleaningData.notes - Optional notes
+   * @returns {Object} Created cleaning
+   */
+  async createCleaning(cleaningData) {
+    const {
+      reservationId,
+      apartmentId,
+      assignedTo,
+      assignedBy,
+      scheduledStartTime,
+      hourlyRate,
+      notes
+    } = cleaningData;
+
+    // Validate required fields
+    if (!reservationId || !apartmentId || !assignedTo || !assignedBy || !scheduledStartTime) {
+      throw new Error('Missing required fields: reservationId, apartmentId, assignedTo, assignedBy, scheduledStartTime');
+    }
+
+    // Validate reservation exists
+    const reservation = await Reservation.findById(reservationId);
+    if (!reservation) {
+      throw new Error('Reservation not found');
+    }
+
+    // Validate assigned user exists
+    const assignedUser = await User.findById(assignedTo).populate('role');
+    if (!assignedUser) {
+      throw new Error('Assigned user not found');
+    }
+
+    // Validate assignedBy user exists
+    const assigningUser = await User.findById(assignedBy).populate('role');
+    if (!assigningUser) {
+      throw new Error('Assigning user not found');
+    }
+
+    // Create cleaning data object
+    const cleaningToCreate = {
+      reservationId,
+      apartmentId,
+      assignedTo,
+      assignedBy,
+      scheduledStartTime,
+      status: 'scheduled',
+      notes
+    };
+
+    if (hourlyRate !== undefined) {
+      cleaningToCreate.hourlyRate = hourlyRate;
+    }
+
+    const cleaning = await ApartmentCleaning.create(cleaningToCreate);
+
+    // Populate and return
+    return await ApartmentCleaning.findById(cleaning._id)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname');
+  }
+
+  /**
+   * Update a scheduled cleaning
+   * Only OWNER/MANAGER can update
+   * Can only update scheduled cleanings (not completed or cancelled)
+   * If changing status to cancelled, no other fields can be updated
+   *
+   * @param {ObjectId} cleaningId - Cleaning ID
+   * @param {Object} updateData - Fields to update
+   * @param {ObjectId} updatedBy - User ID performing the update
+   * @returns {Object} Updated cleaning
+   */
+  async updateCleaning(cleaningId, updateData, updatedBy) {
+    const cleaning = await ApartmentCleaning.findById(cleaningId);
+
+    if (!cleaning) {
+      throw new Error('Cleaning not found');
+    }
+
+    // Cannot update cancelled cleanings
+    if (cleaning.status === 'cancelled') {
+      throw new Error('Cannot update cancelled cleaning');
+    }
+
+    // Can only update scheduled cleanings
+    if (cleaning.status !== 'scheduled') {
+      throw new Error('Can only update scheduled cleanings');
+    }
+
+    // If changing status to cancelled, no other fields can be updated
+    if (updateData.status === 'cancelled') {
+      const otherFields = Object.keys(updateData).filter(key => key !== 'status');
+      if (otherFields.length > 0) {
+        throw new Error('When cancelling, cannot update other fields simultaneously');
+      }
+      cleaning.status = 'cancelled';
+      await cleaning.save();
+
+      // Populate and return
+      return await ApartmentCleaning.findById(cleaning._id)
+        .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+        .populate('apartmentId', '_id name')
+        .populate('assignedTo', 'fname lname role')
+        .populate('assignedBy', 'fname lname')
+        .populate('completedBy', 'fname lname');
+    }
+
+    // Update allowed fields
+    const allowedFields = ['assignedTo', 'scheduledStartTime', 'hourlyRate', 'notes'];
+
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        cleaning[field] = updateData[field];
+      }
+    }
+
+    // If assignedTo changed, update assignedBy
+    if (updateData.assignedTo && updateData.assignedTo.toString() !== cleaning.assignedTo.toString()) {
+      cleaning.assignedBy = updatedBy;
+    }
+
+    await cleaning.save();
+
+    // Populate and return
+    return await ApartmentCleaning.findById(cleaning._id)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname');
+  }
+
+  /**
+   * Complete a cleaning
+   * CLEANING_LADY can complete own assignments
+   * OWNER/MANAGER can complete any cleaning and set any CLEANING_LADY as completedBy
+   *
+   * @param {ObjectId} cleaningId - Cleaning ID
+   * @param {Object} completionData
+   * @param {Number} completionData.hoursSpent - Hours spent on cleaning
+   * @param {ObjectId} completionData.completedBy - User ID completing (must be CLEANING_LADY)
+   * @param {Date} completionData.actualEndTime - When cleaning ended
+   * @param {String} completionData.notes - Optional notes
+   * @param {ObjectId} requestingUserId - User ID making the request
+   * @returns {Object} Updated cleaning
+   */
+  async completeCleaning(cleaningId, completionData, requestingUserId) {
+    const { hoursSpent, completedBy, actualEndTime, notes } = completionData;
+
+    if (!hoursSpent || hoursSpent <= 0) {
+      throw new Error('Hours spent must be greater than 0');
+    }
+
+    if (!completedBy) {
+      throw new Error('completedBy is required');
+    }
+
+    if (!actualEndTime) {
+      throw new Error('actualEndTime is required');
+    }
+
+    const cleaning = await ApartmentCleaning.findById(cleaningId);
+
+    if (!cleaning) {
+      throw new Error('Cleaning not found');
+    }
+
+    // Can only complete scheduled cleanings
+    if (cleaning.status !== 'scheduled') {
+      throw new Error('Can only complete scheduled cleanings');
+    }
+
+    // Validate completedBy user exists and has CLEANING_LADY role
+    const completedByUser = await User.findById(completedBy).populate('role');
+    if (!completedByUser) {
+      throw new Error('Completed by user not found');
+    }
+
+    if (completedByUser.role.name !== USER_ROLES.CLEANING_LADY) {
+      throw new Error('completedBy must be a user with CLEANING_LADY role');
+    }
+
+    // Validate requesting user
+    const requestingUser = await User.findById(requestingUserId).populate('role');
+    if (!requestingUser) {
+      throw new Error('Requesting user not found');
+    }
+
+    // Permission check: CLEANING_LADY can only complete own assignments
+    if (requestingUser.role.name === USER_ROLES.CLEANING_LADY) {
+      if (requestingUserId.toString() !== cleaning.assignedTo.toString()) {
+        throw new Error('Cleaning lady can only complete own assignments');
+      }
+      // For CLEANING_LADY, completedBy must be themselves
+      if (completedBy.toString() !== requestingUserId.toString()) {
+        throw new Error('Cleaning lady must set completedBy to themselves');
+      }
+    }
+
+    // Update cleaning
+    cleaning.status = 'completed';
+    cleaning.actualEndTime = actualEndTime;
+    cleaning.completedBy = completedBy;
+    cleaning.hoursSpent = hoursSpent;
+    cleaning.totalCost = cleaning.hourlyRate * hoursSpent;
+
+    if (notes) {
+      cleaning.notes = notes;
+    }
+
+    await cleaning.save();
+
+    // Populate and return
+    return await ApartmentCleaning.findById(cleaning._id)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname');
+  }
+
+  /**
+   * Cancel a completed cleaning
+   * Only OWNER/MANAGER can cancel completed cleanings
+   *
+   * @param {ObjectId} cleaningId - Cleaning ID
+   * @returns {Object} Updated cleaning
+   */
+  async cancelCompletedCleaning(cleaningId) {
+    const cleaning = await ApartmentCleaning.findById(cleaningId);
+
+    if (!cleaning) {
+      throw new Error('Cleaning not found');
+    }
+
+    // Can only cancel completed cleanings
+    if (cleaning.status !== 'completed') {
+      throw new Error('Can only cancel completed cleanings');
+    }
+
+    cleaning.status = 'cancelled';
+    await cleaning.save();
+
+    // Populate and return
+    return await ApartmentCleaning.findById(cleaning._id)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname');
+  }
+
+  /**
+   * Get cleaning by ID
+   *
+   * @param {ObjectId} cleaningId
+   * @returns {Object} Cleaning
+   */
+  async getCleaningById(cleaningId) {
+    const cleaning = await ApartmentCleaning.findById(cleaningId)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname');
+
+    if (!cleaning) {
+      throw new Error('Cleaning not found');
+    }
+
+    return cleaning;
+  }
+
+  /**
+   * Get cleanings with filters
+   *
+   * @param {Object} filters
+   * @param {ObjectId} filters.apartmentId - Filter by apartment
+   * @param {ObjectId} filters.assignedTo - Filter by assigned user
+   * @param {String} filters.status - Filter by status (scheduled, completed, cancelled)
+   * @param {Date} filters.startDate - Filter by scheduledStartTime >= startDate
+   * @param {Date} filters.endDate - Filter by scheduledStartTime <= endDate
+   * @returns {Array} Cleanings
+   */
+  async getCleanings(filters = {}) {
+    const query = {};
+
+    if (filters.apartmentId) {
+      query.apartmentId = filters.apartmentId;
+    }
+
+    if (filters.assignedTo) {
+      query.assignedTo = filters.assignedTo;
+    }
+
+    if (filters.status) {
+      query.status = filters.status;
+    }
+
+    if (filters.startDate || filters.endDate) {
+      query.scheduledStartTime = {};
+      if (filters.startDate) {
+        query.scheduledStartTime.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        query.scheduledStartTime.$lte = filters.endDate;
+      }
+    }
+
+    const cleanings = await ApartmentCleaning.find(query)
+      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+      .populate('apartmentId', '_id name')
+      .populate('assignedTo', 'fname lname role')
+      .populate('assignedBy', 'fname lname')
+      .populate('completedBy', 'fname lname')
+      .sort({ scheduledStartTime: -1 });
+
+    return cleanings;
+  }
+
+  /**
+   * Get reservations with checkout tomorrow (for scheduling cleanings)
+   *
+   * @returns {Array} Reservations checking out tomorrow
+   */
+  async getTomorrowCheckouts() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const dayAfterTomorrow = new Date(tomorrow);
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+
+    const reservations = await Reservation.find({
+      plannedCheckOut: {
+        $gte: tomorrow,
+        $lt: dayAfterTomorrow
+      }
+    })
+      .populate('apartment')
+      .populate('guest')
+      .sort({ plannedCheckOut: 1 });
+
+    return reservations;
+  }
+}
+
+module.exports = new CleaningService();
