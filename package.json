@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "install:all": "npm install && npm install --prefix client",
     "test": "jest",
     "test:watch": "jest --watch",
     "format": "npx prettier --write .",
