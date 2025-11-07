@@ -58,5 +58,10 @@
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
     "babel-jest": "^29.7.0"
+  },
+  "overrides": {
+    "react-sticky-table": {
+      "react-dom": "$react-dom"
+    }
   }
 }
