@@ -9,8 +9,11 @@ import Modal from 'react-bootstrap/Modal';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Alert from 'react-bootstrap/Alert';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
+import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { getCleaningsByReservation, createCleaning } from '../../modules/cleaning/operations';
 import { formatDateTime } from '../../utils/date';
 import CompleteCleaningModal from './CompleteCleaningModal';
@@ -37,6 +40,7 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const reservationId = formState?._id;
   const apartmentId = formState?.apartment?._id || formState?.apartment;
   const checkoutDate = formState?.plannedCheckOut;
+  const reservationStatus = formState?.status;
 
   // Get user permissions and user ID
   const { user: { role: userRole, _id: currentUserId } = {} } = useSelector((state) => state.auth);
@@ -45,6 +49,11 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const canCreateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_CLEANING);
   const canViewCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_CLEANING);
   const canCompleteCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_COMPLETE_CLEANING);
+
+  // Cannot create cleaning for non-active reservations (noshow or canceled)
+  const isNotActiveReservation =
+    reservationStatus === RESERVATION_STATUSES.noshow ||
+    reservationStatus === RESERVATION_STATUSES.canceled;
 
   // Calculate default scheduled start time (checkout date at 11:00 AM)
   const getDefaultScheduledTime = () => {
@@ -184,23 +193,38 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h6>Cleaning Schedule</h6>
             {canCreateCleaning && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  // Set default values when opening modal
-                  setNewCleaning({
-                    assignedTo: '',
-                    scheduledStartTime: getDefaultScheduledTime(),
-                    hourlyRate: 5,
-                    notes: '',
-                  });
-                  setShowCreateModal(true);
-                }}
-                disabled={isEditable}
+              <OverlayTrigger
+                placement="left"
+                overlay={
+                  isNotActiveReservation ? (
+                    <Tooltip id="inactive-reservation-tooltip">
+                      Cannot schedule cleaning for no-show or canceled reservations
+                    </Tooltip>
+                  ) : (
+                    <></>
+                  )
+                }
               >
-                Schedule Cleaning
-              </Button>
+                <span>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      // Set default values when opening modal
+                      setNewCleaning({
+                        assignedTo: '',
+                        scheduledStartTime: getDefaultScheduledTime(),
+                        hourlyRate: 5,
+                        notes: '',
+                      });
+                      setShowCreateModal(true);
+                    }}
+                    disabled={isEditable || isNotActiveReservation}
+                  >
+                    Schedule Cleaning
+                  </Button>
+                </span>
+              </OverlayTrigger>
             )}
           </div>
         </Col>
@@ -209,6 +233,12 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
             {isEditable && canCreateCleaning && (
               <div className="text-muted mb-2" style={{ fontSize: '0.85rem' }}>
                 Please save or cancel your changes before scheduling a cleaning.
+              </div>
+            )}
+
+            {isNotActiveReservation && canCreateCleaning && (
+              <div className="text-muted mb-2" style={{ fontSize: '0.85rem' }}>
+                Cannot schedule cleaning for no-show or canceled reservations.
               </div>
             )}
 

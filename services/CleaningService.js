@@ -5,6 +5,7 @@ const ApartmentCleaning = require('../models/ApartmentCleaning');
 const User = require('../models/User');
 const Reservation = require('../models/Reservation');
 const { USER_ROLES } = require('../constants/userRoles');
+const { RESERVATION_STATUSES } = require('../constants/reservationStatuses');
 
 class CleaningService {
 
@@ -42,6 +43,11 @@ class CleaningService {
     const reservation = await Reservation.findById(reservationId);
     if (!reservation) {
       throw new Error('Reservation not found');
+    }
+
+    // Cannot create cleaning for non-active reservations (noshow or canceled)
+    if (reservation.status === RESERVATION_STATUSES.NO_SHOW || reservation.status === RESERVATION_STATUSES.CANCELED) {
+      throw new Error('Cannot create cleaning for no-show or canceled reservations');
     }
 
     // Validate assigned user exists
