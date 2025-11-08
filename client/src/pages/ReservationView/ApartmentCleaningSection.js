@@ -12,15 +12,19 @@ import Alert from 'react-bootstrap/Alert';
 import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 import { getCleaningsByReservation, createCleaning } from '../../modules/cleaning/operations';
+import { formatDateTime } from '../../utils/date';
+import CompleteCleaningModal from './CompleteCleaningModal';
 import axios from 'axios';
 
 const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const [cleanings, setCleanings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [cleaningLadies, setCleaningLadies] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [selectedCleaning, setSelectedCleaning] = useState(null);
 
   // Form state for creating cleaning
   const [newCleaning, setNewCleaning] = useState({
@@ -34,12 +38,13 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const apartmentId = formState?.apartment?._id || formState?.apartment;
   const checkoutDate = formState?.plannedCheckOut;
 
-  // Get user permissions
-  const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
+  // Get user permissions and user ID
+  const { user: { role: userRole, _id: currentUserId } = {} } = useSelector((state) => state.auth);
   const userPermissions = userRole?.permissions || [];
 
   const canCreateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_CLEANING);
   const canViewCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_CLEANING);
+  const canCompleteCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_COMPLETE_CLEANING);
 
   // Calculate default scheduled start time (checkout date at 11:00 AM)
   const getDefaultScheduledTime = () => {
@@ -147,6 +152,17 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
     }
   };
 
+  const handleCleaningCompleted = async () => {
+    // Refresh cleanings list after successful completion
+    const updatedCleanings = await getCleaningsByReservation(reservationId);
+    setCleanings(updatedCleanings);
+  };
+
+  const openCompleteModal = (cleaning) => {
+    setSelectedCleaning(cleaning);
+    setShowCompleteModal(true);
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       scheduled: 'primary',
@@ -154,18 +170,6 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
       cancelled: 'secondary',
     };
     return <Badge bg={variants[status] || 'secondary'}>{status.toUpperCase()}</Badge>;
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   // Only show for existing reservations and users with view permission
@@ -223,24 +227,44 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                     <th>Scheduled Start</th>
                     <th>Hours Spent</th>
                     <th>Total Cost</th>
-                    <th>Notes</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cleanings.map((cleaning) => (
-                    <tr key={cleaning._id}>
-                      <td>{getStatusBadge(cleaning.status)}</td>
-                      <td>
-                        {cleaning.assignedTo?.fname && cleaning.assignedTo?.lname
-                          ? `${cleaning.assignedTo.fname} ${cleaning.assignedTo.lname}`
-                          : 'Unknown'}
-                      </td>
-                      <td>{formatDateTime(cleaning.scheduledStartTime)}</td>
-                      <td>{cleaning.hoursSpent || 0}</td>
-                      <td>${cleaning.totalCost?.toFixed(2) || '0.00'}</td>
-                      <td>{cleaning.notes || '-'}</td>
-                    </tr>
-                  ))}
+                  {cleanings.map((cleaning) => {
+                    // Check if current user is assigned to this cleaning
+                    const isAssignedToCurrentUser =
+                      cleaning.assignedTo?._id === currentUserId;
+                    const canComplete =
+                      canCompleteCleaning &&
+                      isAssignedToCurrentUser &&
+                      cleaning.status === 'scheduled';
+
+                    return (
+                      <tr key={cleaning._id}>
+                        <td>{getStatusBadge(cleaning.status)}</td>
+                        <td>
+                          {cleaning.assignedTo?.fname && cleaning.assignedTo?.lname
+                            ? `${cleaning.assignedTo.fname} ${cleaning.assignedTo.lname}`
+                            : 'Unknown'}
+                        </td>
+                        <td>{formatDateTime(cleaning.scheduledStartTime)}</td>
+                        <td>{cleaning.hoursSpent || 0}</td>
+                        <td>${cleaning.totalCost?.toFixed(2) || '0.00'}</td>
+                        <td>
+                          {canComplete && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={() => openCompleteModal(cleaning)}
+                            >
+                              Complete
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
             )}
@@ -321,6 +345,15 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Complete Cleaning Modal */}
+      <CompleteCleaningModal
+        show={showCompleteModal}
+        onHide={() => setShowCompleteModal(false)}
+        cleaning={selectedCleaning}
+        currentUserId={currentUserId}
+        onSuccess={handleCleaningCompleted}
+      />
     </>
   );
 };

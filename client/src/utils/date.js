@@ -79,6 +79,23 @@ export const formatDayShort = (timestamp) => {
   return `${dayOfWeekShort} </br> ${dayOfTheMonth}`;
 };
 
+/**
+ * Format date-time string for display with date and time
+ * @param {string|Date|number} dateValue - Date string, Date object, or timestamp
+ * @returns {string} Formatted date-time string (e.g., "Jan 15, 2025, 02:30 PM")
+ */
+export const formatDateTime = (dateValue) => {
+  if (!dateValue) return 'N/A';
+  const date = new Date(dateValue);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export const getArrayOfConsecutiveDates = (startDate, numOfDays) => {
   startDate.setHours(0);
   startDate.setMinutes(0);
@@ -105,4 +122,18 @@ export const isToday = (timestamp) => {
   const date = new Date(timestamp);
   const today = new Date();
   return date.toDateString() === today.toDateString();
+};
+
+/**
+ * Get current date-time in format YYYY-MM-DDTHH:MM for datetime-local input
+ * @param {Date} date - Optional date object, defaults to now
+ * @returns {string} Date-time string formatted for datetime-local input
+ */
+export const getCurrentDateTimeLocal = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
