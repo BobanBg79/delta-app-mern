@@ -170,6 +170,7 @@ router.get('/', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res) =
   try {
     const filters = {};
 
+    if (req.query.reservationId) filters.reservationId = req.query.reservationId;
     if (req.query.apartmentId) filters.apartmentId = req.query.apartmentId;
     if (req.query.assignedTo) filters.assignedTo = req.query.assignedTo;
     if (req.query.status) filters.status = req.query.status;

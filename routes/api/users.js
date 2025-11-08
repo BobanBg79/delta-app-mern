@@ -110,7 +110,7 @@ router.post(
 );
 
 // @route    GET api/users
-// @desc     Get all users
+// @desc     Get all users with optional role filter
 // @access   Private (Requires CAN_VIEW_USER permission)
 router.get(
   '/',
@@ -118,8 +118,27 @@ router.get(
   requirePermission('CAN_VIEW_USER'), // Changed from CAN_VIEW_USERS to CAN_VIEW_USER
   async (req, res) => {
     try {
-      // Get all users and populate role information, exclude passwords
-      const users = await User.find({})
+      const { role } = req.query;
+
+      let query = {};
+
+      // If role filter is provided, find users with that role
+      if (role) {
+        const roleDoc = await Role.findOne({ name: role.toUpperCase() });
+        if (roleDoc) {
+          query.role = roleDoc._id;
+        } else {
+          // If role doesn't exist, return empty array
+          return res.json({
+            message: 'No users found with specified role',
+            count: 0,
+            users: [],
+          });
+        }
+      }
+
+      // Get users based on query and populate role information, exclude passwords
+      const users = await User.find(query)
         .select('-password') // Exclude password field
         .populate('role', 'name description') // Populate role with name and description
         .populate('createdBy', 'username') // Populate who created the user

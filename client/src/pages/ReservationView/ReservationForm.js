@@ -42,9 +42,9 @@ const ReservationForm = ({
     plannedCheckOut = null,
     plannedArrivalTime = '',
     plannedCheckoutTime = '',
-    apartment = '',
+    apartment: apartmentRaw = '',
     phoneNumber = '',
-    bookingAgent = '',
+    bookingAgent: bookingAgentRaw = '',
     pricePerNight = '',
     totalAmount = '',
     firstName = '',
@@ -52,6 +52,10 @@ const ReservationForm = ({
     reservationNotes = '',
     _id: reservationId = null,
   } = formState || {};
+
+  // Convert null to empty string for select inputs to avoid React warning
+  const apartment = apartmentRaw || '';
+  const bookingAgent = bookingAgentRaw || '';
 
   // Redux state
   const { apartments: apartmentsArray = [] } = useSelector((state) => state.apartments);

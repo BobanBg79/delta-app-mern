@@ -298,6 +298,7 @@ class CleaningService {
    * Get cleanings with filters
    *
    * @param {Object} filters
+   * @param {ObjectId} filters.reservationId - Filter by reservation
    * @param {ObjectId} filters.apartmentId - Filter by apartment
    * @param {ObjectId} filters.assignedTo - Filter by assigned user
    * @param {String} filters.status - Filter by status (scheduled, completed, cancelled)
@@ -307,6 +308,10 @@ class CleaningService {
    */
   async getCleanings(filters = {}) {
     const query = {};
+
+    if (filters.reservationId) {
+      query.reservationId = filters.reservationId;
+    }
 
     if (filters.apartmentId) {
       query.apartmentId = filters.apartmentId;

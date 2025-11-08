@@ -246,7 +246,7 @@ export const deleteReservation = (reservationId) => async (dispatch) => {
   }
 };
 
-export default {
+const reservationOperations = {
   getReservation,
   createReservation,
   updateReservation,
@@ -255,3 +255,5 @@ export default {
   searchReservations,
   deleteReservation,
 };
+
+export default reservationOperations;

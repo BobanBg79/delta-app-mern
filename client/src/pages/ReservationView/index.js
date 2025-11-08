@@ -1,8 +1,10 @@
 import { useSelector } from 'react-redux';
 import { useParams, useHistory } from 'react-router-dom';
+import Col from 'react-bootstrap/Col';
 import FormContainer from '../../components/Form/FormContainer';
 import ReservationForm from './ReservationForm';
 import ReservationPaymentSection from './ReservationPaymentSection';
+import ApartmentCleaningSection from './ApartmentCleaningSection';
 import ReservationModel from './ReservationModel';
 import { getReservation, createReservation, updateReservation } from '../../modules/reservation/operations';
 import { reservationActions } from '../../modules/reservation';
@@ -44,9 +46,23 @@ const ReservationView = () => {
   return (
     <>
       <FormContainer formContainerProps={formContainerProps}>
-        <ReservationForm />
-        <ReservationPaymentSection />
+        <ReservationFormWithLayout />
       </FormContainer>
+    </>
+  );
+};
+
+// Wrapper component to handle the two-column layout
+const ReservationFormWithLayout = (props) => {
+  return (
+    <>
+      <Col xs={12} lg={6}>
+        <ReservationForm {...props} />
+      </Col>
+      <Col xs={12} lg={6}>
+        <ReservationPaymentSection {...props} />
+        <ApartmentCleaningSection {...props} />
+      </Col>
     </>
   );
 };
