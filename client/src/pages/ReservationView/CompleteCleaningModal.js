@@ -49,11 +49,15 @@ const CompleteCleaningModal = ({ show, onHide, cleaning, currentUserId, onSucces
     setIsSubmitting(true);
 
     try {
+      // completedBy is always the assignedTo user (the CLEANING_LADY who physically did the work)
+      // regardless of who is submitting the completion (could be ADMIN/OWNER/MANAGER)
+      const completedBy = cleaning.assignedTo?._id;
+
       // Prepare payload with all required data
       const completionPayload = {
         hoursSpent: parseFloat(completionData.hoursSpent),
         actualEndTime: completionData.actualEndTime,
-        completedBy: currentUserId,
+        completedBy: completedBy,
         notes: completionData.notes,
       };
 

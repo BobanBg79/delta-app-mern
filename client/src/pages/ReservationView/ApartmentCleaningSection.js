@@ -219,12 +219,13 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                 No cleanings scheduled for this reservation
               </div>
             ) : (
-              <Table striped bordered hover size="sm" responsive>
+              <Table striped bordered hover size="sm" responsive style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Status</th>
                     <th>Assigned To</th>
                     <th>Scheduled Start</th>
+                    <th>Completed At</th>
                     <th>Hours Spent</th>
                     <th>Total Cost</th>
                     <th>Actions</th>
@@ -232,13 +233,16 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                 </thead>
                 <tbody>
                   {cleanings.map((cleaning) => {
-                    // Check if current user is assigned to this cleaning
-                    const isAssignedToCurrentUser =
-                      cleaning.assignedTo?._id === currentUserId;
+                    // Check if user can complete this cleaning:
+                    // - Must have CAN_COMPLETE_CLEANING permission
+                    // - CLEANING_LADY role can only complete cleanings assigned to them
+                    const isCleaningLady = userRole?.name === 'CLEANING_LADY';
+                    const isAssignedToCurrentUser = cleaning.assignedTo?._id === currentUserId;
+
                     const canComplete =
                       canCompleteCleaning &&
-                      isAssignedToCurrentUser &&
-                      cleaning.status === 'scheduled';
+                      cleaning.status === 'scheduled' &&
+                      (!isCleaningLady || isAssignedToCurrentUser);
 
                     return (
                       <tr key={cleaning._id}>
@@ -249,6 +253,7 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                             : 'Unknown'}
                         </td>
                         <td>{formatDateTime(cleaning.scheduledStartTime)}</td>
+                        <td>{cleaning.actualEndTime ? formatDateTime(cleaning.actualEndTime) : '-'}</td>
                         <td>{cleaning.hoursSpent || 0}</td>
                         <td>${cleaning.totalCost?.toFixed(2) || '0.00'}</td>
                         <td>
