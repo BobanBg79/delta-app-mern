@@ -252,12 +252,13 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
               <Table striped bordered hover size="sm" responsive style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
-                    <th>Status</th>
                     <th>Assigned To</th>
                     <th>Scheduled Start</th>
                     <th>Completed At</th>
                     <th>Hours Spent</th>
                     <th>Total Cost</th>
+                    <th>Status</th>
+                    <th>Created By</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -276,7 +277,6 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
 
                     return (
                       <tr key={cleaning._id}>
-                        <td>{getStatusBadge(cleaning.status)}</td>
                         <td>
                           {cleaning.assignedTo?.fname && cleaning.assignedTo?.lname
                             ? `${cleaning.assignedTo.fname} ${cleaning.assignedTo.lname}`
@@ -284,8 +284,22 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                         </td>
                         <td>{formatDateTime(cleaning.scheduledStartTime)}</td>
                         <td>{cleaning.actualEndTime ? formatDateTime(cleaning.actualEndTime) : '-'}</td>
-                        <td>{cleaning.hoursSpent || 0}</td>
-                        <td>${cleaning.totalCost?.toFixed(2) || '0.00'}</td>
+                        <td>
+                          {cleaning.hoursSpent !== undefined && cleaning.hoursSpent !== null
+                            ? cleaning.hoursSpent
+                            : ''}
+                        </td>
+                        <td>
+                          {cleaning.totalCost !== undefined && cleaning.totalCost !== null
+                            ? `$${cleaning.totalCost.toFixed(2)}`
+                            : ''}
+                        </td>
+                        <td>{getStatusBadge(cleaning.status)}</td>
+                        <td>
+                          {cleaning.assignedBy?.fname && cleaning.assignedBy?.lname
+                            ? `${cleaning.assignedBy.fname} ${cleaning.assignedBy.lname}`
+                            : 'Unknown'}
+                        </td>
                         <td>
                           {canComplete && (
                             <Button

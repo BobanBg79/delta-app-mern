@@ -11,10 +11,11 @@ const PermissionSchema = new mongoose.Schema(
         validator: function (v) {
           // Validate CAN_{OPERATION}_{ENTITY} format or special permissions
           const standardPattern = /^CAN_(VIEW|CREATE|UPDATE|DELETE|DEACTIVATE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO|CLEANING)$/;
+          const sensitiveDataPattern = /^CAN_VIEW_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO|CLEANING)_SENSITIVE_DATA$/;
           const specialPermissions = /^CAN_(DEACTIVATE_KONTO|COMPLETE_CLEANING|DEACTIVATE_CLEANING)$/;
-          return standardPattern.test(v) || specialPermissions.test(v);
+          return standardPattern.test(v) || sensitiveDataPattern.test(v) || specialPermissions.test(v);
         },
-        message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY} or be a special permission',
+        message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY} or CAN_VIEW_{ENTITY}_SENSITIVE_DATA or be a special permission',
       },
     },
   },
@@ -41,6 +42,9 @@ PermissionSchema.statics.getAllPermissions = function () {
     entities.map((entity) => `CAN_${op}_${entity}`)
   );
 
+  // Add sensitive data view permissions for all entities
+  const sensitiveDataPermissions = entities.map((entity) => `CAN_VIEW_${entity}_SENSITIVE_DATA`);
+
   // Add special permissions
   const specialPermissions = [
     'CAN_DEACTIVATE_KONTO',
@@ -48,7 +52,7 @@ PermissionSchema.statics.getAllPermissions = function () {
     'CAN_DEACTIVATE_CLEANING'
   ];
 
-  return [...standardPermissions, ...specialPermissions];
+  return [...standardPermissions, ...sensitiveDataPermissions, ...specialPermissions];
 };
 
 module.exports = mongoose.model('Permission', PermissionSchema);

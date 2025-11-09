@@ -5,6 +5,8 @@ const router = express.Router();
 const auth = require('../../middleware/auth');
 const { requirePermission } = require('../../middleware/permission');
 const CleaningService = require('../../services/CleaningService');
+const { hasPermission } = require('../../utils/permissionHelper');
+const { formatCleanings } = require('../../utils/cleaningFormatter');
 
 // @route    POST api/apartment-cleanings
 // @desc     Create cleaning assignment
@@ -177,10 +179,18 @@ router.get('/', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res) =
     if (req.query.startDate) filters.startDate = new Date(req.query.startDate);
     if (req.query.endDate) filters.endDate = new Date(req.query.endDate);
 
+    // Get cleanings from service (Service doesn't know about permissions)
     const cleanings = await CleaningService.getCleanings(filters);
 
+    // Check if user has permission to view sensitive data
+    const canViewSensitiveData = await hasPermission(req.user, 'CAN_VIEW_CLEANING_SENSITIVE_DATA');
+
+    // Format and filter sensitive fields based on permission and ownership
+    // CLEANING_LADY will only see sensitive data for cleanings assigned to them
+    const formattedCleanings = formatCleanings(cleanings, canViewSensitiveData, req.user);
+
     res.json({
-      cleanings
+      cleanings: formattedCleanings
     });
 
   } catch (error) {
@@ -198,10 +208,18 @@ router.get('/:id', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res
   try {
     const { id } = req.params;
 
+    // Get cleaning from service (Service doesn't know about permissions)
     const cleaning = await CleaningService.getCleaningById(id);
 
+    // Check if user has permission to view sensitive data
+    const canViewSensitiveData = await hasPermission(req.user, 'CAN_VIEW_CLEANING_SENSITIVE_DATA');
+
+    // Format and filter sensitive fields based on permission and ownership
+    // CLEANING_LADY will only see sensitive data if assigned to this cleaning
+    const formattedCleaning = formatCleanings(cleaning, canViewSensitiveData, req.user);
+
     res.json({
-      cleaning
+      cleaning: formattedCleaning
     });
 
   } catch (error) {
