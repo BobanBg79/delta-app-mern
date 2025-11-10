@@ -29,7 +29,7 @@ router.post(
     .matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
     .withMessage('Password must contain at least one uppercase letter and one special character'),
   check('role', 'Role ID is required').notEmpty().isMongoId(),
-  check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
+  // check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
