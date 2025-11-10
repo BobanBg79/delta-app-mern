@@ -1,28 +1,17 @@
 import React from 'react';
-import { Card, Alert, Badge } from 'react-bootstrap';
+import RolePermissions from '../../../components/RolePermissions';
 
+/**
+ * AppliedPermissions - Displays permissions assigned to a role
+ * Uses the shared RolePermissions component with grid view
+ */
 const AppliedPermissions = ({ permissions }) => (
-  <Card>
-    <Card.Header>
-      <h5>Applied Permissions ({permissions.length})</h5>
-    </Card.Header>
-    <Card.Body>
-      {permissions.length > 0 ? (
-        <div>
-          {permissions.map((permission) => (
-            <div key={permission._id} className="mb-2">
-              <Badge bg="success" className="me-2">
-                {permission.name}
-              </Badge>
-              {permission.description && <small className="text-muted d-block">{permission.description}</small>}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <Alert variant="info">No permissions assigned to this role.</Alert>
-      )}
-    </Card.Body>
-  </Card>
+  <RolePermissions
+    permissions={permissions}
+    title="Applied Permissions"
+    showCount={true}
+    compact={false}
+  />
 );
 
 export default React.memo(AppliedPermissions);

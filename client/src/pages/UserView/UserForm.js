@@ -5,8 +5,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import Card from 'react-bootstrap/Card';
-import Badge from 'react-bootstrap/Badge';
+import RolePermissions from '../../components/RolePermissions';
 import { getRoles } from '../../modules/role/operations';
 
 const UserForm = ({
@@ -170,23 +169,10 @@ const UserForm = ({
           </Row>
 
           {/* Role Permissions Display (only in view/edit mode when role is selected) */}
-          {!isCreateMode && selectedRole?.permissions && selectedRole.permissions.length > 0 && (
+          {!isCreateMode && selectedRole?.permissions && (
             <Row className="mb-4">
               <Col xs="12">
-                <Card>
-                  <Card.Header>
-                    <h6 className="mb-0">Role Permissions</h6>
-                  </Card.Header>
-                  <Card.Body>
-                    <div className="d-flex flex-wrap gap-2">
-                      {selectedRole.permissions.map((permission) => (
-                        <Badge key={permission._id} bg="info">
-                          {permission.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Card.Body>
-                </Card>
+                <RolePermissions permissions={selectedRole.permissions} />
               </Col>
             </Row>
           )}
