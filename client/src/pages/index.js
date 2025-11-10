@@ -9,3 +9,5 @@ export { default as ReservationView } from './ReservationView';
 export { default as MultiCalendar } from './MultiCalendar';
 export { default as GuestsList } from './GuestsList';
 export { default as GuestView } from './GuestView';
+export { default as UsersList } from './UsersList';
+export { default as UserView } from './UserView';

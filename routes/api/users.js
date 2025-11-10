@@ -28,7 +28,7 @@ router.post(
     .isLength({ min: 8 })
     .matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
     .withMessage('Password must contain at least one uppercase letter and one special character'),
-  check('role', 'Role name is required').notEmpty().isString(),
+  check('role', 'Role ID is required').notEmpty().isMongoId(),
   check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
     const errors = validationResult(req);
@@ -46,12 +46,12 @@ router.post(
         return res.status(400).json({ errors: [{ msg: 'User already exists' }] });
       }
 
-      // Find the role by name in the database
-      const roleFromDB = await Role.findOne({ name: role.toUpperCase() });
+      // Verify the role exists in the database
+      const roleFromDB = await Role.findById(role);
 
       if (!roleFromDB) {
         return res.status(400).json({
-          errors: [{ msg: `Role '${role}' not found in database` }]
+          errors: [{ msg: 'Role not found in database' }]
         });
       }
 
@@ -60,7 +60,7 @@ router.post(
         password,
         fname,
         lname,
-        role: roleFromDB._id, // Use the role ID from database
+        role, // Use the role ID directly
         createdBy: req.user.id, // Use the authenticated user's ID
       };
 
@@ -175,7 +175,7 @@ router.get(
     try {
       const user = await User.findById(req.params.id)
         .select('-password') // Exclude password field
-        .populate('role', 'name description') // Populate role with name and description
+        .populate('role', 'name description permissions') // Populate role with name, description and permissions
         .populate('createdBy', 'username'); // Populate who created the user
 
       if (!user) {
@@ -200,6 +200,92 @@ router.get(
 
       res.status(500).json({
         errors: [{ msg: 'Server error while retrieving user' }],
+      });
+    }
+  }
+);
+
+// @route    PUT api/users/:id
+// @desc     Update user (complete replacement)
+// @access   Private (Requires CAN_UPDATE_USER permission)
+router.put(
+  '/:id',
+  auth,
+  requirePermission('CAN_UPDATE_USER'),
+  check('id', 'Invalid user ID').isMongoId(),
+  check('username', 'Username must be a valid email').isEmail(),
+  check('fname', 'First name is required').notEmpty().trim(),
+  check('lname', 'Last name is required').notEmpty().trim(),
+  check('role', 'Role ID is required').notEmpty().isMongoId(),
+  check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { username, fname, lname, role, employeeId } = req.body;
+
+      // Check if user exists
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      // If username is being changed, check if it's already taken
+      if (username !== user.username) {
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+          return res.status(400).json({
+            errors: [{ msg: 'Username already exists' }],
+          });
+        }
+      }
+
+      // Verify role exists
+      const roleFromDB = await Role.findById(role);
+      if (!roleFromDB) {
+        return res.status(400).json({
+          errors: [{ msg: 'Role not found in database' }],
+        });
+      }
+
+      // Update user with all fields
+      const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        {
+          $set: {
+            username,
+            fname,
+            lname,
+            role,
+            employeeId: employeeId || null,
+          },
+        },
+        { new: true, runValidators: true }
+      )
+        .select('-password')
+        .populate('role', 'name description permissions')
+        .populate('createdBy', 'username');
+
+      res.json({
+        message: 'User updated successfully',
+        user: updatedUser,
+      });
+    } catch (err) {
+      console.error('Update user error:', err.message);
+
+      if (err.kind === 'ObjectId') {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      res.status(500).json({
+        errors: [{ msg: 'Server error while updating user' }],
       });
     }
   }

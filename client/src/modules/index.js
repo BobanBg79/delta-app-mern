@@ -8,6 +8,7 @@ import bookingAgentsReducer from './bookingAgents';
 import guestReducer from './guest';
 import guestsReducer from './guests';
 import { roleReducer } from './role';
+import { userReducer } from './users';
 
 export default combineReducers({
   apartment: apartmentReducer,
@@ -19,4 +20,5 @@ export default combineReducers({
   reservation: reservationReducer,
   bookingAgents: bookingAgentsReducer,
   role: roleReducer,
+  user: userReducer,
 });

@@ -16,6 +16,13 @@ const navItems = [
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_ROLE,
   },
   {
+    label: 'Users',
+    path: '/users',
+    exact: false,
+    strict: false,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_USER,
+  },
+  {
     label: 'Apartments',
     path: '/apartments',
     exact: false,

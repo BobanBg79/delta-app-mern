@@ -13,6 +13,8 @@ import {
 } from '../pages';
 import RolesList from '../pages/RolesList';
 import RoleView from '../pages/RoleView';
+import UsersList from '../pages/UsersList';
+import UserView from '../pages/UserView';
 import Accounting from '../pages/Accounting';
 import KontosList from '../pages/Accounting/KontosList';
 import KontoDetails from '../pages/Accounting/KontoDetails';
@@ -37,6 +39,9 @@ const PAGE_URLS = {
   guestCreate: '/guests/create',
   rolesList: '/roles',
   roleView: '/roles/:roleId',
+  usersList: '/users',
+  userView: '/users/:userId',
+  userCreate: '/users/create',
   accounting: '/accounting',
   kontosList: '/accounting/kontos',
   kontoDetails: '/accounting/konto/:code',
@@ -59,9 +64,11 @@ const {
   guestsList,
   guestView,
   guestCreate,
-  // Add these
   rolesList,
   roleView,
+  usersList,
+  userView,
+  userCreate,
   accounting,
   kontosList,
   kontoDetails,
@@ -176,6 +183,29 @@ export const PROTECTED_ROUTES = {
     path: roleView,
     component: RoleView,
     requiredPermission: USER_PERMISSIONS.CAN_VIEW_ROLE,
+  },
+  // User management routes
+  USERS_LIST: {
+    title: 'Users',
+    id: 'users_list',
+    isExact: true,
+    path: usersList,
+    component: UsersList,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_USER,
+  },
+  USER_CREATE: {
+    title: 'Create User',
+    id: 'user_create',
+    path: userCreate,
+    component: UserView,
+    requiredPermission: USER_PERMISSIONS.CAN_CREATE_USER,
+  },
+  USER_VIEW: {
+    title: 'User Details',
+    id: 'user_view',
+    path: userView,
+    component: UserView,
+    requiredPermission: USER_PERMISSIONS.CAN_VIEW_USER,
   },
   // Accounting routes
   ACCOUNTING: {
