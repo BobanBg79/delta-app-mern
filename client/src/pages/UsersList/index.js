@@ -8,7 +8,6 @@ import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
 import TableHeader from '../../components/TableHeader';
 import { getUsers } from '../../modules/users/operations';
-import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 
 const UsersList = () => {
@@ -17,11 +16,6 @@ const UsersList = () => {
 
   // Get users from Redux store
   const { users = [], fetching, error } = useSelector((state) => state.user);
-
-  // Get auth user permissions
-  const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
-  const userPermissions = userRole?.permissions || [];
-  const canCreateUser = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_USER);
 
   useEffect(() => {
     dispatch(getUsers());
@@ -48,8 +42,7 @@ const UsersList = () => {
         title="Users"
         createEntityPath="/users/create"
         createEntityLabel="Create User"
-        requiredPermission={USER_PERMISSIONS.CAN_CREATE_USER}
-        showCreateButton={canCreateUser}
+        createPermission={USER_PERMISSIONS.CAN_CREATE_USER}
       />
 
       {error && (
