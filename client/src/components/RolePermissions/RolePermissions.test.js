@@ -112,6 +112,7 @@ describe('RolePermissions Component', () => {
     // All should be grouped under Cleaning
     expect(screen.getByText('Cleaning')).toBeInTheDocument();
 
+    
     // Check for permission badges
     expect(screen.getByText('VIEW')).toBeInTheDocument();
     expect(screen.getByText('COMPLETE')).toBeInTheDocument();

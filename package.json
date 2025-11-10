@@ -15,7 +15,8 @@
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --force --prefix client && npm run build --prefix client",
     "cleanup:orphaned-reservations": "node scripts/cleanupOrphanedReservations.js",
     "validate:accounts": "node scripts/validateAccounts.js",
-    "delete:kontos": "node scripts/deleteKontos.js"
+    "delete:kontos": "node scripts/deleteKontos.js",
+    "prepare": "husky"
   },
   "author": "",
   "license": "ISC",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "concurrently": "^7.5.0",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "nodemon": "^2.0.20",
     "prettier": "^2.7.1",

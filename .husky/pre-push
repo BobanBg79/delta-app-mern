@@ -1,0 +1,20 @@
+echo "🧪 Running root Jest tests..."
+npm test -- --passWithNoTests
+
+if [ $? -ne 0 ]; then
+  echo "❌ Root tests failed. Push aborted."
+  exit 1
+fi
+
+echo "✅ Root tests passed!"
+
+echo "🧪 Running client Jest tests..."
+cd client && npm test -- --watchAll=false --passWithNoTests
+
+if [ $? -ne 0 ]; then
+  echo "❌ Client tests failed. Push aborted."
+  exit 1
+fi
+
+echo "✅ Client tests passed!"
+echo "✅ All tests passed! Proceeding with push..."
