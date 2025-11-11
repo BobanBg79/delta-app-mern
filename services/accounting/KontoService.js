@@ -124,6 +124,56 @@ class KontoService {
   }
 
   /**
+   * Create a single apartment-related konto (private helper)
+   *
+   * @param {ObjectId} apartmentId - Apartment ID
+   * @param {String} apartmentName - Apartment name
+   * @param {String} type - 'revenue' or 'rent'
+   * @param {Object} session - MongoDB session (optional)
+   * @returns {Object} Created konto
+   */
+  async _createApartmentKonto(apartmentId, apartmentName, type, session = null) {
+    const kontoConfig = {
+      revenue: {
+        prefix: '601-',
+        nameTemplate: `Accommodation Revenue - ${apartmentName}`,
+        type: 'revenue',
+        descriptionTemplate: `Revenue from accommodation in apartment ${apartmentName}`
+      },
+      rent: {
+        prefix: '701-',
+        nameTemplate: `Rent to Owner - ${apartmentName}`,
+        type: 'expense',
+        descriptionTemplate: `Monthly rent to owner of apartment ${apartmentName}`
+      }
+    };
+
+    const config = kontoConfig[type];
+    if (!config) {
+      throw new Error(`Invalid apartment konto type: ${type}. Must be 'revenue' or 'rent'`);
+    }
+
+    // Get next available code
+    const code = await this.getNextAvailableCode(config.prefix, session);
+
+    // Create konto data
+    const kontoData = {
+      code,
+      name: config.nameTemplate,
+      type: config.type,
+      apartmentId,
+      apartmentName,
+      description: config.descriptionTemplate,
+      currentBalance: 0,
+      isActive: true
+    };
+
+    const [konto] = await Konto.create([kontoData], { session });
+
+    return konto;
+  }
+
+  /**
    * Create kontos for a new apartment (Revenue + Rent to Owner)
    *
    * @param {ObjectId} apartmentId - Apartment ID
@@ -145,36 +195,11 @@ class KontoService {
       throw new Error(`Apartment ${apartmentName} already has ${existingKontos.length} konto(s)`);
     }
 
-    // Get next codes using existing getNextAvailableCode
-    const revenueCode = await this.getNextAvailableCode('601-', session);
-    const rentCode = await this.getNextAvailableCode('701-', session);
+    // Create both kontos using helper method
+    const revenueKonto = await this._createApartmentKonto(apartmentId, apartmentName, 'revenue', session);
+    const rentKonto = await this._createApartmentKonto(apartmentId, apartmentName, 'rent', session);
 
-    // Create both kontos
-    const revenueKontoData = {
-      code: revenueCode,
-      name: `Accommodation Revenue - ${apartmentName}`,
-      type: 'revenue',
-      apartmentId,
-      apartmentName,
-      description: `Revenue from accommodation in apartment ${apartmentName}`,
-      currentBalance: 0,
-      isActive: true
-    };
-
-    const rentKontoData = {
-      code: rentCode,
-      name: `Rent to Owner - ${apartmentName}`,
-      type: 'expense',
-      apartmentId,
-      apartmentName,
-      description: `Monthly rent to owner of apartment ${apartmentName}`,
-      currentBalance: 0,
-      isActive: true
-    };
-
-    const [revenueKonto, rentKonto] = await Konto.create([revenueKontoData, rentKontoData], { session });
-
-    console.log(`✅ Created kontos for apartment ${apartmentName}: ${revenueCode}, ${rentCode}`);
+    console.log(`✅ Created kontos for apartment ${apartmentName}: ${revenueKonto.code}, ${rentKonto.code}`);
 
     return { revenueKonto, rentKonto };
   }
@@ -205,19 +230,8 @@ class KontoService {
 
         if (!revenueKonto) {
           try {
-            const revenueCode = await this.getNextAvailableCode('601-');
-            const revenueData = {
-              code: revenueCode,
-              name: `Accommodation Revenue - ${apartment.name}`,
-              type: 'revenue',
-              apartmentId: apartment._id,
-              apartmentName: apartment.name,
-              description: `Revenue from accommodation in apartment ${apartment.name}`,
-              currentBalance: 0,
-              isActive: true
-            };
-            await Konto.create(revenueData);
-            console.log(`   ✅ Created Revenue konto ${revenueCode} for ${apartment.name}`);
+            const created = await this._createApartmentKonto(apartment._id, apartment.name, 'revenue');
+            console.log(`   ✅ Created Revenue konto ${created.code} for ${apartment.name}`);
             syncedCount++;
           } catch (revenueError) {
             const errorMsg = `Failed to create Revenue konto for ${apartment.name}: ${revenueError.message}`;
@@ -235,19 +249,8 @@ class KontoService {
 
         if (!rentKonto) {
           try {
-            const rentCode = await this.getNextAvailableCode('701-');
-            const rentData = {
-              code: rentCode,
-              name: `Rent to Owner - ${apartment.name}`,
-              type: 'expense',
-              apartmentId: apartment._id,
-              apartmentName: apartment.name,
-              description: `Monthly rent to owner of apartment ${apartment.name}`,
-              currentBalance: 0,
-              isActive: true
-            };
-            await Konto.create(rentData);
-            console.log(`   ✅ Created Rent konto ${rentCode} for ${apartment.name}`);
+            const created = await this._createApartmentKonto(apartment._id, apartment.name, 'rent');
+            console.log(`   ✅ Created Rent konto ${created.code} for ${apartment.name}`);
             syncedCount++;
           } catch (rentError) {
             const errorMsg = `Failed to create Rent konto for ${apartment.name}: ${rentError.message}`;
