@@ -124,6 +124,158 @@ class KontoService {
   }
 
   /**
+   * Create kontos for a new apartment (Revenue + Rent to Owner)
+   *
+   * @param {ObjectId} apartmentId - Apartment ID
+   * @param {String} apartmentName - Apartment name
+   * @param {Object} session - MongoDB session (optional)
+   * @returns {Object} { revenueKonto, rentKonto }
+   */
+  async createKontosForApartment(apartmentId, apartmentName, session = null) {
+    // Validate apartment exists
+    const Apartment = require('../../models/Apartment');
+    const apartment = await Apartment.findById(apartmentId).session(session);
+    if (!apartment) {
+      throw new Error('Apartment not found');
+    }
+
+    // Check if kontos already exist for this apartment
+    const existingKontos = await Konto.find({ apartmentId }).session(session);
+    if (existingKontos.length > 0) {
+      throw new Error(`Apartment ${apartmentName} already has ${existingKontos.length} konto(s)`);
+    }
+
+    // Get next codes using existing getNextAvailableCode
+    const revenueCode = await this.getNextAvailableCode('601-', session);
+    const rentCode = await this.getNextAvailableCode('701-', session);
+
+    // Create both kontos
+    const revenueKontoData = {
+      code: revenueCode,
+      name: `Accommodation Revenue - ${apartmentName}`,
+      type: 'revenue',
+      apartmentId,
+      apartmentName,
+      description: `Revenue from accommodation in apartment ${apartmentName}`,
+      currentBalance: 0,
+      isActive: true
+    };
+
+    const rentKontoData = {
+      code: rentCode,
+      name: `Rent to Owner - ${apartmentName}`,
+      type: 'expense',
+      apartmentId,
+      apartmentName,
+      description: `Monthly rent to owner of apartment ${apartmentName}`,
+      currentBalance: 0,
+      isActive: true
+    };
+
+    const [revenueKonto, rentKonto] = await Konto.create([revenueKontoData, rentKontoData], { session });
+
+    console.log(`✅ Created kontos for apartment ${apartmentName}: ${revenueCode}, ${rentCode}`);
+
+    return { revenueKonto, rentKonto };
+  }
+
+  /**
+   * Sync apartment kontos - ensure all apartments have Revenue and Rent kontos
+   * This is a backup/healing function that runs during seed to fix any missing kontos
+   *
+   * @returns {Object} { syncedCount, errors }
+   */
+  async syncApartmentKontos() {
+    const Apartment = require('../../models/Apartment');
+    const apartments = await Apartment.find({});
+
+    let syncedCount = 0;
+    const errors = [];
+
+    console.log(`\n🏢 Syncing apartment kontos for ${apartments.length} apartment(s)...`);
+
+    for (const apartment of apartments) {
+      try {
+        // Check Revenue konto (601-XX)
+        const revenueKonto = await Konto.findOne({
+          apartmentId: apartment._id,
+          type: 'revenue',
+          code: /^601-/
+        });
+
+        if (!revenueKonto) {
+          try {
+            const revenueCode = await this.getNextAvailableCode('601-');
+            const revenueData = {
+              code: revenueCode,
+              name: `Accommodation Revenue - ${apartment.name}`,
+              type: 'revenue',
+              apartmentId: apartment._id,
+              apartmentName: apartment.name,
+              description: `Revenue from accommodation in apartment ${apartment.name}`,
+              currentBalance: 0,
+              isActive: true
+            };
+            await Konto.create(revenueData);
+            console.log(`   ✅ Created Revenue konto ${revenueCode} for ${apartment.name}`);
+            syncedCount++;
+          } catch (revenueError) {
+            const errorMsg = `Failed to create Revenue konto for ${apartment.name}: ${revenueError.message}`;
+            console.error(`   ⚠️  ${errorMsg}`);
+            errors.push(errorMsg);
+          }
+        }
+
+        // Check Rent konto (701-XX) - independent of Revenue
+        const rentKonto = await Konto.findOne({
+          apartmentId: apartment._id,
+          type: 'expense',
+          code: /^701-/
+        });
+
+        if (!rentKonto) {
+          try {
+            const rentCode = await this.getNextAvailableCode('701-');
+            const rentData = {
+              code: rentCode,
+              name: `Rent to Owner - ${apartment.name}`,
+              type: 'expense',
+              apartmentId: apartment._id,
+              apartmentName: apartment.name,
+              description: `Monthly rent to owner of apartment ${apartment.name}`,
+              currentBalance: 0,
+              isActive: true
+            };
+            await Konto.create(rentData);
+            console.log(`   ✅ Created Rent konto ${rentCode} for ${apartment.name}`);
+            syncedCount++;
+          } catch (rentError) {
+            const errorMsg = `Failed to create Rent konto for ${apartment.name}: ${rentError.message}`;
+            console.error(`   ⚠️  ${errorMsg}`);
+            errors.push(errorMsg);
+          }
+        }
+      } catch (apartmentError) {
+        const errorMsg = `Error syncing kontos for apartment ${apartment.name}: ${apartmentError.message}`;
+        console.error(`   ⚠️  ${errorMsg}`);
+        errors.push(errorMsg);
+      }
+    }
+
+    if (syncedCount > 0) {
+      console.log(`✅ Synced ${syncedCount} apartment konto(s)`);
+    } else {
+      console.log(`✅ All apartment kontos are in sync`);
+    }
+
+    if (errors.length > 0) {
+      console.warn(`⚠️  ${errors.length} error(s) occurred during sync`);
+    }
+
+    return { syncedCount, errors };
+  }
+
+  /**
    * Deactivate a konto (only if no transactions exist)
    *
    * @param {String} kontoCode - Konto code

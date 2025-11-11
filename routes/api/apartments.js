@@ -4,6 +4,7 @@ const auth = require('../../middleware/auth');
 const { requirePermission } = require('../../middleware/permission');
 
 const Apartment = require('../../models/Apartment');
+const KontoService = require('../../services/accounting/KontoService');
 
 // @route    GET api/apartments
 // @desc     Get the list of all apartments
@@ -64,6 +65,21 @@ router.post('/', auth, requirePermission('CAN_CREATE_APARTMENT'), async (req, re
       statusHistory,
     });
     await apartment.save();
+
+    // Auto-create kontos for apartment (non-blocking - log error but don't fail request)
+    try {
+      const { revenueKonto, rentKonto } = await KontoService.createKontosForApartment(
+        apartment._id,
+        apartment.name
+      );
+      console.log(`✅ Auto-created kontos for apartment ${apartment.name}:`);
+      console.log(`   Revenue: ${revenueKonto.code} - ${revenueKonto.name}`);
+      console.log(`   Rent: ${rentKonto.code} - ${rentKonto.name}`);
+    } catch (kontoError) {
+      // Log error but don't fail apartment creation
+      console.error(`⚠️  Failed to create kontos for apartment ${apartment.name}:`, kontoError.message);
+      console.error('   Kontos will be auto-created on next database connection (seed process runs on server restart)');
+    }
 
     res.status(201).json({ msg: 'Apartment successfully created' });
   } catch (error) {

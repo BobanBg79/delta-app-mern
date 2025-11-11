@@ -61,10 +61,20 @@ const seedKonto = async () => {
     const User = require('../models/User');
     const chartOfAccounts = require('../models/konto/chartOfAccounts');
     const { CASH_REGISTER_ROLES } = require('../constants/userRoles');
+    const KontoService = require('../services/accounting/KontoService');
 
     const existingKontoCount = await Konto.countDocuments();
     if (existingKontoCount > 0) {
-      console.log('✅ Konto accounts already exist, skipping seed...');
+      console.log('✅ Konto accounts already exist, skipping initial seed...');
+
+      // Sync apartment kontos (backup/healing mechanism)
+      try {
+        await KontoService.syncApartmentKontos();
+      } catch (syncError) {
+        console.error('❌ Error during apartment konto sync:', syncError.message);
+        // Don't throw - log and continue
+      }
+
       return;
     }
 
