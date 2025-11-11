@@ -92,6 +92,19 @@ router.post(
         }
       }
 
+      // Auto-create additional kontos for CLEANING_LADY (non-blocking - log error but don't fail request)
+      let cleaningLadyKontos = null;
+      if (roleFromDB.name === 'CLEANING_LADY') {
+        try {
+          cleaningLadyKontos = await KontoService.createKontosForCleaningLady(user._id, user.fname, user.lname);
+          console.log(`✅ Auto-created kontos for cleaning lady: ${user.fname} ${user.lname}`);
+        } catch (cleaningLadyError) {
+          // Log error but don't fail user creation
+          console.error(`⚠️  Failed to create kontos for cleaning lady ${user.fname} ${user.lname}:`, cleaningLadyError.message);
+          console.error('   Kontos can be created later via sync process (runs on server restart/reconnect to database)');
+        }
+      }
+
       // Don't generate a token for the new user, just return success
       const { password: _, ...responseUser } = user._doc;
       res.status(201).json({
@@ -100,6 +113,16 @@ router.post(
         cashRegister: cashRegister ? {
           code: cashRegister.code,
           name: cashRegister.name
+        } : null,
+        cleaningLadyKontos: cleaningLadyKontos ? {
+          payables: {
+            code: cleaningLadyKontos.payablesKonto.code,
+            name: cleaningLadyKontos.payablesKonto.name
+          },
+          netSalary: {
+            code: cleaningLadyKontos.netSalaryKonto.code,
+            name: cleaningLadyKontos.netSalaryKonto.name
+          }
         } : null
       });
     } catch (err) {

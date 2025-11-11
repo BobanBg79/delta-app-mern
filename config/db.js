@@ -75,6 +75,14 @@ const seedKonto = async () => {
         // Don't throw - log and continue
       }
 
+      // Sync user kontos (backup/healing mechanism)
+      try {
+        await KontoService.syncUserKontos();
+      } catch (syncError) {
+        console.error('❌ Error during user konto sync:', syncError.message);
+        // Don't throw - log and continue
+      }
+
       return;
     }
 

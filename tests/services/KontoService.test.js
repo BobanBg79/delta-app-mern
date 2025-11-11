@@ -3,10 +3,12 @@
 const KontoService = require('../../services/accounting/KontoService');
 const Konto = require('../../models/konto/Konto');
 const Apartment = require('../../models/Apartment');
+const User = require('../../models/User');
 
 // Mock models
 jest.mock('../../models/konto/Konto');
 jest.mock('../../models/Apartment');
+jest.mock('../../models/User');
 
 describe('KontoService', () => {
   afterEach(() => {
@@ -631,6 +633,447 @@ describe('KontoService', () => {
         expect(result.syncedCount).toBe(0);
         expect(result.errors).toEqual([]);
         expect(Konto.findOne).not.toHaveBeenCalled();
+        expect(Konto.create).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('createKontosForCleaningLady', () => {
+    const mockUserId = '507f1f77bcf86cd799439020';
+    const mockFname = 'Jane';
+    const mockLname = 'Doe';
+    const mockUserName = 'Jane Doe';
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('Error scenarios', () => {
+      it('should throw error when user does not exist', async () => {
+        // Mock User.findById to return null
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(null)
+          })
+        });
+
+        // Execute and Assert
+        await expect(
+          KontoService.createKontosForCleaningLady(mockUserId, mockFname, mockLname)
+        ).rejects.toThrow('User not found');
+      });
+
+      it('should throw error when user is not a CLEANING_LADY', async () => {
+        // Mock User.findById to return a non-cleaning lady user
+        const mockUser = {
+          _id: mockUserId,
+          fname: mockFname,
+          lname: mockLname,
+          role: { name: 'HOST' }
+        };
+
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(mockUser)
+          })
+        });
+
+        // Execute and Assert
+        await expect(
+          KontoService.createKontosForCleaningLady(mockUserId, mockFname, mockLname)
+        ).rejects.toThrow('is not a cleaning lady');
+      });
+
+      it('should throw error when kontos already exist for cleaning lady', async () => {
+        // Mock User.findById to return a cleaning lady
+        const mockUser = {
+          _id: mockUserId,
+          fname: mockFname,
+          lname: mockLname,
+          role: { name: 'CLEANING_LADY' }
+        };
+
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(mockUser)
+          })
+        });
+
+        // Mock Konto.find to return existing kontos
+        Konto.find = jest.fn().mockReturnValue({
+          session: jest.fn().mockResolvedValue([
+            { code: '201', name: 'Payables to Cleaner - Jane Doe' },
+            { code: '751', name: 'Net Salary - Jane Doe' }
+          ])
+        });
+
+        // Execute and Assert
+        await expect(
+          KontoService.createKontosForCleaningLady(mockUserId, mockFname, mockLname)
+        ).rejects.toThrow('already has 2 konto(s)');
+      });
+    });
+
+    describe('Success scenario', () => {
+      it('should create payables and net salary kontos with correct data', async () => {
+        // Mock User.findById to return a cleaning lady
+        const mockUser = {
+          _id: mockUserId,
+          fname: mockFname,
+          lname: mockLname,
+          role: { name: 'CLEANING_LADY' }
+        };
+
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(mockUser)
+          })
+        });
+
+        // Mock Konto.find for checking existing kontos (none exist)
+        // Also for getNextAvailableCode calls
+        Konto.find = jest.fn()
+          .mockReturnValueOnce({
+            session: jest.fn().mockResolvedValue([]) // No existing kontos
+          })
+          .mockReturnValueOnce({
+            session: jest.fn().mockResolvedValue([]) // No existing 20X codes
+          })
+          .mockReturnValueOnce({
+            session: jest.fn().mockResolvedValue([]) // No existing 75X codes
+          });
+
+        // Mock Konto.create
+        const mockPayablesKonto = {
+          code: '201',
+          name: `Payables to Cleaner - ${mockUserName}`,
+          type: 'liability',
+          employeeId: mockUserId,
+          employeeName: mockUserName,
+          description: `Payables to cleaning lady ${mockUserName}`,
+          currentBalance: 0,
+          isActive: true
+        };
+
+        const mockNetSalaryKonto = {
+          code: '751',
+          name: `Net Salary - ${mockUserName}`,
+          type: 'expense',
+          employeeId: mockUserId,
+          employeeName: mockUserName,
+          description: `Net salary expense for cleaning lady ${mockUserName}`,
+          currentBalance: 0,
+          isActive: true
+        };
+
+        Konto.create = jest.fn()
+          .mockResolvedValueOnce([mockPayablesKonto])  // First call: payables
+          .mockResolvedValueOnce([mockNetSalaryKonto]); // Second call: net salary
+
+        // Execute
+        const result = await KontoService.createKontosForCleaningLady(mockUserId, mockFname, mockLname);
+
+        // Assertions
+        expect(result).toEqual({
+          payablesKonto: mockPayablesKonto,
+          netSalaryKonto: mockNetSalaryKonto
+        });
+
+        // Verify Konto.create was called twice with correct data
+        expect(Konto.create).toHaveBeenCalledTimes(2);
+
+        // First call for payables konto
+        expect(Konto.create).toHaveBeenNthCalledWith(
+          1,
+          [
+            {
+              code: '201',
+              name: `Payables to Cleaner - ${mockUserName}`,
+              type: 'liability',
+              employeeId: mockUserId,
+              employeeName: mockUserName,
+              description: `Payables to cleaning lady ${mockUserName}`,
+              currentBalance: 0,
+              isActive: true
+            }
+          ],
+          { session: null }
+        );
+
+        // Second call for net salary konto
+        expect(Konto.create).toHaveBeenNthCalledWith(
+          2,
+          [
+            {
+              code: '751',
+              name: `Net Salary - ${mockUserName}`,
+              type: 'expense',
+              employeeId: mockUserId,
+              employeeName: mockUserName,
+              description: `Net salary expense for cleaning lady ${mockUserName}`,
+              currentBalance: 0,
+              isActive: true
+            }
+          ],
+          { session: null }
+        );
+      });
+    });
+  });
+
+  describe('syncUserKontos', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('All kontos exist - nothing to sync', () => {
+      it('should return syncedCount=0 when all users have required kontos', async () => {
+        // Mock users: 1 OWNER (needs Cash Register), 1 CLEANING_LADY (needs all 3)
+        const mockUsers = [
+          { _id: 'user1', fname: 'John', lname: 'Owner', role: { name: 'OWNER' } },
+          { _id: 'user2', fname: 'Jane', lname: 'Cleaner', role: { name: 'CLEANING_LADY' } }
+        ];
+
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(mockUsers)
+        });
+
+        // Mock Cash Register checks - both exist
+        Konto.findOne = jest.fn()
+          // User 1 (OWNER) - Cash Register exists
+          .mockResolvedValueOnce({ code: '101', name: 'Cash Register - John Owner' })
+          // User 2 (CLEANING_LADY) - Cash Register exists
+          .mockResolvedValueOnce({ code: '102', name: 'Cash Register - Jane Cleaner' })
+          // User 2 - Payables exists
+          .mockResolvedValueOnce({ code: '201', name: 'Payables to Cleaner - Jane Cleaner' })
+          // User 2 - Net Salary exists
+          .mockResolvedValueOnce({ code: '751', name: 'Net Salary - Jane Cleaner' });
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(0);
+        expect(result.errors).toEqual([]);
+        expect(Konto.create).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('Missing CLEANING_LADY kontos', () => {
+      it('should create all 3 kontos when CLEANING_LADY has none', async () => {
+        const mockUsers = [
+          { _id: 'user1', fname: 'Jane', lname: 'Cleaner', role: { name: 'CLEANING_LADY' } }
+        ];
+
+        // User.find is called TWICE - once for Cash Registers, once for CLEANING_LADY
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn()
+            .mockResolvedValueOnce(mockUsers)  // For Cash Registers sync
+            .mockResolvedValueOnce(mockUsers)  // For CLEANING_LADY sync
+        });
+
+        // Mock User.findById for createCashRegisterForUser
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(mockUsers[0])
+          })
+        });
+
+        // Mock Konto.findOne
+        // First call: _syncCashRegisters checks if Cash Register exists (returns null directly)
+        // Second call: createCashRegisterForUser checks if Cash Register exists (returns object with .session())
+        // Third call: _syncCleaningLadyKontos checks if Payables exists (returns null directly)
+        // Fourth call: _syncCleaningLadyKontos checks if Net Salary exists (returns null directly)
+        Konto.findOne = jest.fn()
+          .mockResolvedValueOnce(null)  // _syncCashRegisters check
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue(null) })  // createCashRegisterForUser check
+          .mockResolvedValueOnce(null)  // _syncCleaningLadyKontos - Payables check
+          .mockResolvedValueOnce(null); // _syncCleaningLadyKontos - Net Salary check
+
+        // Mock getNextAvailableCode
+        Konto.find = jest.fn()
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) })  // For Cash Register
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) })  // For Payables
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) }); // For Net Salary
+
+        // Mock Konto.create
+        const mockCashRegister = { code: '101', name: 'Cash Register - Jane Cleaner' };
+        const mockPayables = { code: '201', name: 'Payables to Cleaner - Jane Cleaner' };
+        const mockNetSalary = { code: '751', name: 'Net Salary - Jane Cleaner' };
+        Konto.create = jest.fn()
+          .mockResolvedValueOnce([mockCashRegister])
+          .mockResolvedValueOnce([mockPayables])
+          .mockResolvedValueOnce([mockNetSalary]);
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(3);
+        expect(result.errors).toEqual([]);
+        expect(Konto.create).toHaveBeenCalledTimes(3);
+      });
+
+      it('should create only missing Payables with correct data when other kontos exist', async () => {
+        const mockUserId = 'user1';
+        const mockUsers = [
+          { _id: mockUserId, fname: 'Jane', lname: 'Cleaner', role: { name: 'CLEANING_LADY' } }
+        ];
+
+        // User.find is called TWICE
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn()
+            .mockResolvedValueOnce(mockUsers)  // For Cash Registers sync
+            .mockResolvedValueOnce(mockUsers)  // For CLEANING_LADY sync
+        });
+
+        // Mock Konto.findOne
+        Konto.findOne = jest.fn()
+          .mockResolvedValueOnce({ code: '101' })  // Cash Register exists
+          .mockResolvedValueOnce(null)             // Payables doesn't exist
+          .mockResolvedValueOnce({ code: '751' }); // Net Salary exists
+
+        // Mock getNextAvailableCode
+        Konto.find = jest.fn().mockReturnValue({
+          session: jest.fn().mockResolvedValue([])
+        });
+
+        // Mock Konto.create for Payables
+        const mockPayables = { code: '201', name: 'Payables to Cleaner - Jane Cleaner' };
+        Konto.create = jest.fn().mockResolvedValue([mockPayables]);
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(1);
+        expect(result.errors).toEqual([]);
+        expect(Konto.create).toHaveBeenCalledTimes(1);
+
+        // Verify Konto.create was called with exact Payables data
+        expect(Konto.create).toHaveBeenCalledWith(
+          [
+            {
+              code: '201',
+              name: 'Payables to Cleaner - Jane Cleaner',
+              type: 'liability',
+              employeeId: mockUserId,
+              employeeName: 'Jane Cleaner',
+              description: 'Payables to cleaning lady Jane Cleaner',
+              currentBalance: 0,
+              isActive: true
+            }
+          ],
+          { session: null }
+        );
+      });
+    });
+
+    describe('Multiple users with mixed scenarios', () => {
+      it('should sync kontos for multiple users correctly', async () => {
+        const mockUsers = [
+          { _id: 'user1', fname: 'John', lname: 'Owner', role: { name: 'OWNER' } },
+          { _id: 'user2', fname: 'Jane', lname: 'Cleaner', role: { name: 'CLEANING_LADY' } },
+          { _id: 'user3', fname: 'Bob', lname: 'Manager', role: { name: 'MANAGER' } }
+        ];
+
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn()
+            .mockResolvedValueOnce(mockUsers)  // For Cash Registers sync
+            .mockResolvedValueOnce(mockUsers)  // For CLEANING_LADY sync
+        });
+
+        // Mock User.findById for createCashRegisterForUser (will be called for user1)
+        User.findById = jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            session: jest.fn().mockResolvedValue(mockUsers[0]) // Return user1
+          })
+        });
+
+        // Mock Konto.findOne
+        Konto.findOne = jest.fn()
+          // User 1 (OWNER) - no Cash Register (_syncCashRegisters check)
+          .mockResolvedValueOnce(null)
+          // User 1 (OWNER) - no Cash Register (createCashRegisterForUser check)
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue(null) })
+          // User 2 (CLEANING_LADY) - has Cash Register (_syncCashRegisters check)
+          .mockResolvedValueOnce({ code: '102' })
+          // User 3 (MANAGER) - has Cash Register (_syncCashRegisters check)
+          .mockResolvedValueOnce({ code: '103' })
+          // User 2 - no Payables (_syncCleaningLadyKontos check)
+          .mockResolvedValueOnce(null)
+          // User 2 - has Net Salary (_syncCleaningLadyKontos check)
+          .mockResolvedValueOnce({ code: '751' });
+
+        // Mock getNextAvailableCode
+        Konto.find = jest.fn()
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) })  // User 1 Cash Register
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) }); // User 2 Payables
+
+        // Mock Konto.create
+        Konto.create = jest.fn()
+          .mockResolvedValueOnce([{ code: '101' }])  // User 1 Cash Register
+          .mockResolvedValueOnce([{ code: '201' }]); // User 2 Payables
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(2);  // 1 Cash Register + 1 Payables
+        expect(result.errors).toEqual([]);
+        expect(Konto.create).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe('Error handling - non-blocking', () => {
+      it('should log error but continue when Payables creation fails for CLEANING_LADY', async () => {
+        const mockUsers = [
+          { _id: 'user1', fname: 'Jane', lname: 'Cleaner', role: { name: 'CLEANING_LADY' } }
+        ];
+
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(mockUsers)
+        });
+
+        // Mock Konto.findOne
+        Konto.findOne = jest.fn()
+          .mockResolvedValueOnce({ code: '101' })  // Cash Register exists
+          .mockResolvedValueOnce(null)             // Payables doesn't exist
+          .mockResolvedValueOnce(null);            // Net Salary doesn't exist
+
+        // Mock getNextAvailableCode
+        Konto.find = jest.fn()
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) })  // Payables
+          .mockReturnValueOnce({ session: jest.fn().mockResolvedValue([]) }); // Net Salary
+
+        // Mock Konto.create - Payables fails, Net Salary succeeds
+        Konto.create = jest.fn()
+          .mockRejectedValueOnce(new Error('Duplicate key'))
+          .mockResolvedValueOnce([{ code: '751' }]);
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(1);  // Only Net Salary created
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toContain('Failed to create Payables konto for Jane Cleaner');
+        expect(result.errors[0]).toContain('Duplicate key');
+      });
+    });
+
+    describe('No users in database', () => {
+      it('should handle empty user list gracefully', async () => {
+        User.find = jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue([])
+        });
+
+        // Execute
+        const result = await KontoService.syncUserKontos();
+
+        // Assertions
+        expect(result.syncedCount).toBe(0);
+        expect(result.errors).toEqual([]);
         expect(Konto.create).not.toHaveBeenCalled();
       });
     });
