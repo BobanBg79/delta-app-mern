@@ -375,14 +375,120 @@ class KontoService {
   }
 
   /**
+   * Find cash register for a user
+   * @param {ObjectId} userId - User ID
+   * @param {Object} session - MongoDB session (optional)
+   * @returns {Object|null} Existing cash register konto or null
+   */
+  async _findCashRegisterForUser(userId, session = null) {
+    const query = Konto.findOne({
+      employeeId: userId,
+      isCashRegister: true
+    });
+    return session ? await query.session(session) : await query;
+  }
+
+  /**
+   * Find payables konto for a user
+   * @param {ObjectId} userId - User ID
+   * @param {Object} session - MongoDB session (optional)
+   * @returns {Object|null} Existing payables konto or null
+   */
+  async _findPayablesKontoForUser(userId, session = null) {
+    const query = Konto.findOne({
+      employeeId: userId,
+      type: 'liability',
+      code: /^20/
+    });
+    return session ? await query.session(session) : await query;
+  }
+
+  /**
+   * Find net salary konto for a user
+   * @param {ObjectId} userId - User ID
+   * @param {Object} session - MongoDB session (optional)
+   * @returns {Object|null} Existing net salary konto or null
+   */
+  async _findNetSalaryKontoForUser(userId, session = null) {
+    const query = Konto.findOne({
+      employeeId: userId,
+      type: 'expense',
+      code: /^75/
+    });
+    return session ? await query.session(session) : await query;
+  }
+
+  /**
+   * Safely create a konto and handle errors
+   * @param {Function} createFn - Async function that creates the konto
+   * @param {String} kontoTypeName - Human-readable name of konto type
+   * @param {String} userName - User name for logging
+   * @param {Object} counters - Object with optional syncedCount and errors array
+   * @returns {Object|null} Created konto or null if error
+   */
+  async _safeCreateKonto(createFn, kontoTypeName, userName, counters) {
+    try {
+      const created = await createFn();
+      console.log(`      ✅ Created ${kontoTypeName} ${created.code} for ${userName}`);
+      if (counters.syncedCount !== undefined) {
+        counters.syncedCount++;
+      }
+      return created;
+    } catch (error) {
+      const errorMsg = `Failed to create ${kontoTypeName} for ${userName}: ${error.message}`;
+      console.error(`      ⚠️  ${errorMsg}`);
+      counters.errors.push(errorMsg);
+      return null;
+    }
+  }
+
+  /**
+   * Ensure a specific type of konto exists, create if missing
+   * @param {Object} options - Configuration object
+   * @returns {Object|null} Existing or created konto, or null if error
+   */
+  async _ensureKontoExists(options) {
+    const {
+      findFn,
+      createFn,
+      kontoTypeName,
+      userName,
+      counters = null,
+      trackingObject = null,
+      trackingKey = null
+    } = options;
+
+    // Check if konto exists
+    const existingKonto = await findFn();
+
+    if (existingKonto) {
+      return existingKonto;
+    }
+
+    // Konto doesn't exist, create it
+    const created = await this._safeCreateKonto(
+      createFn,
+      kontoTypeName,
+      userName,
+      counters || { errors: [] }
+    );
+
+    // Track creation if requested
+    if (created && trackingObject && trackingKey) {
+      trackingObject[trackingKey] = true;
+    }
+
+    return created;
+  }
+
+  /**
    * Sync cash registers - ensure all users with CASH_REGISTER_ROLES have cash registers
    * Private helper for syncUserKontos
    *
    * @returns {Object} { syncedCount, errors }
    */
   async _syncCashRegisters() {
-    let syncedCount = 0;
-    const errors = [];
+    const counters = { syncedCount: 0, errors: [] };
 
     try {
       // Get all users with roles that require cash registers
@@ -394,38 +500,28 @@ class KontoService {
       console.log(`   💰 Checking ${usersNeedingCashRegister.length} user(s) for Cash Register kontos...`);
 
       for (const user of usersNeedingCashRegister) {
+        const userName = `${user.fname} ${user.lname}`;
         try {
-          // Check if Cash Register exists
-          const cashRegister = await Konto.findOne({
-            employeeId: user._id,
-            isCashRegister: true
+          await this._ensureKontoExists({
+            findFn: () => this._findCashRegisterForUser(user._id),
+            createFn: () => this.createCashRegisterForUser(user._id),
+            kontoTypeName: 'Cash Register',
+            userName,
+            counters
           });
-
-          if (!cashRegister) {
-            // Create Cash Register
-            try {
-              const created = await this.createCashRegisterForUser(user._id);
-              console.log(`      ✅ Created Cash Register ${created.code} for ${user.fname} ${user.lname}`);
-              syncedCount++;
-            } catch (createError) {
-              const errorMsg = `Failed to create Cash Register for ${user.fname} ${user.lname}: ${createError.message}`;
-              console.error(`      ⚠️  ${errorMsg}`);
-              errors.push(errorMsg);
-            }
-          }
         } catch (userError) {
-          const errorMsg = `Error checking Cash Register for user ${user.fname} ${user.lname}: ${userError.message}`;
+          const errorMsg = `Error checking Cash Register for user ${userName}: ${userError.message}`;
           console.error(`      ⚠️  ${errorMsg}`);
-          errors.push(errorMsg);
+          counters.errors.push(errorMsg);
         }
       }
     } catch (error) {
       const errorMsg = `Fatal error during Cash Register sync: ${error.message}`;
       console.error(`   ❌ ${errorMsg}`);
-      errors.push(errorMsg);
+      counters.errors.push(errorMsg);
     }
 
-    return { syncedCount, errors };
+    return counters;
   }
 
   /**
@@ -435,8 +531,7 @@ class KontoService {
    * @returns {Object} { syncedCount, errors }
    */
   async _syncCleaningLadyKontos() {
-    let syncedCount = 0;
-    const errors = [];
+    const counters = { syncedCount: 0, errors: [] };
 
     try {
       // Get all cleaning ladies
@@ -451,56 +546,36 @@ class KontoService {
         const userName = `${user.fname} ${user.lname}`;
 
         try {
-          // Check Payables konto (20X)
-          const payablesKonto = await Konto.findOne({
-            employeeId: user._id,
-            type: 'liability',
-            code: /^20/
+          // Check and create Payables konto (20X)
+          await this._ensureKontoExists({
+            findFn: () => this._findPayablesKontoForUser(user._id),
+            createFn: () => this._createCleaningLadyKonto(user._id, userName, 'payables'),
+            kontoTypeName: 'Payables konto',
+            userName,
+            counters
           });
 
-          if (!payablesKonto) {
-            try {
-              const created = await this._createCleaningLadyKonto(user._id, userName, 'payables');
-              console.log(`      ✅ Created Payables konto ${created.code} for ${userName}`);
-              syncedCount++;
-            } catch (payablesError) {
-              const errorMsg = `Failed to create Payables konto for ${userName}: ${payablesError.message}`;
-              console.error(`      ⚠️  ${errorMsg}`);
-              errors.push(errorMsg);
-            }
-          }
-
-          // Check Net Salary konto (75X) - independent of Payables
-          const netSalaryKonto = await Konto.findOne({
-            employeeId: user._id,
-            type: 'expense',
-            code: /^75/
+          // Check and create Net Salary konto (75X) - independent of Payables
+          await this._ensureKontoExists({
+            findFn: () => this._findNetSalaryKontoForUser(user._id),
+            createFn: () => this._createCleaningLadyKonto(user._id, userName, 'net_salary'),
+            kontoTypeName: 'Net Salary konto',
+            userName,
+            counters
           });
-
-          if (!netSalaryKonto) {
-            try {
-              const created = await this._createCleaningLadyKonto(user._id, userName, 'net_salary');
-              console.log(`      ✅ Created Net Salary konto ${created.code} for ${userName}`);
-              syncedCount++;
-            } catch (salaryError) {
-              const errorMsg = `Failed to create Net Salary konto for ${userName}: ${salaryError.message}`;
-              console.error(`      ⚠️  ${errorMsg}`);
-              errors.push(errorMsg);
-            }
-          }
         } catch (userError) {
           const errorMsg = `Error syncing kontos for cleaning lady ${userName}: ${userError.message}`;
           console.error(`      ⚠️  ${errorMsg}`);
-          errors.push(errorMsg);
+          counters.errors.push(errorMsg);
         }
       }
     } catch (error) {
       const errorMsg = `Fatal error during cleaning lady kontos sync: ${error.message}`;
       console.error(`   ❌ ${errorMsg}`);
-      errors.push(errorMsg);
+      counters.errors.push(errorMsg);
     }
 
-    return { syncedCount, errors };
+    return counters;
   }
 
   /**
@@ -536,6 +611,80 @@ class KontoService {
     }
 
     return { syncedCount: totalSyncedCount, errors: allErrors };
+  }
+
+  /**
+   * Ensure user has all required kontos based on their role
+   * Used when updating a user's role to automatically create missing kontos
+   *
+   * @param {ObjectId} userId - User ID
+   * @returns {Object} { created: { cashRegister: boolean, payables: boolean, netSalary: boolean }, errors: [] }
+   */
+  async ensureUserKontos(userId) {
+    const created = {
+      cashRegister: false,
+      payables: false,
+      netSalary: false
+    };
+    const errors = [];
+
+    try {
+      // Get user with populated role
+      const user = await User.findById(userId).populate('role');
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const roleName = user.role?.name;
+      if (!roleName) {
+        throw new Error('User has no role assigned');
+      }
+
+      const userName = `${user.fname} ${user.lname}`;
+
+      // Check and create Cash Register if role requires it
+      if (CASH_REGISTER_ROLES.includes(roleName)) {
+        await this._ensureKontoExists({
+          findFn: () => this._findCashRegisterForUser(userId),
+          createFn: () => this.createCashRegisterForUser(userId),
+          kontoTypeName: 'Cash Register',
+          userName: `${userName} (role: ${roleName})`,
+          counters: { errors },
+          trackingObject: created,
+          trackingKey: 'cashRegister'
+        });
+      }
+
+      // Check and create CLEANING_LADY kontos if role is CLEANING_LADY
+      if (roleName === 'CLEANING_LADY') {
+        await this._ensureKontoExists({
+          findFn: () => this._findPayablesKontoForUser(userId),
+          createFn: () => this._createCleaningLadyKonto(userId, userName, 'payables'),
+          kontoTypeName: 'Payables',
+          userName,
+          counters: { errors },
+          trackingObject: created,
+          trackingKey: 'payables'
+        });
+
+        await this._ensureKontoExists({
+          findFn: () => this._findNetSalaryKontoForUser(userId),
+          createFn: () => this._createCleaningLadyKonto(userId, userName, 'net_salary'),
+          kontoTypeName: 'Net Salary',
+          userName,
+          counters: { errors },
+          trackingObject: created,
+          trackingKey: 'netSalary'
+        });
+      }
+
+      return { created, errors };
+    } catch (error) {
+      const errorMsg = `Fatal error ensuring kontos for user: ${error.message}`;
+      console.error(`❌ ${errorMsg}`);
+      errors.push(errorMsg);
+      return { created, errors };
+    }
   }
 
   /**

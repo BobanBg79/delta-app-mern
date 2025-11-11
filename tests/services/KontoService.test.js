@@ -880,15 +880,15 @@ describe('KontoService', () => {
         });
 
         // Mock Konto.findOne
-        // First call: _syncCashRegisters checks if Cash Register exists (returns null directly)
-        // Second call: createCashRegisterForUser checks if Cash Register exists (returns object with .session())
-        // Third call: _syncCleaningLadyKontos checks if Payables exists (returns null directly)
-        // Fourth call: _syncCleaningLadyKontos checks if Net Salary exists (returns null directly)
+        // First call: _findCashRegisterForUser (via _syncCashRegisters) - returns null
+        // Second call: createCashRegisterForUser checks if Cash Register exists - needs .session()
+        // Third call: _findPayablesKontoForUser (via _syncCleaningLadyKontos) - returns null
+        // Fourth call: _findNetSalaryKontoForUser (via _syncCleaningLadyKontos) - returns null
         Konto.findOne = jest.fn()
-          .mockResolvedValueOnce(null)  // _syncCashRegisters check
+          .mockResolvedValueOnce(null)  // _findCashRegisterForUser
           .mockReturnValueOnce({ session: jest.fn().mockResolvedValue(null) })  // createCashRegisterForUser check
-          .mockResolvedValueOnce(null)  // _syncCleaningLadyKontos - Payables check
-          .mockResolvedValueOnce(null); // _syncCleaningLadyKontos - Net Salary check
+          .mockResolvedValueOnce(null)  // _findPayablesKontoForUser
+          .mockResolvedValueOnce(null); // _findNetSalaryKontoForUser
 
         // Mock getNextAvailableCode
         Konto.find = jest.fn()

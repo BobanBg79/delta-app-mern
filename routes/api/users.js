@@ -294,9 +294,22 @@ router.put(
         .populate('role', 'name description permissions')
         .populate('createdBy', 'username');
 
+      // Ensure user has all required kontos based on their (potentially new) role
+      let kontosResult = null;
+      try {
+        kontosResult = await KontoService.ensureUserKontos(updatedUser._id);
+
+        if (kontosResult.errors.length > 0) {
+          console.error(`⚠️  Some kontos could not be created for ${updatedUser.fname} ${updatedUser.lname}:`, kontosResult.errors);
+          console.error('   Missing kontos can be created later via sync process (runs on server restart/reconnect to database)');
+        }
+      } catch (kontosError) {
+        console.error(`⚠️  Error ensuring kontos for ${updatedUser.fname} ${updatedUser.lname}:`, kontosError.message);
+      }
+
       res.json({
         message: 'User updated successfully',
-        user: updatedUser,
+        user: updatedUser
       });
     } catch (err) {
       console.error('Update user error:', err.message);

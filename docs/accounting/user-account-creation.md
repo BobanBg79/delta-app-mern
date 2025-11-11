@@ -148,9 +148,13 @@ The sync process automatically runs:
 
 - **KontoService.createCashRegisterForUser()** - Creates Cash Register when adding a user
 - **KontoService.createKontosForCleaningLady()** - Creates Payables + Net Salary for CLEANING_LADY
+- **KontoService.ensureUserKontos()** - Ensures user has all required kontos (used on user update)
 - **KontoService.syncUserKontos()** - Sync process (calls _syncCashRegisters and _syncCleaningLadyKontos)
-- **POST /api/users/register endpoint** - Calls account creation (non-blocking)
-- **40 unit tests** - Everything is covered by tests
+- **POST /api/users/register** - Calls account creation on new user (blocking for Cash Register, non-blocking for CLEANING_LADY kontos)
+- **PUT /api/users/:id** - Calls ensureUserKontos() after successful update (non-blocking)
+- **33 unit tests** - Everything is covered by tests
+
+For detailed technical flow charts and implementation details, see [User Role Update Konto Sync - Technical Details](./user-role-update-konto-sync-technical.md)
 
 ## What About Existing Users?
 
@@ -176,13 +180,20 @@ A: You can check in:
 A: Currently, accounts keep the old name. This is intentional because changing the user's name doesn't affect accounting history. If the account name needs to be changed, that's done separately.
 
 **Q: What happens if a user's role changes?**
-A: If a user changes from one cash-handling role to another (e.g., MANAGER → OWNER), nothing changes - they already have a Cash Register. If they change to CLEANING_LADY, the sync process will add the missing Payables and Net Salary accounts during the next restart.
+A: The system automatically handles role changes! When you update a user's role through the `PUT /api/users/:id` endpoint, the system immediately calls `KontoService.ensureUserKontos()` to create any missing accounts. This happens right away - no need to wait for server restart. For example:
+- MANAGER → OWNER: Nothing changes (they already have Cash Register)
+- HOST → CLEANING_LADY: Immediately creates Payables (20X) and Net Salary (75X) accounts
+- Regular user → MANAGER: Immediately creates Cash Register (10X)
+If account creation fails, it's logged but doesn't fail the user update - missing accounts will be created during the next sync.
 
 **Q: How often does sync run?**
 A: Automatically on every server restart. On Heroku, that's approximately once daily, but can be more frequent during deployments.
 
 ---
 
-**Document Version**: 1.0
-**Date**: 2025-11-11
+**Document Version**: 1.1
+**Last Updated**: 2025-11-11
 **Status**: Active system
+**Changelog**:
+- v1.1: Added automatic konto creation on user role update (PUT /api/users/:id)
+- v1.0: Initial documentation
