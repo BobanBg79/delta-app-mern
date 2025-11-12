@@ -15,6 +15,7 @@ import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
 import { getCleaningsByReservation, createCleaning } from '../../modules/cleaning/operations';
+import { getCleaningStatusVariant } from '../../modules/cleaning/helpers';
 import { formatDateTime } from '../../utils/date';
 import CompleteCleaningModal from './CompleteCleaningModal';
 import axios from 'axios';
@@ -173,12 +174,8 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   };
 
   const getStatusBadge = (status) => {
-    const variants = {
-      scheduled: 'primary',
-      completed: 'success',
-      cancelled: 'secondary',
-    };
-    return <Badge bg={variants[status] || 'secondary'}>{status.toUpperCase()}</Badge>;
+    const variant = getCleaningStatusVariant(status);
+    return <Badge bg={variant}>{status.toUpperCase()}</Badge>;
   };
 
   // Only show for existing reservations and users with view permission
