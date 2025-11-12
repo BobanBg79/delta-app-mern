@@ -29,6 +29,7 @@ const UserForm = ({
     lname = '',
     role: roleId = '',
     employeeId = '',
+    isActive = true,
   } = formState || {};
 
   // Load roles on component mount
@@ -167,6 +168,36 @@ const UserForm = ({
               </FloatingLabel>
             </Col>
           </Row>
+
+          {/* Account Status (only in edit mode) */}
+          {!isCreateMode && (
+            <Row className="mb-4">
+              <Col xs="12">
+                <h6>Account Status</h6>
+              </Col>
+              <Col xs="12">
+                <Form.Check
+                  type="checkbox"
+                  id="isActive"
+                  label="Active"
+                  checked={isActive}
+                  onChange={(e) => {
+                    // For checkboxes, we need to manually create an event-like object
+                    const syntheticEvent = {
+                      target: {
+                        value: e.target.checked,
+                        name: 'isActive'
+                      }
+                    };
+                    onInputChange(['isActive'])(syntheticEvent);
+                  }}
+                />
+                <Form.Text className="text-muted">
+                  Inactive users cannot log in to the system
+                </Form.Text>
+              </Col>
+            </Row>
+          )}
 
           {/* Role Permissions Display (only in view/edit mode when role is selected) */}
           {!isCreateMode && selectedRole?.permissions && (

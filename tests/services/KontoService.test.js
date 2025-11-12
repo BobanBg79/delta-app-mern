@@ -11,6 +11,19 @@ jest.mock('../../models/Apartment');
 jest.mock('../../models/User');
 
 describe('KontoService', () => {
+  // Suppress console output during tests to avoid confusion
+  beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    console.error.mockRestore();
+    console.warn.mockRestore();
+    console.log.mockRestore();
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });

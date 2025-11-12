@@ -5,6 +5,7 @@ const UserModel = {
   lname: '',
   role: '',
   employeeId: '',
+  isActive: true,
 };
 
 export default UserModel;

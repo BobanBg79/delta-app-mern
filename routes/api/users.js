@@ -141,9 +141,15 @@ router.get(
   requirePermission('CAN_VIEW_USER'), // Changed from CAN_VIEW_USERS to CAN_VIEW_USER
   async (req, res) => {
     try {
-      const { role } = req.query;
+      const { role, includeInactive } = req.query;
 
       let query = {};
+
+      // By default, only return active users (or users without isActive field - legacy users)
+      // Only exclude users that are explicitly deactivated (isActive: false)
+      if (includeInactive !== 'true') {
+        query.isActive = { $ne: false };
+      }
 
       // If role filter is provided, find users with that role
       if (role) {
@@ -240,6 +246,7 @@ router.put(
   check('fname', 'First name is required').notEmpty().trim(),
   check('lname', 'Last name is required').notEmpty().trim(),
   check('role', 'Role ID is required').notEmpty().isMongoId(),
+  check('isActive', 'isActive is required').notEmpty().isBoolean(),
   check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
     const errors = validationResult(req);
@@ -248,13 +255,20 @@ router.put(
     }
 
     try {
-      const { username, fname, lname, role, employeeId } = req.body;
+      const { username, fname, lname, role, isActive, employeeId } = req.body;
 
       // Check if user exists
       const user = await User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({
           errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      // Prevent self-deactivation
+      if (isActive === false && req.params.id === req.user.id) {
+        return res.status(400).json({
+          errors: [{ msg: 'You cannot deactivate yourself' }],
         });
       }
 
@@ -285,6 +299,7 @@ router.put(
             fname,
             lname,
             role,
+            isActive,
             employeeId: employeeId || null,
           },
         },

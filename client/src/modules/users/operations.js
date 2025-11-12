@@ -5,11 +5,12 @@ import { msgOperations, messageConstants } from '../message';
 const { SUCCESS, ERROR } = messageConstants;
 const { showMessageToast } = msgOperations;
 
-// Get all users
+// Get all users (including inactive)
 export const getUsers = () => async (dispatch) => {
   try {
     dispatch(actions.setUsersFetchStart());
-    const res = await axios.get('/api/users');
+    // Always fetch all users including inactive ones - filtering happens in the UI
+    const res = await axios.get('/api/users?includeInactive=true');
     dispatch(actions.setUsers(res.data.users));
   } catch (err) {
     console.error('Error fetching users:', err);

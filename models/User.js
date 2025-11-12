@@ -45,6 +45,10 @@ const UserSchema = new mongoose.Schema(
       required: true,
       ref: 'Role',
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     // employeeId: {
     //   type: mongoose.Schema.Types.ObjectId,
     //   ref: 'Employee',

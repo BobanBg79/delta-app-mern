@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import Container from 'react-bootstrap/Container';
@@ -6,6 +6,8 @@ import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
+import Form from 'react-bootstrap/Form';
+import Badge from 'react-bootstrap/Badge';
 import TableHeader from '../../components/TableHeader';
 import { getUsers } from '../../modules/users/operations';
 import { USER_PERMISSIONS } from '../../constants';
@@ -13,6 +15,7 @@ import { USER_PERMISSIONS } from '../../constants';
 const UsersList = () => {
   const history = useHistory();
   const dispatch = useDispatch();
+  const [showInactive, setShowInactive] = useState(false);
 
   // Get users from Redux store
   const { users = [], fetching, error } = useSelector((state) => state.user);
@@ -36,6 +39,11 @@ const UsersList = () => {
     );
   }
 
+  // Filter users based on showInactive toggle
+  const filteredUsers = showInactive
+    ? users
+    : users.filter(user => user.isActive !== false);
+
   return (
     <Container fluid className="mt-4">
       <TableHeader
@@ -51,7 +59,18 @@ const UsersList = () => {
         </Alert>
       )}
 
-      {users.length === 0 ? (
+      {/* Filter controls */}
+      <div className="mb-3">
+        <Form.Check
+          type="checkbox"
+          id="showInactive"
+          label="Show inactive users"
+          checked={showInactive}
+          onChange={(e) => setShowInactive(e.target.checked)}
+        />
+      </div>
+
+      {filteredUsers.length === 0 ? (
         <Alert variant="info">No users found</Alert>
       ) : (
         <Table striped bordered hover responsive>
@@ -61,33 +80,58 @@ const UsersList = () => {
               <th>First Name</th>
               <th>Last Name</th>
               <th>Role</th>
+              <th>Status</th>
               <th>Created By</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr
-                key={user._id}
-                onClick={() => handleRowClick(user._id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td>{user.username}</td>
-                <td>{user.fname}</td>
-                <td>{user.lname}</td>
-                <td>{user.role?.name || 'N/A'}</td>
-                <td>{user.createdBy?.username || 'N/A'}</td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleRowClick(user._id)}
-                  >
-                    View
-                  </Button>
-                </td>
-              </tr>
-            ))}
+            {filteredUsers.map((user) => {
+              const isInactive = user.isActive === false;
+              return (
+                <tr
+                  key={user._id}
+                  onClick={() => handleRowClick(user._id)}
+                  style={{
+                    cursor: 'pointer',
+                    opacity: isInactive ? 0.6 : 1,
+                    backgroundColor: isInactive ? '#f8f9fa' : 'inherit'
+                  }}
+                >
+                  <td style={{ color: isInactive ? '#6c757d' : 'inherit' }}>
+                    {user.username}
+                  </td>
+                  <td style={{ color: isInactive ? '#6c757d' : 'inherit' }}>
+                    {user.fname}
+                  </td>
+                  <td style={{ color: isInactive ? '#6c757d' : 'inherit' }}>
+                    {user.lname}
+                  </td>
+                  <td style={{ color: isInactive ? '#6c757d' : 'inherit' }}>
+                    {user.role?.name || 'N/A'}
+                  </td>
+                  <td>
+                    {isInactive ? (
+                      <Badge bg="secondary">Inactive</Badge>
+                    ) : (
+                      <Badge bg="success">Active</Badge>
+                    )}
+                  </td>
+                  <td style={{ color: isInactive ? '#6c757d' : 'inherit' }}>
+                    {user.createdBy?.username || 'N/A'}
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleRowClick(user._id)}
+                    >
+                      View
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </Table>
       )}
