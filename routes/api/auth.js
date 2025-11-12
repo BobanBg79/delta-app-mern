@@ -74,6 +74,11 @@ router.post(
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }
 
+      // Check if user account is active
+      if (user.isActive === false) {
+        return res.status(403).json({ errors: [{ msg: 'Account has been deactivated' }] });
+      }
+
       // Ensure role is populated and has an _id
       if (!user.role || !user.role._id) {
         console.error('User role not properly populated:', user.role);
