@@ -7,6 +7,7 @@
     "install:all": "npm install && npm install --prefix client",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:all": "npm test && npm test --prefix client",
     "format": "npx prettier --write .",
     "start": "node server",
     "server": "set NODE_ENV=dev& nodemon --inspect server",
