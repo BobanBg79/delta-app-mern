@@ -2,7 +2,15 @@ const request = require('supertest');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
+const {
+  suppressConsoleOutput,
+  restoreConsoleOutput,
+  createMockObjectId,
+  createMockUser,
+  mockBcryptCompare,
+  mockUserFindOne,
+  setupTestEnv
+} = require('../testUtils');
 
 // Mock dependencies BEFORE requiring the route
 jest.mock('../../models/User');
@@ -19,27 +27,23 @@ app.use('/api/auth', authRouter);
 
 // Suppress console output during tests
 beforeAll(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'log').mockImplementation(() => {});
+  suppressConsoleOutput();
+  setupTestEnv();
 });
 
 afterAll(() => {
-  console.error.mockRestore();
-  console.warn.mockRestore();
-  console.log.mockRestore();
+  restoreConsoleOutput();
 });
 
 describe('POST /api/auth - Login with isActive Check', () => {
-  const mockUserId = new mongoose.Types.ObjectId();
-  const mockRoleId = new mongoose.Types.ObjectId();
+  const mockUserId = createMockObjectId();
+  const mockRoleId = createMockObjectId();
   const validUsername = 'testuser@example.com';
   const validPassword = 'password123';
   const hashedPassword = '$2a$10$hashedPasswordExample';
 
   beforeEach(() => {
-    // Set up environment variable
-    process.env.JSON_WT_SECRET = 'test-secret';
+    // Environment is already set up in beforeAll
   });
 
   afterEach(() => {
@@ -48,7 +52,7 @@ describe('POST /api/auth - Login with isActive Check', () => {
 
   describe('Deactivated User Login Prevention', () => {
     it('should prevent deactivated user from logging in with valid credentials', async () => {
-      const mockUser = {
+      const mockUser = createMockUser({
         _id: mockUserId,
         username: validUsername,
         password: hashedPassword,
@@ -57,26 +61,14 @@ describe('POST /api/auth - Login with isActive Check', () => {
           _id: mockRoleId,
           name: 'USER',
           permissions: []
-        },
-        toObject: jest.fn().mockReturnValue({
-          _id: mockUserId,
-          username: validUsername,
-          isActive: false,
-          role: {
-            _id: mockRoleId,
-            name: 'USER',
-            permissions: []
-          }
-        })
-      };
-
-      // Mock User.findOne to return deactivated user
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockUser)
+        }
       });
 
+      // Mock User.findOne to return deactivated user
+      mockUserFindOne(User, mockUser);
+
       // Mock bcrypt to return successful password match
-      bcrypt.compare.mockResolvedValue(true);
+      mockBcryptCompare(bcrypt, true);
 
       const response = await request(app)
         .post('/api/auth')
@@ -101,7 +93,7 @@ describe('POST /api/auth - Login with isActive Check', () => {
     });
 
     it('should allow active user to login with valid credentials', async () => {
-      const mockUser = {
+      const mockUser = createMockUser({
         _id: mockUserId,
         id: mockUserId.toString(),
         username: validUsername,
@@ -111,31 +103,16 @@ describe('POST /api/auth - Login with isActive Check', () => {
           _id: mockRoleId,
           name: 'USER',
           permissions: [
-            { name: 'CAN_VIEW_USER', _id: new mongoose.Types.ObjectId() }
+            { name: 'CAN_VIEW_USER', _id: createMockObjectId() }
           ]
-        },
-        toObject: jest.fn().mockReturnValue({
-          _id: mockUserId,
-          username: validUsername,
-          password: hashedPassword,
-          isActive: true,
-          role: {
-            _id: mockRoleId,
-            name: 'USER',
-            permissions: [
-              { name: 'CAN_VIEW_USER', _id: new mongoose.Types.ObjectId() }
-            ]
-          }
-        })
-      };
-
-      // Mock User.findOne to return active user
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockUser)
+        }
       });
 
+      // Mock User.findOne to return active user
+      mockUserFindOne(User, mockUser);
+
       // Mock bcrypt to return successful password match
-      bcrypt.compare.mockResolvedValue(true);
+      mockBcryptCompare(bcrypt, true);
 
       // Mock jwt.sign to call callback with token
       jwt.sign.mockImplementation((payload, secret, options, callback) => {
@@ -179,36 +156,25 @@ describe('POST /api/auth - Login with isActive Check', () => {
     });
 
     it('should allow legacy user without isActive field to login', async () => {
-      const mockUser = {
+      const mockUser = createMockUser({
         _id: mockUserId,
         id: mockUserId.toString(),
         username: validUsername,
         password: hashedPassword,
-        // No isActive field (legacy user)
         role: {
           _id: mockRoleId,
           name: 'USER',
           permissions: []
-        },
-        toObject: jest.fn().mockReturnValue({
-          _id: mockUserId,
-          username: validUsername,
-          password: hashedPassword,
-          role: {
-            _id: mockRoleId,
-            name: 'USER',
-            permissions: []
-          }
-        })
-      };
+        }
+      });
+      // Remove isActive field to simulate legacy user
+      delete mockUser.isActive;
 
       // Mock User.findOne to return legacy user
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockUser)
-      });
+      mockUserFindOne(User, mockUser);
 
       // Mock bcrypt to return successful password match
-      bcrypt.compare.mockResolvedValue(true);
+      mockBcryptCompare(bcrypt, true);
 
       // Mock jwt.sign to call callback with token
       jwt.sign.mockImplementation((payload, secret, options, callback) => {
@@ -232,7 +198,7 @@ describe('POST /api/auth - Login with isActive Check', () => {
     });
 
     it('should still reject user with invalid password even if active', async () => {
-      const mockUser = {
+      const mockUser = createMockUser({
         _id: mockUserId,
         username: validUsername,
         password: hashedPassword,
@@ -242,15 +208,13 @@ describe('POST /api/auth - Login with isActive Check', () => {
           name: 'USER',
           permissions: []
         }
-      };
-
-      // Mock User.findOne to return active user
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockUser)
       });
 
+      // Mock User.findOne to return active user
+      mockUserFindOne(User, mockUser);
+
       // Mock bcrypt to return failed password match
-      bcrypt.compare.mockResolvedValue(false);
+      mockBcryptCompare(bcrypt, false);
 
       const response = await request(app)
         .post('/api/auth')
@@ -272,7 +236,7 @@ describe('POST /api/auth - Login with isActive Check', () => {
     });
 
     it('should check isActive AFTER password validation', async () => {
-      const mockUser = {
+      const mockUser = createMockUser({
         _id: mockUserId,
         username: validUsername,
         password: hashedPassword,
@@ -282,15 +246,13 @@ describe('POST /api/auth - Login with isActive Check', () => {
           name: 'USER',
           permissions: []
         }
-      };
-
-      // Mock User.findOne to return deactivated user
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockUser)
       });
 
+      // Mock User.findOne to return deactivated user
+      mockUserFindOne(User, mockUser);
+
       // Mock bcrypt to return failed password match
-      bcrypt.compare.mockResolvedValue(false);
+      mockBcryptCompare(bcrypt, false);
 
       const response = await request(app)
         .post('/api/auth')
@@ -338,9 +300,7 @@ describe('POST /api/auth - Login with isActive Check', () => {
 
     it('should reject login with non-existent user', async () => {
       // Mock User.findOne to return null
-      User.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(null)
-      });
+      mockUserFindOne(User, null);
 
       const response = await request(app)
         .post('/api/auth')

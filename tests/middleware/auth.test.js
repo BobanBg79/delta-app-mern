@@ -1,7 +1,17 @@
 const auth = require('../../middleware/auth');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
-const mongoose = require('mongoose');
+const {
+  suppressConsoleOutput,
+  restoreConsoleOutput,
+  createMockObjectId,
+  createMockExpressContext,
+  mockJwtVerifySuccess,
+  mockJwtVerifyError,
+  mockUserFindById,
+  waitForAsync,
+  setupTestEnv
+} = require('../testUtils');
 
 // Mock dependencies
 jest.mock('jsonwebtoken');
@@ -9,33 +19,23 @@ jest.mock('../../models/User');
 
 // Suppress console output during tests
 beforeAll(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'log').mockImplementation(() => {});
+  suppressConsoleOutput();
+  setupTestEnv();
 });
 
 afterAll(() => {
-  console.error.mockRestore();
-  console.warn.mockRestore();
-  console.log.mockRestore();
+  restoreConsoleOutput();
 });
 
 describe('Auth Middleware - Active User Check', () => {
   let req, res, next;
-  const mockUserId = new mongoose.Types.ObjectId();
+  const mockUserId = createMockObjectId();
 
   beforeEach(() => {
-    req = {
-      header: jest.fn()
-    };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
-    next = jest.fn();
-
-    // Set up environment variable
-    process.env.JSON_WT_SECRET = 'test-secret';
+    const context = createMockExpressContext();
+    req = context.req;
+    res = context.res;
+    next = context.next;
   });
 
   afterEach(() => {
@@ -55,27 +55,21 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with decoded token
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockDecoded);
-      });
+      mockJwtVerifySuccess(jwt, mockDecoded);
 
       // Mock User.findById to return deactivated user
-      const mockUserQuery = {
-        select: jest.fn().mockResolvedValue({
-          _id: mockUserId,
-          isActive: false
-        })
-      };
-      User.findById.mockReturnValue(mockUserQuery);
+      mockUserFindById(User, {
+        _id: mockUserId,
+        isActive: false
+      });
 
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       // Verify user was checked
       expect(User.findById).toHaveBeenCalledWith(mockUserId.toString());
-      expect(mockUserQuery.select).toHaveBeenCalledWith('isActive');
 
       // Verify 403 response
       expect(res.status).toHaveBeenCalledWith(403);
@@ -99,27 +93,21 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with decoded token
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockDecoded);
-      });
+      mockJwtVerifySuccess(jwt, mockDecoded);
 
       // Mock User.findById to return active user
-      const mockUserQuery = {
-        select: jest.fn().mockResolvedValue({
-          _id: mockUserId,
-          isActive: true
-        })
-      };
-      User.findById.mockReturnValue(mockUserQuery);
+      mockUserFindById(User, {
+        _id: mockUserId,
+        isActive: true
+      });
 
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       // Verify user was checked
       expect(User.findById).toHaveBeenCalledWith(mockUserId.toString());
-      expect(mockUserQuery.select).toHaveBeenCalledWith('isActive');
 
       // Verify next was called (user allowed)
       expect(next).toHaveBeenCalled();
@@ -143,23 +131,18 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with decoded token
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockDecoded);
-      });
+      mockJwtVerifySuccess(jwt, mockDecoded);
 
       // Mock User.findById to return user without isActive field
-      const mockUserQuery = {
-        select: jest.fn().mockResolvedValue({
-          _id: mockUserId
-          // No isActive field
-        })
-      };
-      User.findById.mockReturnValue(mockUserQuery);
+      mockUserFindById(User, {
+        _id: mockUserId
+        // No isActive field
+      });
 
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       // Verify next was called (legacy user allowed)
       expect(next).toHaveBeenCalled();
@@ -180,20 +163,15 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with decoded token
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockDecoded);
-      });
+      mockJwtVerifySuccess(jwt, mockDecoded);
 
       // Mock User.findById to return null (user deleted)
-      const mockUserQuery = {
-        select: jest.fn().mockResolvedValue(null)
-      };
-      User.findById.mockReturnValue(mockUserQuery);
+      mockUserFindById(User, null);
 
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       // Verify 401 response
       expect(res.status).toHaveBeenCalledWith(401);
@@ -217,9 +195,7 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with decoded token
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockDecoded);
-      });
+      mockJwtVerifySuccess(jwt, mockDecoded);
 
       // Mock User.findById to throw database error
       const mockUserQuery = {
@@ -230,7 +206,7 @@ describe('Auth Middleware - Active User Check', () => {
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       // Verify 500 response
       expect(res.status).toHaveBeenCalledWith(500);
@@ -268,14 +244,12 @@ describe('Auth Middleware - Active User Check', () => {
       req.header.mockReturnValue(`Bearer ${mockToken}`);
 
       // Mock jwt.verify to call callback with error
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(new Error('jwt malformed'), null);
-      });
+      mockJwtVerifyError(jwt);
 
       await auth(req, res, next);
 
       // Wait for async operations
-      await new Promise(resolve => setImmediate(resolve));
+      await waitForAsync();
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({

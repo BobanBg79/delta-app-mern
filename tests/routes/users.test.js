@@ -4,8 +4,12 @@ const mongoose = require('mongoose');
 const usersRouter = require('../../routes/api/users');
 const User = require('../../models/User');
 const Role = require('../../models/Role');
-const auth = require('../../middleware/auth');
 const KontoService = require('../../services/accounting/KontoService');
+const {
+  suppressConsoleOutput,
+  restoreConsoleOutput,
+  mockUserFindByIdAndUpdate
+} = require('../testUtils');
 
 // Mock models and services
 jest.mock('../../models/User');
@@ -19,7 +23,7 @@ const mockRoleId = new mongoose.Types.ObjectId();
 
 // Mock auth middleware
 jest.mock('../../middleware/auth', () => {
-  return jest.fn((req, res, next) => {
+  return jest.fn((req, _res, next) => {
     req.user = { id: mockUserId.toString() };
     next();
   });
@@ -27,20 +31,16 @@ jest.mock('../../middleware/auth', () => {
 
 // Mock requirePermission middleware
 jest.mock('../../middleware/permission', () => ({
-  requirePermission: jest.fn(() => (req, res, next) => next())
+  requirePermission: jest.fn(() => (_req, _res, next) => next())
 }));
 
 // Suppress console output during tests
 beforeAll(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'log').mockImplementation(() => {});
+  suppressConsoleOutput();
 });
 
 afterAll(() => {
-  console.error.mockRestore();
-  console.warn.mockRestore();
-  console.log.mockRestore();
+  restoreConsoleOutput();
 });
 
 // Create Express app for testing
@@ -128,13 +128,7 @@ describe('User Routes - Self-Deactivation Prevention', () => {
       User.findOne.mockResolvedValue(null);
 
       // Mock User.findByIdAndUpdate with chaining methods
-      User.findByIdAndUpdate.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          populate: jest.fn().mockReturnValue({
-            populate: jest.fn().mockResolvedValue(mockUpdatedUser)
-          })
-        })
-      });
+      mockUserFindByIdAndUpdate(User, mockUpdatedUser);
 
       const response = await request(app)
         .put(`/api/users/${mockUserId}`)
@@ -184,13 +178,7 @@ describe('User Routes - Self-Deactivation Prevention', () => {
       User.findOne.mockResolvedValue(null);
 
       // Mock User.findByIdAndUpdate with chaining methods
-      User.findByIdAndUpdate.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          populate: jest.fn().mockReturnValue({
-            populate: jest.fn().mockResolvedValue(mockUpdatedOtherUser)
-          })
-        })
-      });
+      mockUserFindByIdAndUpdate(User, mockUpdatedOtherUser);
 
       const response = await request(app)
         .put(`/api/users/${mockOtherUserId}`)
@@ -239,13 +227,7 @@ describe('User Routes - Self-Deactivation Prevention', () => {
       User.findOne.mockResolvedValue(null);
 
       // Mock User.findByIdAndUpdate with chaining methods
-      User.findByIdAndUpdate.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          populate: jest.fn().mockReturnValue({
-            populate: jest.fn().mockResolvedValue(mockReactivatedUser)
-          })
-        })
-      });
+      mockUserFindByIdAndUpdate(User, mockReactivatedUser);
 
       const response = await request(app)
         .put(`/api/users/${mockUserId}`)
