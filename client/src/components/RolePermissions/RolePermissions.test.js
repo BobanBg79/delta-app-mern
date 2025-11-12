@@ -67,7 +67,7 @@ describe('RolePermissions Component', () => {
     const mockPermissions = [
       { _id: '1', name: 'CAN_VIEW_USER' },
       { _id: '2', name: 'CAN_CREATE_USER' },
-      { _id: '3', name: 'CAN_DELETE_USER' },
+      { _id: '3', name: 'CAN_DEACTIVATE_USER' },
       { _id: '4', name: 'CAN_VIEW_ROLE' },
       { _id: '5', name: 'CAN_UPDATE_ROLE' },
     ];
@@ -79,7 +79,7 @@ describe('RolePermissions Component', () => {
     expect(screen.getByText('Role')).toBeInTheDocument();
 
     // All 5 permission badges should be present
-    const badges = screen.getAllByText(/VIEW|CREATE|DELETE|UPDATE/);
+    const badges = screen.getAllByText(/VIEW|CREATE|DEACTIVATE|UPDATE/);
     expect(badges).toHaveLength(5);
   });
 
@@ -158,7 +158,7 @@ describe('RolePermissions Component', () => {
       { _id: '1', name: 'CAN_VIEW_USER' },
       { _id: '2', name: 'CAN_CREATE_USER' },
       { _id: '3', name: 'CAN_UPDATE_USER' },
-      { _id: '4', name: 'CAN_DELETE_USER' },
+      { _id: '4', name: 'CAN_DEACTIVATE_USER' },
     ];
 
     render(<RolePermissions permissions={mockPermissions} />);
@@ -167,7 +167,7 @@ describe('RolePermissions Component', () => {
     expect(screen.getByText('VIEW')).toBeInTheDocument();
     expect(screen.getByText('CREATE')).toBeInTheDocument();
     expect(screen.getByText('UPDATE')).toBeInTheDocument();
-    expect(screen.getByText('DELETE')).toBeInTheDocument();
+    expect(screen.getByText('DEACTIVATE')).toBeInTheDocument();
   });
 
   it('does not display entity groups that have no permissions', () => {

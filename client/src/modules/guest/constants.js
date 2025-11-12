@@ -6,4 +6,3 @@ const {
 
 export const CAN_EDIT_GUEST_DETAILS = [ADMIN, OWNER, MANAGER];
 export const CAN_VIEW_GUEST_DETAILS = [ADMIN, OWNER, MANAGER];
-export const CAN_DELETE_GUEST = [ADMIN, OWNER];

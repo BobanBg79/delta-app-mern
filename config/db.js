@@ -159,33 +159,65 @@ const updateAdminRolePermissions = async () => {
       return;
     }
 
-    // Get all current permissions
+    // Get all current permissions that exist in Permission collection
     const allPermissions = await Permission.find({});
     const allPermissionIds = allPermissions.map(p => p._id.toString());
 
-    // Get current ADMIN permissions
-    const currentAdminPermissionIds = adminRole.permissions.map(p => p._id.toString());
+    // Get current ADMIN permissions (SAVE BEFORE MODIFYING!)
+    const currentAdminPermissions = adminRole.permissions; // Keep full objects for logging
+    const currentAdminPermissionIds = currentAdminPermissions.map(p => p._id.toString());
 
-    // Find missing permissions
+    // Debug logging
+    console.log(`   📊 DB has ${allPermissions.length} permissions, ADMIN has ${currentAdminPermissions.length} permissions`);
+
+    // Find permissions to add (exist in DB but not on ADMIN)
     const missingPermissionIds = allPermissionIds.filter(
       id => !currentAdminPermissionIds.includes(id)
     );
 
-    if (missingPermissionIds.length === 0) {
-      console.log(`✅ ADMIN role already has all ${allPermissions.length} permissions`);
+    // Find permissions to remove (on ADMIN but no longer exist in DB)
+    const obsoletePermissionIds = currentAdminPermissionIds.filter(
+      id => !allPermissionIds.includes(id)
+    );
+
+    // Check if sync is needed
+    if (missingPermissionIds.length === 0 && obsoletePermissionIds.length === 0) {
+      console.log(`✅ ADMIN role already has all ${allPermissions.length} permissions (in sync)`);
       return;
     }
 
-    // Update ADMIN role with all permissions
+    // Prepare log messages BEFORE updating
+    let addedPermissionNames = [];
+    let removedPermissionNames = [];
+
+    if (missingPermissionIds.length > 0) {
+      addedPermissionNames = allPermissions
+        .filter(p => missingPermissionIds.includes(p._id.toString()))
+        .map(p => p.name);
+    }
+
+    if (obsoletePermissionIds.length > 0) {
+      removedPermissionNames = currentAdminPermissions
+        .filter(p => obsoletePermissionIds.includes(p._id.toString()))
+        .map(p => p.name);
+    }
+
+    // Sync: Set ADMIN permissions to exactly match what exists in Permission collection
     adminRole.permissions = allPermissions.map(p => p._id);
     await adminRole.save();
 
-    const missingPermissionNames = allPermissions
-      .filter(p => missingPermissionIds.includes(p._id.toString()))
-      .map(p => p.name);
+    // Log changes
+    if (addedPermissionNames.length > 0) {
+      console.log(`✅ Added ${addedPermissionNames.length} new permissions to ADMIN`);
+      console.log(`   ➕ Added: ${addedPermissionNames.join(', ')}`);
+    }
 
-    console.log(`✅ Updated ADMIN role with ${missingPermissionIds.length} new permissions`);
-    console.log(`   New permissions: ${missingPermissionNames.join(', ')}`);
+    if (removedPermissionNames.length > 0) {
+      console.log(`✅ Removed ${removedPermissionNames.length} obsolete permissions from ADMIN`);
+      console.log(`   ➖ Removed: ${removedPermissionNames.join(', ')}`);
+    }
+
+    console.log(`✅ ADMIN role now has ${allPermissions.length} permissions (synced with database)`);
   } catch (error) {
     console.error('❌ Error updating ADMIN role permissions:', error.message);
   }
@@ -209,135 +241,16 @@ const seedRoles = async () => {
       permissionMap[p.name] = p._id;
     });
 
-    // Destructure all permissions from constants
-    const {
-      CAN_VIEW_USER,
-      CAN_CREATE_USER,
-      CAN_UPDATE_USER,
-      CAN_DELETE_USER,
-      CAN_VIEW_ROLE,
-      CAN_CREATE_ROLE,
-      CAN_UPDATE_ROLE,
-      CAN_VIEW_EMPLOYEE,
-      CAN_CREATE_EMPLOYEE,
-      CAN_UPDATE_EMPLOYEE,
-      CAN_DELETE_EMPLOYEE,
-      CAN_VIEW_APARTMENT,
-      CAN_CREATE_APARTMENT,
-      CAN_UPDATE_APARTMENT,
-      CAN_DELETE_APARTMENT,
-      CAN_VIEW_RESERVATION,
-      CAN_CREATE_RESERVATION,
-      CAN_UPDATE_RESERVATION,
-      CAN_DELETE_RESERVATION,
-      CAN_VIEW_CLEANING,
-      CAN_CREATE_CLEANING,
-      CAN_UPDATE_CLEANING,
-      CAN_DELETE_CLEANING,
-      CAN_COMPLETE_CLEANING,
-      CAN_DEACTIVATE_CLEANING,
-    } = Permission.getAllPermissions().reduce((acc, perm) => {
-      acc[perm] = perm;
-      return acc;
-    }, {});
-
-    // Define role permissions using destructured constants
-    // Get KONTO permissions
-    const kontoPermissions = allPermissions
-      .filter(p => p.name.includes('KONTO'))
-      .map(p => p.name);
-
+    // Define role permissions
+    // Only ADMIN gets all permissions automatically on first seed
+    // Other roles start empty and must be configured manually by ADMIN
     const rolePermissions = {
-      ADMIN: [
-        // Full access except CAN_DELETE_ROLE (system roles cannot be deleted)
-        CAN_VIEW_USER,
-        CAN_CREATE_USER,
-        CAN_UPDATE_USER,
-        CAN_DELETE_USER,
-        CAN_VIEW_ROLE,
-        CAN_CREATE_ROLE,
-        CAN_UPDATE_ROLE, // NO CAN_DELETE_ROLE
-        CAN_VIEW_EMPLOYEE,
-        CAN_CREATE_EMPLOYEE,
-        CAN_UPDATE_EMPLOYEE,
-        CAN_DELETE_EMPLOYEE,
-        CAN_VIEW_APARTMENT,
-        CAN_CREATE_APARTMENT,
-        CAN_UPDATE_APARTMENT,
-        CAN_DELETE_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_CREATE_RESERVATION,
-        CAN_UPDATE_RESERVATION,
-        CAN_DELETE_RESERVATION,
-        CAN_VIEW_CLEANING,
-        CAN_CREATE_CLEANING,
-        CAN_UPDATE_CLEANING,
-        CAN_DELETE_CLEANING,
-        CAN_COMPLETE_CLEANING,
-        CAN_DEACTIVATE_CLEANING,
-        // Add all KONTO permissions dynamically
-        ...kontoPermissions,
-      ],
-      OWNER: [
-        // Full access except role and user management entirely
-        CAN_VIEW_EMPLOYEE,
-        CAN_CREATE_EMPLOYEE,
-        CAN_UPDATE_EMPLOYEE,
-        CAN_DELETE_EMPLOYEE,
-        CAN_VIEW_APARTMENT,
-        CAN_CREATE_APARTMENT,
-        CAN_UPDATE_APARTMENT,
-        CAN_DELETE_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_CREATE_RESERVATION,
-        CAN_UPDATE_RESERVATION,
-        CAN_DELETE_RESERVATION,
-        CAN_VIEW_CLEANING,
-        CAN_CREATE_CLEANING,
-        CAN_UPDATE_CLEANING,
-        CAN_DELETE_CLEANING,
-        CAN_COMPLETE_CLEANING,
-        CAN_DEACTIVATE_CLEANING,
-      ],
-      MANAGER: [
-        // Employee and reservation management
-        CAN_VIEW_EMPLOYEE,
-        CAN_CREATE_EMPLOYEE,
-        CAN_UPDATE_EMPLOYEE,
-        CAN_VIEW_APARTMENT,
-        CAN_UPDATE_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_CREATE_RESERVATION,
-        CAN_UPDATE_RESERVATION,
-        CAN_DELETE_RESERVATION,
-        CAN_VIEW_CLEANING,
-        CAN_CREATE_CLEANING,
-        CAN_UPDATE_CLEANING,
-        CAN_COMPLETE_CLEANING,
-        CAN_DEACTIVATE_CLEANING,
-      ],
-      HOST: [
-        // Basic reservation and apartment management
-        CAN_VIEW_APARTMENT,
-        CAN_UPDATE_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_CREATE_RESERVATION,
-        CAN_UPDATE_RESERVATION,
-        CAN_VIEW_CLEANING,
-      ],
-      CLEANING_LADY: [
-        // View apartments and reservations for cleaning schedule
-        CAN_VIEW_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_VIEW_CLEANING,
-        CAN_COMPLETE_CLEANING, // Can complete own assignments
-      ],
-      HANDY_MAN: [
-        // View apartments for maintenance
-        CAN_VIEW_APARTMENT,
-        CAN_VIEW_RESERVATION,
-        CAN_VIEW_CLEANING, // Can see cleaning schedule to coordinate maintenance
-      ],
+      ADMIN: allPermissions.map(p => p.name), // ADMIN gets ALL permissions
+      OWNER: [],      // Empty - configure manually
+      MANAGER: [],    // Empty - configure manually
+      HOST: [],       // Empty - configure manually
+      CLEANING_LADY: [], // Empty - configure manually
+      HANDY_MAN: [],  // Empty - configure manually
     };
 
     // Create roles with their permissions

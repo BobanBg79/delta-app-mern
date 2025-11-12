@@ -103,8 +103,8 @@ router.put('/:id', auth, requirePermission('CAN_UPDATE_APARTMENT'), async (req, 
 
 // @route    PUT api/apartments/:apartmentId/deactivate
 // @desc     Deactivate apartment (set isActive to false)
-// @access   Private (requires CAN_DELETE_APARTMENT permission)
-router.put('/:id/deactivate', auth, requirePermission('CAN_DELETE_APARTMENT'), async (req, res) => {
+// @access   Private (requires CAN_DEACTIVATE_APARTMENT permission)
+router.put('/:id/deactivate', auth, requirePermission('CAN_DEACTIVATE_APARTMENT'), async (req, res) => {
   try {
     const { id: apartmentId } = req.params;
 

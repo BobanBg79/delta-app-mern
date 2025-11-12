@@ -16,7 +16,7 @@ const TableActionDropdown = ({ apartmentId, showModal, isActive }) => {
   const { user: { role: userRole } = {} } = useSelector((state) => state.auth);
   const userPermissions = userRole?.permissions || [];
   const userCanViewApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_APARTMENT);
-  const userCanDeleteApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DELETE_APARTMENT);
+  const userCanDeactivateApartment = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DEACTIVATE_APARTMENT);
   // methods
   const goToApartmentDetails = () => history.push(`/apartments/${apartmentId}`);
   const renderTooltip = (props) => {
@@ -50,7 +50,7 @@ const TableActionDropdown = ({ apartmentId, showModal, isActive }) => {
             <span>Details</span>
           </Dropdown.Item>
         )}
-        {userCanDeleteApartment && isActive ? (
+        {userCanDeactivateApartment && isActive ? (
           <div>{renderDeleteButton()}</div>
         ) : (
           <OverlayTrigger placement="left" delay={{ show: 250, hide: 400 }} overlay={renderTooltip}>
