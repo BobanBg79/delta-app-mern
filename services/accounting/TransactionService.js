@@ -186,6 +186,205 @@ class TransactionService {
   }
 
   /**
+   * Create transactions for cleaning completion
+   * Records expense and liability when cleaning is completed
+   *
+   * @param {Object} data
+   * @param {Object} data.cleaning - ApartmentCleaning document (must have actualEndTime, totalCost, completedBy, _id)
+   * @param {Object} data.netSalaryKonto - Net Salary konto (75X) for cleaning lady
+   * @param {Object} data.payablesKonto - Payables konto (20X) for cleaning lady
+   * @param {String} data.apartmentName - Apartment name for description
+   * @param {Date} data.reservationCheckIn - Reservation check-in date for description
+   * @param {Date} data.reservationCheckOut - Reservation check-out date for description
+   * @param {Object} data.session - Mongoose session for transaction
+   * @returns {Array} Created transactions
+   */
+  async createCleaningCompletionTransactions(data) {
+    const {
+      cleaning,
+      netSalaryKonto,
+      payablesKonto,
+      apartmentName,
+      reservationCheckIn,
+      reservationCheckOut,
+      session
+    } = data;
+
+    const groupId = new mongoose.Types.ObjectId();
+    const { fiscalYear, fiscalMonth } = getFiscalPeriod(cleaning.actualEndTime);
+
+    // Format reservation dates for description
+    const checkInStr = reservationCheckIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const checkOutStr = reservationCheckOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const reservationPeriod = `${checkInStr} - ${checkOutStr}`;
+
+    // Prepare transactions
+    const transactionsToCreate = [];
+
+    // Transaction 1: Net Salary (Expense - Debit increases)
+    transactionsToCreate.push({
+      transactionDate: cleaning.actualEndTime,
+      fiscalYear,
+      fiscalMonth,
+      description: `Cleaning service - ${apartmentName} (${reservationPeriod})`,
+      amount: cleaning.totalCost,
+      kontoCode: netSalaryKonto.code,
+      kontoName: netSalaryKonto.name,
+      type: 'expense',
+      debit: cleaning.totalCost,
+      credit: 0,
+      groupId,
+      sourceType: TRANSACTION_SOURCE_TYPES.CLEANING,
+      sourceId: cleaning._id,
+      createdBy: cleaning.completedBy,
+      note: cleaning.notes
+    });
+
+    // Transaction 2: Payables (Liability - Credit increases)
+    transactionsToCreate.push({
+      transactionDate: cleaning.actualEndTime,
+      fiscalYear,
+      fiscalMonth,
+      description: `Cleaning service payable - ${apartmentName} (${reservationPeriod})`,
+      amount: cleaning.totalCost,
+      kontoCode: payablesKonto.code,
+      kontoName: payablesKonto.name,
+      type: 'expense',
+      debit: 0,
+      credit: cleaning.totalCost,
+      groupId,
+      sourceType: TRANSACTION_SOURCE_TYPES.CLEANING,
+      sourceId: cleaning._id,
+      createdBy: cleaning.completedBy,
+      note: cleaning.notes
+    });
+
+    // Validate double-entry bookkeeping
+    validateDoubleEntry(transactionsToCreate);
+
+    // Create transactions
+    const createdTransactions = await Transaction.create(transactionsToCreate, { session });
+
+    // Update Konto balances
+    await this._updateKontoBalance(netSalaryKonto, cleaning.totalCost, 0, session); // Debit increases expense
+    await this._updateKontoBalance(payablesKonto, 0, cleaning.totalCost, session); // Credit increases liability
+
+    return createdTransactions;
+  }
+
+  /**
+   * Create transactions for cleaning cancellation (reversal)
+   * Reverses expense and liability when completed cleaning is cancelled
+   *
+   * @param {Object} data
+   * @param {Object} data.cleaning - ApartmentCleaning document (must have totalCost, _id)
+   * @param {Array} data.originalTransactions - Original transactions to reverse
+   * @param {Object} data.netSalaryKonto - Net Salary konto (75X) for cleaning lady
+   * @param {Object} data.payablesKonto - Payables konto (20X) for cleaning lady
+   * @param {String} data.apartmentName - Apartment name for description
+   * @param {Date} data.reservationCheckIn - Reservation check-in date for description
+   * @param {Date} data.reservationCheckOut - Reservation check-out date for description
+   * @param {ObjectId} data.cancelledBy - User who cancelled
+   * @param {Object} data.session - Mongoose session for transaction
+   * @returns {Array} Created reversal transactions
+   */
+  async createCleaningCancellationTransactions(data) {
+    const {
+      cleaning,
+      originalTransactions,
+      netSalaryKonto,
+      payablesKonto,
+      apartmentName,
+      reservationCheckIn,
+      reservationCheckOut,
+      cancelledBy,
+      session
+    } = data;
+
+    // Extract fiscal period from original transactions (CRITICAL: use original period, not current!)
+    if (!originalTransactions || originalTransactions.length === 0) {
+      throw new Error('Cannot reverse cleaning: no original transactions found');
+    }
+
+    const originalFiscalYear = originalTransactions[0].fiscalYear;
+    const originalFiscalMonth = originalTransactions[0].fiscalMonth;
+
+    const groupId = new mongoose.Types.ObjectId();
+    const now = new Date();
+
+    // Format reservation dates for description
+    const checkInStr = reservationCheckIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const checkOutStr = reservationCheckOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const reservationPeriod = `${checkInStr} - ${checkOutStr}`;
+
+    // Prepare reversal transactions
+    const transactionsToCreate = [];
+
+    // Transaction 1: Payables (Liability - Debit decreases)
+    transactionsToCreate.push({
+      transactionDate: now,
+      fiscalYear: originalFiscalYear,    // Use ORIGINAL fiscal period
+      fiscalMonth: originalFiscalMonth,  // Use ORIGINAL fiscal period
+      description: `Cleaning cancelled (reversal) - ${apartmentName} (${reservationPeriod})`,
+      amount: cleaning.totalCost,
+      kontoCode: payablesKonto.code,
+      kontoName: payablesKonto.name,
+      type: 'expense',
+      debit: cleaning.totalCost, // Debit decreases liability
+      credit: 0,
+      groupId,
+      sourceType: TRANSACTION_SOURCE_TYPES.CLEANING,
+      sourceId: cleaning._id,
+      createdBy: cancelledBy,
+      note: 'Reversal of completed cleaning'
+    });
+
+    // Transaction 2: Net Salary (Expense - Credit decreases)
+    transactionsToCreate.push({
+      transactionDate: now,
+      fiscalYear: originalFiscalYear,    // Use ORIGINAL fiscal period
+      fiscalMonth: originalFiscalMonth,  // Use ORIGINAL fiscal period
+      description: `Cleaning cancelled (reversal) - ${apartmentName} (${reservationPeriod})`,
+      amount: cleaning.totalCost,
+      kontoCode: netSalaryKonto.code,
+      kontoName: netSalaryKonto.name,
+      type: 'expense',
+      debit: 0,
+      credit: cleaning.totalCost, // Credit decreases expense
+      groupId,
+      sourceType: TRANSACTION_SOURCE_TYPES.CLEANING,
+      sourceId: cleaning._id,
+      createdBy: cancelledBy,
+      note: 'Reversal of completed cleaning'
+    });
+
+    // Validate double-entry bookkeeping
+    validateDoubleEntry(transactionsToCreate);
+
+    // Create transactions
+    const createdTransactions = await Transaction.create(transactionsToCreate, { session });
+
+    // Update Konto balances (opposite of completion)
+    await this._updateKontoBalance(payablesKonto, cleaning.totalCost, 0, session); // Debit decreases liability
+    await this._updateKontoBalance(netSalaryKonto, 0, cleaning.totalCost, session); // Credit decreases expense
+
+    return createdTransactions;
+  }
+
+  /**
+   * Get transactions for a specific cleaning
+   *
+   * @param {ObjectId} cleaningId
+   * @returns {Array} transactions
+   */
+  async getTransactionsByCleaning(cleaningId) {
+    return await Transaction.find({
+      sourceType: TRANSACTION_SOURCE_TYPES.CLEANING,
+      sourceId: cleaningId
+    }).sort({ createdAt: 1 });
+  }
+
+  /**
    * Update konto balance based on debit/credit
    *
    * @param {Object} konto - Konto document

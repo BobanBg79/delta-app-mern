@@ -163,6 +163,7 @@ class CleaningService {
    * Complete a cleaning
    * CLEANING_LADY can complete own assignments
    * OWNER/MANAGER can complete any cleaning and set any CLEANING_LADY as completedBy
+   * Creates accounting transactions (expense + liability) atomically
    *
    * @param {ObjectId} cleaningId - Cleaning ID
    * @param {Object} completionData
@@ -170,12 +171,13 @@ class CleaningService {
    * @param {ObjectId} completionData.completedBy - User ID completing (must be CLEANING_LADY)
    * @param {Date} completionData.actualEndTime - When cleaning ended
    * @param {String} completionData.notes - Optional notes
-   * @param {ObjectId} requestingUserId - User ID making the request
-   * @returns {Object} Updated cleaning
+   * @param {ObjectId} requestingUserId - User ID making the request (can be OWNER/MANAGER/CLEANING_LADY)
+   * @returns {Object} Populated cleaning document
    */
   async completeCleaning(cleaningId, completionData, requestingUserId) {
     const { hoursSpent, completedBy, actualEndTime, notes } = completionData;
 
+    // Validations (before starting transaction)
     if (!hoursSpent || hoursSpent <= 0) {
       throw new Error('Hours spent must be greater than 0');
     }
@@ -188,95 +190,223 @@ class CleaningService {
       throw new Error('actualEndTime is required');
     }
 
-    const cleaning = await ApartmentCleaning.findById(cleaningId);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!cleaning) {
-      throw new Error('Cleaning not found');
-    }
+    try {
+      // 1. Load and validate cleaning
+      const cleaning = await ApartmentCleaning.findById(cleaningId)
+        .populate('reservationId')
+        .populate('apartmentId')
+        .session(session);
 
-    // Can only complete scheduled cleanings
-    if (cleaning.status !== 'scheduled') {
-      throw new Error('Can only complete scheduled cleanings');
-    }
-
-    // Validate completedBy user exists and has CLEANING_LADY role
-    const completedByUser = await User.findById(completedBy).populate('role');
-    if (!completedByUser) {
-      throw new Error('Completed by user not found');
-    }
-
-    if (completedByUser.role.name !== USER_ROLES.CLEANING_LADY) {
-      throw new Error('completedBy must be a user with CLEANING_LADY role');
-    }
-
-    // Validate requesting user
-    const requestingUser = await User.findById(requestingUserId).populate('role');
-    if (!requestingUser) {
-      throw new Error('Requesting user not found');
-    }
-
-    // Permission check: CLEANING_LADY can only complete own assignments
-    if (requestingUser.role.name === USER_ROLES.CLEANING_LADY) {
-      if (requestingUserId.toString() !== cleaning.assignedTo.toString()) {
-        throw new Error('Cleaning lady can only complete own assignments');
+      if (!cleaning) {
+        throw new Error('Cleaning not found');
       }
-      // For CLEANING_LADY, completedBy must be themselves
-      if (completedBy.toString() !== requestingUserId.toString()) {
-        throw new Error('Cleaning lady must set completedBy to themselves');
+
+      // Can only complete scheduled cleanings
+      if (cleaning.status !== 'scheduled') {
+        throw new Error('Can only complete scheduled cleanings');
       }
+
+      // 2. Validate completedBy user exists and has CLEANING_LADY role
+      const completedByUser = await User.findById(completedBy).populate('role').session(session);
+      if (!completedByUser) {
+        throw new Error('Completed by user not found');
+      }
+
+      if (completedByUser.role.name !== USER_ROLES.CLEANING_LADY) {
+        throw new Error('completedBy must be a user with CLEANING_LADY role');
+      }
+
+      // 3. Validate requesting user
+      const requestingUser = await User.findById(requestingUserId).populate('role').session(session);
+      if (!requestingUser) {
+        throw new Error('Requesting user not found');
+      }
+
+      // Permission check: CLEANING_LADY can only complete own assignments
+      if (requestingUser.role.name === USER_ROLES.CLEANING_LADY) {
+        if (requestingUserId.toString() !== cleaning.assignedTo.toString()) {
+          throw new Error('Cleaning lady can only complete own assignments');
+        }
+        // For CLEANING_LADY, completedBy must be themselves
+        if (completedBy.toString() !== requestingUserId.toString()) {
+          throw new Error('Cleaning lady must set completedBy to themselves');
+        }
+      }
+
+      // 4. Update cleaning
+      cleaning.status = 'completed';
+      cleaning.actualEndTime = actualEndTime;
+      cleaning.completedBy = completedBy;
+      cleaning.hoursSpent = hoursSpent;
+      cleaning.totalCost = cleaning.hourlyRate * hoursSpent;
+
+      if (notes) {
+        cleaning.notes = notes;
+      }
+
+      await cleaning.save({ session });
+
+      // 5. Find cleaning lady's kontos (for completedBy user, not requesting user!)
+      const Konto = require('../models/konto/Konto');
+
+      const payablesKonto = await Konto.findOne({
+        employeeId: completedBy,  // Use completedBy (the cleaning lady)
+        type: 'liability',
+        code: /^20/,
+        isActive: true
+      }).session(session);
+
+      if (!payablesKonto) {
+        throw new Error(`Payables konto not found for cleaning lady ${completedByUser.fname} ${completedByUser.lname} (ID: ${completedBy})`);
+      }
+
+      const netSalaryKonto = await Konto.findOne({
+        employeeId: completedBy,  // Use completedBy (the cleaning lady)
+        type: 'expense',
+        code: /^75/,
+        isActive: true
+      }).session(session);
+
+      if (!netSalaryKonto) {
+        throw new Error(`Net Salary konto not found for cleaning lady ${completedByUser.fname} ${completedByUser.lname} (ID: ${completedBy})`);
+      }
+
+      // 6. Create accounting transactions
+      const TransactionService = require('./accounting/TransactionService');
+
+      await TransactionService.createCleaningCompletionTransactions({
+        cleaning,
+        netSalaryKonto,
+        payablesKonto,
+        apartmentName: cleaning.apartmentId.name,
+        reservationCheckIn: cleaning.reservationId.plannedCheckIn,
+        reservationCheckOut: cleaning.reservationId.plannedCheckOut,
+        session
+      });
+
+      // 7. Commit transaction
+      await session.commitTransaction();
+
+      // 8. Populate and return
+      const populatedCleaning = await ApartmentCleaning.findById(cleaning._id)
+        .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+        .populate('apartmentId', '_id name')
+        .populate('assignedTo', 'fname lname role')
+        .populate('assignedBy', 'fname lname')
+        .populate('completedBy', 'fname lname');
+
+      return populatedCleaning;
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    // Update cleaning
-    cleaning.status = 'completed';
-    cleaning.actualEndTime = actualEndTime;
-    cleaning.completedBy = completedBy;
-    cleaning.hoursSpent = hoursSpent;
-    cleaning.totalCost = cleaning.hourlyRate * hoursSpent;
-
-    if (notes) {
-      cleaning.notes = notes;
-    }
-
-    await cleaning.save();
-
-    // Populate and return
-    return await ApartmentCleaning.findById(cleaning._id)
-      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
-      .populate('apartmentId', '_id name')
-      .populate('assignedTo', 'fname lname role')
-      .populate('assignedBy', 'fname lname')
-      .populate('completedBy', 'fname lname');
   }
 
   /**
    * Cancel a completed cleaning
    * Only OWNER/MANAGER can cancel completed cleanings
+   * Reverses accounting transactions (expense + liability) atomically
    *
    * @param {ObjectId} cleaningId - Cleaning ID
-   * @returns {Object} Updated cleaning
+   * @param {ObjectId} cancelledBy - User ID who is cancelling
+   * @returns {Object} Populated cleaning document
    */
-  async cancelCompletedCleaning(cleaningId) {
-    const cleaning = await ApartmentCleaning.findById(cleaningId);
+  async cancelCompletedCleaning(cleaningId, cancelledBy) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!cleaning) {
-      throw new Error('Cleaning not found');
+    try {
+      // 1. Load and validate cleaning
+      const cleaning = await ApartmentCleaning.findById(cleaningId)
+        .populate('reservationId')
+        .populate('apartmentId')
+        .populate('completedBy')
+        .session(session);
+
+      if (!cleaning) {
+        throw new Error('Cleaning not found');
+      }
+
+      // Can only cancel completed cleanings
+      if (cleaning.status !== 'completed') {
+        throw new Error('Can only cancel completed cleanings');
+      }
+
+      // 2. Find original transactions
+      const TransactionService = require('./accounting/TransactionService');
+      const originalTransactions = await TransactionService.getTransactionsByCleaning(cleaningId);
+
+      if (!originalTransactions || originalTransactions.length === 0) {
+        throw new Error('Cannot cancel cleaning: no original transactions found');
+      }
+
+      // 3. Find cleaning lady's kontos (completedBy is the cleaning lady)
+      const Konto = require('../models/konto/Konto');
+
+      const payablesKonto = await Konto.findOne({
+        employeeId: cleaning.completedBy._id,
+        type: 'liability',
+        code: /^20/,
+        isActive: true
+      }).session(session);
+
+      if (!payablesKonto) {
+        throw new Error(`Payables konto not found for cleaning lady ${cleaning.completedBy.fname} ${cleaning.completedBy.lname}`);
+      }
+
+      const netSalaryKonto = await Konto.findOne({
+        employeeId: cleaning.completedBy._id,
+        type: 'expense',
+        code: /^75/,
+        isActive: true
+      }).session(session);
+
+      if (!netSalaryKonto) {
+        throw new Error(`Net Salary konto not found for cleaning lady ${cleaning.completedBy.fname} ${cleaning.completedBy.lname}`);
+      }
+
+      // 4. Create reversal transactions
+      await TransactionService.createCleaningCancellationTransactions({
+        cleaning,
+        originalTransactions,
+        netSalaryKonto,
+        payablesKonto,
+        apartmentName: cleaning.apartmentId.name,
+        reservationCheckIn: cleaning.reservationId.plannedCheckIn,
+        reservationCheckOut: cleaning.reservationId.plannedCheckOut,
+        cancelledBy,
+        session
+      });
+
+      // 5. Update cleaning status
+      cleaning.status = 'cancelled';
+      await cleaning.save({ session });
+
+      // 6. Commit transaction
+      await session.commitTransaction();
+
+      // 7. Populate and return
+      const populatedCleaning = await ApartmentCleaning.findById(cleaning._id)
+        .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
+        .populate('apartmentId', '_id name')
+        .populate('assignedTo', 'fname lname role')
+        .populate('assignedBy', 'fname lname')
+        .populate('completedBy', 'fname lname');
+
+      return populatedCleaning;
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    // Can only cancel completed cleanings
-    if (cleaning.status !== 'completed') {
-      throw new Error('Can only cancel completed cleanings');
-    }
-
-    cleaning.status = 'cancelled';
-    await cleaning.save();
-
-    // Populate and return
-    return await ApartmentCleaning.findById(cleaning._id)
-      .populate('reservationId', '_id status plannedCheckIn plannedCheckOut plannedCheckoutTime')
-      .populate('apartmentId', '_id name')
-      .populate('assignedTo', 'fname lname role')
-      .populate('assignedBy', 'fname lname')
-      .populate('completedBy', 'fname lname');
   }
 
   /**

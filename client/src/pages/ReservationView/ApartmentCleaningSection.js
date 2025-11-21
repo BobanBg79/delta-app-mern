@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
@@ -11,14 +11,20 @@ import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Alert from 'react-bootstrap/Alert';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import Dropdown from 'react-bootstrap/Dropdown';
+import DropdownButton from 'react-bootstrap/DropdownButton';
 import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
-import { getCleaningsByReservation, createCleaning } from '../../modules/cleaning/operations';
+import { getCleaningsByReservation, createCleaning, cancelCompletedCleaning } from '../../modules/cleaning/operations';
 import { getCleaningStatusVariant } from '../../modules/cleaning/helpers';
 import { formatDateTime } from '../../utils/date';
+import { msgOperations, messageConstants } from '../../modules/message';
 import CompleteCleaningModal from './CompleteCleaningModal';
 import axios from 'axios';
+
+const { showMessageToast } = msgOperations;
+const { SUCCESS, ERROR } = messageConstants;
 
 const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const [cleanings, setCleanings] = useState([]);
@@ -46,10 +52,12 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   // Get user permissions and user ID
   const { user: { role: userRole, _id: currentUserId } = {} } = useSelector((state) => state.auth);
   const userPermissions = userRole?.permissions || [];
+  const dispatch = useDispatch();
 
   const canCreateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_CLEANING);
   const canViewCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_CLEANING);
   const canCompleteCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_COMPLETE_CLEANING);
+  const canDeactivateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DEACTIVATE_CLEANING);
 
   // Cannot create cleaning for non-active reservations (noshow or canceled)
   const isNotActiveReservation =
@@ -173,6 +181,19 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
     setShowCompleteModal(true);
   };
 
+  const handleCancelCompleted = async (cleaningId) => {
+    try {
+      await cancelCompletedCleaning(cleaningId);
+      dispatch(showMessageToast('Cleaning cancelled successfully', SUCCESS));
+
+      // Refresh cleanings list
+      const updatedCleanings = await getCleaningsByReservation(reservationId);
+      setCleanings(updatedCleanings);
+    } catch (err) {
+      dispatch(showMessageToast(err.message || 'Failed to cancel completed cleaning', ERROR));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const variant = getCleaningStatusVariant(status);
     return <Badge bg={variant}>{status.toUpperCase()}</Badge>;
@@ -272,6 +293,10 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                       cleaning.status === 'scheduled' &&
                       (!isCleaningLady || isAssignedToCurrentUser);
 
+                    const canCancelCompleted = canDeactivateCleaning && cleaning.status === 'completed';
+
+                    const showActions = canComplete || canCancelCompleted;
+
                     return (
                       <tr key={cleaning._id}>
                         <td>
@@ -298,14 +323,24 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                             : 'Unknown'}
                         </td>
                         <td>
-                          {canComplete && (
-                            <Button
-                              variant="success"
+                          {showActions && (
+                            <DropdownButton
+                              id={`dropdown-actions-${cleaning._id}`}
+                              title="Actions"
                               size="sm"
-                              onClick={() => openCompleteModal(cleaning)}
+                              variant="secondary"
                             >
-                              Complete
-                            </Button>
+                              {canComplete && (
+                                <Dropdown.Item onClick={() => openCompleteModal(cleaning)}>
+                                  Complete
+                                </Dropdown.Item>
+                              )}
+                              {canCancelCompleted && (
+                                <Dropdown.Item onClick={() => handleCancelCompleted(cleaning._id)}>
+                                  Cancel Completed
+                                </Dropdown.Item>
+                              )}
+                            </DropdownButton>
                           )}
                         </td>
                       </tr>

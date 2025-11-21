@@ -131,7 +131,10 @@ router.post('/:id/cancel-completed', auth, requirePermission('CAN_DEACTIVATE_CLE
   try {
     const { id } = req.params;
 
-    const cleaning = await CleaningService.cancelCompletedCleaning(id);
+    const { cleaning } = await CleaningService.cancelCompletedCleaning(
+      id,
+      req.user.id // cancelledBy parameter
+    );
 
     res.json({
       message: 'Completed cleaning cancelled successfully',
