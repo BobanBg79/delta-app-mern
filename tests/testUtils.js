@@ -242,6 +242,87 @@ function createMockPermissionMiddleware() {
   };
 }
 
+/**
+ * Create a mock MongoDB session for transaction testing
+ * @returns {Object} Mock session object
+ */
+function createMockSession() {
+  return {
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    abortTransaction: jest.fn(),
+    endSession: jest.fn()
+  };
+}
+
+/**
+ * Create a chainable mock query that supports any chain of methods
+ * and resolves to the provided value at the end
+ *
+ * @param {any} resolvedValue - Value to resolve when chain ends
+ * @returns {Object} Chainable mock object
+ *
+ * @example
+ * // Mocks: Model.findById(id).populate('a').populate('b').session(s)
+ * Model.findById.mockReturnValue(createChainableMock(mockData));
+ */
+function createChainableMock(resolvedValue) {
+  const chainable = {
+    populate: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    lean: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue(resolvedValue),
+    session: jest.fn().mockResolvedValue(resolvedValue),
+    then: jest.fn((resolve) => Promise.resolve(resolvedValue).then(resolve))
+  };
+
+  // Make populate, select, etc. return this for chaining
+  chainable.populate.mockReturnValue(chainable);
+  chainable.select.mockReturnValue(chainable);
+  chainable.sort.mockReturnValue(chainable);
+  chainable.limit.mockReturnValue(chainable);
+  chainable.skip.mockReturnValue(chainable);
+  chainable.lean.mockReturnValue(chainable);
+
+  return chainable;
+}
+
+/**
+ * Mock a Model.findById (or similar) with chainable methods
+ *
+ * @param {Object} Model - The mocked Mongoose model
+ * @param {string} method - Method name (findById, findOne, find, etc.)
+ * @param {any} resolvedValue - Value to resolve
+ * @returns {Object} The chainable mock
+ *
+ * @example
+ * mockModelMethod(ApartmentCleaning, 'findById', mockCleaning);
+ * mockModelMethod(User, 'findOne', mockUser);
+ */
+function mockModelMethod(Model, method, resolvedValue) {
+  const chainable = createChainableMock(resolvedValue);
+  Model[method].mockReturnValue(chainable);
+  return chainable;
+}
+
+/**
+ * Mock Konto.findOne with session support
+ * Handles multiple calls returning different kontos
+ *
+ * @param {Object} Konto - The mocked Konto model
+ * @param {Object|null} payablesKonto - First konto to return (20X)
+ * @param {Object|null} netSalaryKonto - Second konto to return (75X)
+ */
+function mockKontoFindOne(Konto, payablesKonto, netSalaryKonto) {
+  let callCount = 0;
+  Konto.findOne.mockImplementation(() =>
+    createChainableMock(++callCount === 1 ? payablesKonto : netSalaryKonto)
+  );
+}
+
 module.exports = {
   // Console utilities
   suppressConsoleOutput,
@@ -249,6 +330,10 @@ module.exports = {
 
   // MongoDB utilities
   createMockObjectId,
+  createMockSession,
+  createChainableMock,
+  mockModelMethod,
+  mockKontoFindOne,
 
   // Express utilities
   createMockExpressContext,
