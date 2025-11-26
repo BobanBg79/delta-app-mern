@@ -478,17 +478,15 @@ describe('CleaningService', () => {
   describe('cancelCompletedCleaning', () => {
     let mockCompletedCleaning;
 
+    const completedCleaningOverrides = () => ({
+      status: 'completed',
+      completedBy: { _id: cleaningLadyId, fname: 'Jane', lname: 'Cleaner' },
+      hoursSpent: 3,
+      totalCost: 15
+    });
+
     beforeEach(() => {
-      mockCompletedCleaning = createMockCleaning({
-        status: 'completed',
-        completedBy: {
-          _id: cleaningLadyId,
-          fname: 'Jane',
-          lname: 'Cleaner'
-        },
-        hoursSpent: 3,
-        totalCost: 15
-      });
+      mockCompletedCleaning = createMockCleaning(completedCleaningOverrides());
     });
 
     // ----------------------------------------------------------
@@ -639,12 +637,7 @@ describe('CleaningService', () => {
       let mockCleaning;
 
       beforeEach(() => {
-        mockCleaning = createMockCleaning({
-          status: 'completed',
-          completedBy: { _id: cleaningLadyId, fname: 'Jane', lname: 'Cleaner' },
-          hoursSpent: 3,
-          totalCost: 15
-        });
+        mockCleaning = createMockCleaning(completedCleaningOverrides());
         mockModelMethod(ApartmentCleaning, 'findById', mockCleaning);
         TransactionService.getTransactionsByCleaning.mockResolvedValue([{ fiscalYear: 2025, fiscalMonth: 10 }]);
         mockKontoFindOne(Konto, createMockKonto('liability', '20'), createMockKonto('expense', '75'));
@@ -667,12 +660,7 @@ describe('CleaningService', () => {
       let originalTransactions;
 
       beforeEach(() => {
-        mockCleaning = createMockCleaning({
-          status: 'completed',
-          completedBy: { _id: cleaningLadyId, fname: 'Jane', lname: 'Cleaner' },
-          hoursSpent: 3,
-          totalCost: 15
-        });
+        mockCleaning = createMockCleaning(completedCleaningOverrides());
         originalTransactions = [
           { fiscalYear: 2025, fiscalMonth: 10, debit: 15, credit: 0 },
           { fiscalYear: 2025, fiscalMonth: 10, debit: 0, credit: 15 }
