@@ -330,6 +330,7 @@ describe('CleaningService', () => {
     // ----------------------------------------------------------
     describe('Konto validation', () => {
       beforeEach(() => {
+        // Setup: Valid cleaning and user so we can test konto lookup failures
         mockModelMethod(ApartmentCleaning, 'findById', createMockCleaning({ assignedTo: cleaningLadyId }));
         mockModelMethod(User, 'findById', createMockUserData(USER_ROLES.CLEANING_LADY, { _id: cleaningLadyId }));
       });
@@ -360,6 +361,7 @@ describe('CleaningService', () => {
     // ----------------------------------------------------------
     describe('Transaction handling', () => {
       beforeEach(() => {
+        // Setup: Valid cleaning, user, and kontos so we can test transaction commit/rollback behavior
         mockModelMethod(ApartmentCleaning, 'findById', createMockCleaning({ assignedTo: cleaningLadyId }));
         mockModelMethod(User, 'findById', createMockUserData(USER_ROLES.CLEANING_LADY, { _id: cleaningLadyId }));
         mockKontoFindOne(Konto, createMockKonto('liability', '20'), createMockKonto('expense', '75'));
@@ -407,6 +409,7 @@ describe('CleaningService', () => {
       let mockCleaning;
 
       beforeEach(() => {
+        // Setup: Full happy path so we can verify cleaning document is updated correctly
         mockCleaning = createMockCleaning({ assignedTo: cleaningLadyId });
         mockModelMethod(ApartmentCleaning, 'findById', mockCleaning);
         mockModelMethod(User, 'findById', createMockUserData(USER_ROLES.CLEANING_LADY, { _id: cleaningLadyId }));
@@ -447,6 +450,7 @@ describe('CleaningService', () => {
       let mockCleaning;
 
       beforeEach(() => {
+        // Setup: Full happy path so we can verify TransactionService is called with correct parameters
         mockCleaning = createMockCleaning({ assignedTo: cleaningLadyId });
         mockModelMethod(ApartmentCleaning, 'findById', mockCleaning);
         mockModelMethod(User, 'findById', createMockUserData(USER_ROLES.CLEANING_LADY, { _id: cleaningLadyId }));
@@ -555,6 +559,7 @@ describe('CleaningService', () => {
     // ----------------------------------------------------------
     describe('Konto validation', () => {
       beforeEach(() => {
+        // Setup: Valid completed cleaning and existing transactions so we can test konto lookup failures
         mockModelMethod(ApartmentCleaning, 'findById', mockCompletedCleaning);
         TransactionService.getTransactionsByCleaning.mockResolvedValue([
           { fiscalYear: 2025, fiscalMonth: 10 },
@@ -588,6 +593,7 @@ describe('CleaningService', () => {
     // ----------------------------------------------------------
     describe('Transaction handling', () => {
       beforeEach(() => {
+        // Setup: Valid completed cleaning, existing transactions, and kontos so we can test transaction commit/rollback behavior
         mockModelMethod(ApartmentCleaning, 'findById', mockCompletedCleaning);
         TransactionService.getTransactionsByCleaning.mockResolvedValue([
           { fiscalYear: 2025, fiscalMonth: 10 }
@@ -637,6 +643,7 @@ describe('CleaningService', () => {
       let mockCleaning;
 
       beforeEach(() => {
+        // Setup: Full happy path so we can verify cleaning document is updated correctly after cancellation
         mockCleaning = createMockCleaning(completedCleaningOverrides());
         mockModelMethod(ApartmentCleaning, 'findById', mockCleaning);
         TransactionService.getTransactionsByCleaning.mockResolvedValue([{ fiscalYear: 2025, fiscalMonth: 10 }]);
@@ -660,6 +667,7 @@ describe('CleaningService', () => {
       let originalTransactions;
 
       beforeEach(() => {
+        // Setup: Full happy path with original transactions so we can verify TransactionService is called with correct parameters
         mockCleaning = createMockCleaning(completedCleaningOverrides());
         originalTransactions = [
           { fiscalYear: 2025, fiscalMonth: 10, debit: 15, credit: 0 },
