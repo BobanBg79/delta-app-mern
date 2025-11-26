@@ -16,7 +16,7 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 import { hasPermission } from '../../utils/permissions';
 import { USER_PERMISSIONS } from '../../constants';
 import { RESERVATION_STATUSES } from '../../modules/reservation/constants';
-import { getCleaningsByReservation, createCleaning, cancelCompletedCleaning } from '../../modules/cleaning/operations';
+import { getCleaningsByReservation, createCleaning, cancelCompletedCleaning, cancelScheduledCleaning } from '../../modules/cleaning/operations';
 import { getCleaningStatusVariant } from '../../modules/cleaning/helpers';
 import { formatDateTime } from '../../utils/date';
 import { msgOperations, messageConstants } from '../../modules/message';
@@ -35,6 +35,8 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [selectedCleaning, setSelectedCleaning] = useState(null);
+  const [showCancelScheduledModal, setShowCancelScheduledModal] = useState(false);
+  const [cleaningToCancel, setCleaningToCancel] = useState(null);
 
   // Form state for creating cleaning
   const [newCleaning, setNewCleaning] = useState({
@@ -56,6 +58,7 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
 
   const canCreateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_CLEANING);
   const canViewCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_VIEW_CLEANING);
+  const canUpdateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_UPDATE_CLEANING);
   const canCompleteCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_COMPLETE_CLEANING);
   const canDeactivateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_DEACTIVATE_CLEANING);
 
@@ -181,6 +184,27 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
     setShowCompleteModal(true);
   };
 
+  const openCancelScheduledModal = (cleaningId) => {
+    setCleaningToCancel(cleaningId);
+    setShowCancelScheduledModal(true);
+  };
+
+  const handleCancelScheduled = async () => {
+    try {
+      await cancelScheduledCleaning(cleaningToCancel);
+      dispatch(showMessageToast('Scheduled cleaning cancelled successfully', SUCCESS));
+
+      // Refresh cleanings list
+      const updatedCleanings = await getCleaningsByReservation(reservationId);
+      setCleanings(updatedCleanings);
+    } catch (err) {
+      dispatch(showMessageToast(err.message || 'Failed to cancel scheduled cleaning', ERROR));
+    } finally {
+      setShowCancelScheduledModal(false);
+      setCleaningToCancel(null);
+    }
+  };
+
   const handleCancelCompleted = async (cleaningId) => {
     try {
       await cancelCompletedCleaning(cleaningId);
@@ -267,7 +291,8 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                 No cleanings scheduled for this reservation
               </div>
             ) : (
-              <Table striped bordered hover size="sm" responsive style={{ fontSize: '12px' }}>
+              <div>
+              <Table striped bordered hover size="sm" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Assigned To</th>
@@ -293,9 +318,10 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                       cleaning.status === 'scheduled' &&
                       (!isCleaningLady || isAssignedToCurrentUser);
 
+                    const canCancelScheduled = canUpdateCleaning && cleaning.status === 'scheduled';
                     const canCancelCompleted = canDeactivateCleaning && cleaning.status === 'completed';
 
-                    const showActions = canComplete || canCancelCompleted;
+                    const showActions = canComplete || canCancelScheduled || canCancelCompleted;
 
                     return (
                       <tr key={cleaning._id}>
@@ -329,10 +355,16 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                               title="Actions"
                               size="sm"
                               variant="secondary"
+                              style={{ position: 'static' }}
                             >
                               {canComplete && (
                                 <Dropdown.Item onClick={() => openCompleteModal(cleaning)}>
                                   Complete
+                                </Dropdown.Item>
+                              )}
+                              {canCancelScheduled && (
+                                <Dropdown.Item onClick={() => openCancelScheduledModal(cleaning._id)}>
+                                  Cancel
                                 </Dropdown.Item>
                               )}
                               {canCancelCompleted && (
@@ -348,6 +380,7 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
                   })}
                 </tbody>
               </Table>
+              </div>
             )}
           </div>
         </Col>
@@ -435,6 +468,24 @@ const ApartmentCleaningSection = ({ formState, isEditable }) => {
         currentUserId={currentUserId}
         onSuccess={handleCleaningCompleted}
       />
+
+      {/* Cancel Scheduled Cleaning Confirmation Modal */}
+      <Modal show={showCancelScheduledModal} onHide={() => setShowCancelScheduledModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Cancel Scheduled Cleaning</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to cancel this scheduled cleaning?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCancelScheduledModal(false)}>
+            No, Keep It
+          </Button>
+          <Button variant="danger" onClick={handleCancelScheduled}>
+            Yes, Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };
