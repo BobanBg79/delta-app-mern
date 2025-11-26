@@ -129,9 +129,52 @@ This project uses **double-entry bookkeeping**. Every financial transaction affe
 
 ### Testing
 
-- **Unit tests:** `/tests/unit/`
-- **Integration tests:** `/tests/integration/`
-- Run tests before implementing new accounting features to ensure you don't break existing functionality
+**Project has two separate test environments:**
+
+| Environment | Location | Framework | Run Command |
+|-------------|----------|-----------|-------------|
+| **Server (Backend)** | `/tests/` | Jest | `npm test` |
+| **Client (Frontend)** | `/client/src/**/*.test.js` | Jest (React Testing Library) | `cd client && npm test` |
+
+**Server Tests:**
+- **Location:** `/tests/` (root project folder)
+- **Test Utils:** `/tests/testUtils.js` - **MUST READ before writing any server test!**
+- **Structure:** `/tests/services/`, `/tests/routes/`, `/tests/middleware/`, `/tests/utils/`
+
+**CRITICAL - Before writing server unit tests:**
+1. **ALWAYS read `/tests/testUtils.js` first** - contains reusable helpers:
+   - `createMockSession()` - MongoDB transaction session mock
+   - `createChainableMock(value)` - Mongoose chainable query mock (`.populate().session()`)
+   - `mockModelMethod(Model, 'findById', data)` - One-liner for mocking Model methods
+   - `mockKontoFindOne(Konto, payables, netSalary)` - Specialized Konto mock
+   - `suppressConsoleOutput()` / `restoreConsoleOutput()` - Clean test output
+   - `createMockObjectId()` - Valid MongoDB ObjectId for tests
+
+2. **Follow patterns from existing tests:**
+   - `/tests/services/CleaningService.test.js` - Service with transactions
+   - `/tests/services/KontoService.test.js` - Service mocking examples
+   - `/tests/routes/users.test.js` - Route testing with supertest
+
+3. **Extend testUtils.js when needed:**
+   - If you find yourself repeating the same mock pattern across multiple tests, **extract it into testUtils.js**
+   - Add new helper functions for common mocking scenarios
+   - Keep testUtils.js up-to-date as the project evolves
+
+**Client Tests:**
+- **Location:** `/client/src/` (colocated with components)
+- **Pattern:** `ComponentName.test.js` next to `ComponentName.js`
+
+**Run tests:**
+```bash
+# Server tests
+npm test
+
+# Specific server test file
+npm test -- --testPathPatterns="CleaningService"
+
+# Client tests
+cd client && npm test
+```
 
 ---
 
