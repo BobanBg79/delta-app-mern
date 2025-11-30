@@ -23,7 +23,6 @@ const TomorrowCheckoutsReport = () => {
       const data = await getCheckoutTimelineDashboardData();
       setDashboardData(data);
     } catch (err) {
-      console.error('Error fetching checkout timeline data:', err);
       setError(err.message || 'Failed to load checkout timeline data');
     } finally {
       setLoading(false);

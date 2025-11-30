@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import TomorrowCheckoutsReport from './TomorrowCheckoutsReport';
 import * as cleaningOperations from '../../modules/cleaning/operations';
 
@@ -30,7 +30,9 @@ describe('TomorrowCheckoutsReport Component', () => {
         new Error(errorMessage)
       );
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(errorMessage)).toBeInTheDocument();
@@ -42,7 +44,9 @@ describe('TomorrowCheckoutsReport Component', () => {
         new Error('Network error occurred')
       );
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/network error occurred/i)).toBeInTheDocument();
@@ -57,7 +61,9 @@ describe('TomorrowCheckoutsReport Component', () => {
         apartments: []
       });
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/no checkouts scheduled for tomorrow/i)).toBeInTheDocument();
@@ -70,7 +76,9 @@ describe('TomorrowCheckoutsReport Component', () => {
         apartments: []
       });
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         // Date is formatted by formatDateDefault, e.g., "30 Nov 2025"
@@ -115,7 +123,9 @@ describe('TomorrowCheckoutsReport Component', () => {
     it('should display apartment name', async () => {
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Morača')).toBeInTheDocument();
@@ -125,7 +135,9 @@ describe('TomorrowCheckoutsReport Component', () => {
     it('should display checkout time', async () => {
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('11:00')).toBeInTheDocument();
@@ -135,7 +147,9 @@ describe('TomorrowCheckoutsReport Component', () => {
     it('should display current guest name', async () => {
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
@@ -145,7 +159,9 @@ describe('TomorrowCheckoutsReport Component', () => {
     it('should display next checkin guest name', async () => {
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Jane Smith')).toBeInTheDocument();
@@ -155,7 +171,9 @@ describe('TomorrowCheckoutsReport Component', () => {
     it('should display table headers', async () => {
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Apartment')).toBeInTheDocument();
@@ -198,7 +216,9 @@ describe('TomorrowCheckoutsReport Component', () => {
 
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(lateCheckoutData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Late check-out!')).toBeInTheDocument();
@@ -235,7 +255,9 @@ describe('TomorrowCheckoutsReport Component', () => {
 
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(normalCheckoutData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('Late check-out!')).not.toBeInTheDocument();
@@ -274,7 +296,9 @@ describe('TomorrowCheckoutsReport Component', () => {
 
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(noCheckinData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('No next reservation')).toBeInTheDocument();
@@ -322,7 +346,9 @@ describe('TomorrowCheckoutsReport Component', () => {
 
       cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(multipleApartmentsData);
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Morača')).toBeInTheDocument();
@@ -340,7 +366,9 @@ describe('TomorrowCheckoutsReport Component', () => {
         apartments: []
       });
 
-      render(<TomorrowCheckoutsReport />);
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/Tomorrow's Checkouts - Cleaning Schedule/i)).toBeInTheDocument();
@@ -369,7 +397,11 @@ describe('TomorrowCheckoutsReport Component', () => {
         ]
       });
 
-      const { container } = render(<TomorrowCheckoutsReport />);
+      let container;
+      await act(async () => {
+        const result = render(<TomorrowCheckoutsReport />);
+        container = result.container;
+      });
 
       await waitFor(() => {
         const tableResponsive = container.querySelector('.table-responsive');

@@ -14,7 +14,6 @@ export const getAllBookingAgents =
       dispatch(setBookingAgents(response.data));
     } catch (error) {
       dispatch(setBookingAgentsError(error.message));
-      console.log(':::booking agents operations, getAllBookingAgents Error: ', error.message);
     } finally {
       dispatch(setBookingAgentsFetchEnd());
     }
