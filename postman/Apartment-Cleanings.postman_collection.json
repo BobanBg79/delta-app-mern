@@ -277,16 +277,16 @@
       "response": []
     },
     {
-      "name": "Get Tomorrow's Checkouts (Report)",
+      "name": "Get Tomorrow's Checkouts Dashboard",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/apartment-cleanings/reports/tomorrow-checkouts",
+          "raw": "{{baseUrl}}/api/apartment-cleanings/reports/tomorrow-checkouts-dashboard",
           "host": ["{{baseUrl}}"],
-          "path": ["api", "apartment-cleanings", "reports", "tomorrow-checkouts"]
+          "path": ["api", "apartment-cleanings", "reports", "tomorrow-checkouts-dashboard"]
         },
-        "description": "Get all reservations with checkout tomorrow - useful for scheduling cleanings. Only OWNER/MANAGER. Required permission: CAN_VIEW_CLEANING"
+        "description": "Get aggregated dashboard data for tomorrow's checkouts including: checkout reservations, checkin reservations (if same day), scheduled cleanings, cleaning windows, and time validation flags. Returns array of apartments with checkout tomorrow. Only ADMIN/OWNER/MANAGER. Required permission: CAN_CREATE_CLEANING\n\nResponse format:\n{\n  \"date\": \"2025-11-30\",\n  \"apartments\": [\n    {\n      \"apartment\": { \"_id\": \"...\", \"name\": \"Morača\" },\n      \"checkoutReservation\": {\n        \"_id\": \"...\",\n        \"plannedCheckIn\": \"2025-11-29\",\n        \"plannedCheckOut\": \"2025-11-30\",\n        \"plannedCheckoutTime\": \"11:00\",\n        \"guest\": { \"fname\": \"John\", \"lname\": \"Doe\" }\n      },\n      \"checkinReservation\": {\n        \"_id\": \"...\",\n        \"plannedCheckIn\": \"2025-11-30\",\n        \"plannedArrivalTime\": \"14:00\",\n        \"guest\": { \"fname\": \"Jane\", \"lname\": \"Smith\" }\n      } || null,\n      \"scheduledCleanings\": [\n        {\n          \"_id\": \"...\",\n          \"scheduledStartTime\": \"2025-11-30T11:30:00Z\",\n          \"assignedTo\": { \"fname\": \"Ana\", \"lname\": \"Marić\" },\n          \"status\": \"scheduled\"\n        }\n      ],\n      \"cleaningWindow\": {\n        \"startTime\": \"11:00\",\n        \"endTime\": \"14:00\",\n        \"durationMinutes\": 180,\n        \"isCritical\": false,\n        \"isInvalid\": false\n      },\n      \"isLateCheckout\": false,\n      \"isEarlyCheckin\": false\n    }\n  ]\n}"
       },
       "response": []
     }

@@ -208,15 +208,16 @@ export const getCleaningsByReservation = async (reservationId) => {
 };
 
 /**
- * Get report of tomorrow's checkouts (for scheduling cleanings)
- * @returns {Promise<Array>} Array of reservations with checkouts tomorrow
+ * Get checkout timeline dashboard data for tomorrow
+ * Returns aggregated data: checkouts, checkins, scheduled cleanings, and cleaning windows
+ * @returns {Promise<Object>} { date: string, apartments: Array }
  */
-export const getTomorrowCheckouts = async () => {
+export const getCheckoutTimelineDashboardData = async () => {
   try {
-    const response = await axios.get('/api/apartment-cleanings/reports/tomorrow-checkouts');
+    const response = await axios.get('/api/apartment-cleanings/reports/tomorrow-checkouts-dashboard');
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.errors?.[0]?.msg || error.response?.data?.msg || 'Failed to fetch tomorrow checkouts';
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || error.response?.data?.msg || 'Failed to fetch checkout timeline dashboard data';
     throw new Error(errorMessage);
   }
 };
@@ -230,7 +231,7 @@ const cleaningOperations = {
   getCleaningById,
   getCleanings,
   getCleaningsByReservation,
-  getTomorrowCheckouts,
+  getCheckoutTimelineDashboardData,
 };
 
 export default cleaningOperations;

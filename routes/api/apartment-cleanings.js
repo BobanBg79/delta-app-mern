@@ -13,19 +13,12 @@ const { formatCleanings } = require('../../utils/cleaningFormatter');
 // @access   Private - OWNER/MANAGER only
 router.post('/', auth, requirePermission('CAN_CREATE_CLEANING'), async (req, res) => {
   try {
-    const {
-      reservationId,
-      apartmentId,
-      assignedTo,
-      scheduledStartTime,
-      hourlyRate,
-      notes
-    } = req.body;
+    const { reservationId, apartmentId, assignedTo, scheduledStartTime, hourlyRate, notes } = req.body;
 
     // Basic validation
     if (!reservationId || !apartmentId || !assignedTo || !scheduledStartTime) {
       return res.status(400).json({
-        errors: ['reservationId, apartmentId, assignedTo, and scheduledStartTime are required']
+        errors: ['reservationId, apartmentId, assignedTo, and scheduledStartTime are required'],
       });
     }
 
@@ -37,18 +30,17 @@ router.post('/', auth, requirePermission('CAN_CREATE_CLEANING'), async (req, res
       assignedBy: req.user.id,
       scheduledStartTime: new Date(scheduledStartTime),
       hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
-      notes
+      notes,
     });
 
     res.status(201).json({
       message: 'Cleaning created successfully',
-      cleaning
+      cleaning,
     });
-
   } catch (error) {
     console.error('Error creating cleaning:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });
@@ -74,13 +66,12 @@ router.put('/:id', auth, requirePermission('CAN_UPDATE_CLEANING'), async (req, r
 
     res.json({
       message: 'Cleaning updated successfully',
-      cleaning
+      cleaning,
     });
-
   } catch (error) {
     console.error('Error updating cleaning:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });
@@ -96,7 +87,7 @@ router.post('/:id/complete', auth, requirePermission('CAN_COMPLETE_CLEANING'), a
     // Basic validation
     if (!hoursSpent || !actualEndTime || !completedBy) {
       return res.status(400).json({
-        errors: ['hoursSpent, actualEndTime, and completedBy are required']
+        errors: ['hoursSpent, actualEndTime, and completedBy are required'],
       });
     }
 
@@ -106,20 +97,19 @@ router.post('/:id/complete', auth, requirePermission('CAN_COMPLETE_CLEANING'), a
         hoursSpent: parseFloat(hoursSpent),
         actualEndTime: new Date(actualEndTime),
         completedBy,
-        notes
+        notes,
       },
       req.user.id
     );
 
     res.json({
       message: 'Cleaning completed successfully',
-      cleaning
+      cleaning,
     });
-
   } catch (error) {
     console.error('Error completing cleaning:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });
@@ -138,35 +128,44 @@ router.post('/:id/cancel-completed', auth, requirePermission('CAN_DEACTIVATE_CLE
 
     res.json({
       message: 'Completed cleaning cancelled successfully',
-      cleaning
+      cleaning,
     });
-
   } catch (error) {
     console.error('Error cancelling completed cleaning:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });
 
-// @route    GET api/apartment-cleanings/reports/tomorrow-checkouts
-// @desc     Get reservations checking out tomorrow (for scheduling)
-// @access   Private - OWNER/MANAGER only
-router.get('/reports/tomorrow-checkouts', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res) => {
-  try {
-    const reservations = await CleaningService.getTomorrowCheckouts();
+// @route    GET api/apartment-cleanings/reports/tomorrow-checkouts-dashboard
+// @desc     Get tomorrow's checkouts with aggregated data for dashboard
+// @access   Private - ADMIN/OWNER/MANAGER only
+router.get(
+  '/reports/tomorrow-checkouts-dashboard',
+  auth,
+  requirePermission('CAN_CREATE_CLEANING'),
+  async (req, res) => {
+    try {
+      const apartments = await CleaningService.getTomorrowCheckoutsForDashboard();
 
-    res.json({
-      reservations
-    });
+      // Get tomorrow's date for response
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().split('T')[0];
 
-  } catch (error) {
-    console.error('Error fetching tomorrow checkouts:', error);
-    res.status(500).json({
-      errors: [error.message]
-    });
+      res.json({
+        date: dateStr,
+        apartments,
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      res.status(500).json({
+        errors: [error.message],
+      });
+    }
   }
-});
+);
 
 // @route    GET api/apartment-cleanings
 // @desc     Get cleanings with filters
@@ -193,13 +192,12 @@ router.get('/', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res) =
     const formattedCleanings = formatCleanings(cleanings, canViewSensitiveData, req.user);
 
     res.json({
-      cleanings: formattedCleanings
+      cleanings: formattedCleanings,
     });
-
   } catch (error) {
     console.error('Error fetching cleanings:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });
@@ -222,13 +220,12 @@ router.get('/:id', auth, requirePermission('CAN_VIEW_CLEANING'), async (req, res
     const formattedCleaning = formatCleanings(cleaning, canViewSensitiveData, req.user);
 
     res.json({
-      cleaning: formattedCleaning
+      cleaning: formattedCleaning,
     });
-
   } catch (error) {
     console.error('Error fetching cleaning:', error);
     res.status(500).json({
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 });

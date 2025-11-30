@@ -3,6 +3,7 @@
 const mongoose = require('mongoose');
 const CleaningService = require('../../services/CleaningService');
 const ApartmentCleaning = require('../../models/ApartmentCleaning');
+const Reservation = require('../../models/Reservation');
 const User = require('../../models/User');
 const Konto = require('../../models/konto/Konto');
 const TransactionService = require('../../services/accounting/TransactionService');
@@ -19,6 +20,7 @@ const {
 
 // Mock models and services
 jest.mock('../../models/ApartmentCleaning');
+jest.mock('../../models/Reservation');
 jest.mock('../../models/User');
 jest.mock('../../models/konto/Konto');
 jest.mock('../../services/accounting/TransactionService');
@@ -701,6 +703,470 @@ describe('CleaningService', () => {
         await CleaningService.cancelCompletedCleaning(cleaningId, managerId);
 
         expect(TransactionService.getTransactionsByCleaning).toHaveBeenCalledWith(cleaningId);
+      });
+    });
+  });
+
+  // ==========================================
+  // Helper Methods Tests
+  // ==========================================
+
+  describe('isLateCheckout', () => {
+    it('should return false for 11:00 (exactly default)', () => {
+      expect(CleaningService.isLateCheckout('11:00')).toBe(false);
+    });
+
+    it('should return false for checkouts before 11:00', () => {
+      expect(CleaningService.isLateCheckout('10:00')).toBe(false);
+      expect(CleaningService.isLateCheckout('10:59')).toBe(false);
+      expect(CleaningService.isLateCheckout('08:30')).toBe(false);
+    });
+
+    it('should return true for checkouts after 11:00', () => {
+      expect(CleaningService.isLateCheckout('11:01')).toBe(true);
+      expect(CleaningService.isLateCheckout('12:00')).toBe(true);
+      expect(CleaningService.isLateCheckout('15:30')).toBe(true);
+    });
+
+    it('should default to 11:00 when checkoutTime is null', () => {
+      expect(CleaningService.isLateCheckout(null)).toBe(false);
+    });
+
+    it('should default to 11:00 when checkoutTime is undefined', () => {
+      expect(CleaningService.isLateCheckout(undefined)).toBe(false);
+    });
+
+    it('should default to 11:00 when checkoutTime is empty string', () => {
+      expect(CleaningService.isLateCheckout('')).toBe(false);
+    });
+  });
+
+  describe('isEarlyCheckin', () => {
+    it('should return false for 14:00 (exactly default)', () => {
+      expect(CleaningService.isEarlyCheckin('14:00')).toBe(false);
+    });
+
+    it('should return true for checkins before 14:00', () => {
+      expect(CleaningService.isEarlyCheckin('13:59')).toBe(true);
+      expect(CleaningService.isEarlyCheckin('12:00')).toBe(true);
+      expect(CleaningService.isEarlyCheckin('10:30')).toBe(true);
+    });
+
+    it('should return false for checkins after 14:00', () => {
+      expect(CleaningService.isEarlyCheckin('14:01')).toBe(false);
+      expect(CleaningService.isEarlyCheckin('15:00')).toBe(false);
+      expect(CleaningService.isEarlyCheckin('18:30')).toBe(false);
+    });
+
+    it('should default to 14:00 when checkinTime is null', () => {
+      expect(CleaningService.isEarlyCheckin(null)).toBe(false);
+    });
+
+    it('should default to 14:00 when checkinTime is undefined', () => {
+      expect(CleaningService.isEarlyCheckin(undefined)).toBe(false);
+    });
+
+    it('should default to 14:00 when checkinTime is empty string', () => {
+      expect(CleaningService.isEarlyCheckin('')).toBe(false);
+    });
+  });
+
+  describe('calculateCleaningWindow', () => {
+    describe('Normal flow - valid windows', () => {
+      it('should calculate standard 3-hour window (11:00 to 14:00)', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '14:00');
+
+        expect(result).toEqual({
+          startTime: '11:00',
+          endTime: '14:00',
+          durationMinutes: 180,
+          isCritical: false,
+          isInvalid: false
+        });
+      });
+
+      it('should calculate 4-hour window (10:00 to 14:00)', () => {
+        const result = CleaningService.calculateCleaningWindow('10:00', '14:00');
+
+        expect(result.durationMinutes).toBe(240);
+        expect(result.isCritical).toBe(false);
+      });
+
+      it('should calculate 5-hour window (09:00 to 14:00)', () => {
+        const result = CleaningService.calculateCleaningWindow('09:00', '14:00');
+
+        expect(result.durationMinutes).toBe(300);
+        expect(result.isCritical).toBe(false);
+      });
+    });
+
+    describe('Critical windows (< 2 hours / 120 minutes)', () => {
+      it('should mark 119-minute window as critical', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '12:59');
+
+        expect(result.durationMinutes).toBe(119);
+        expect(result.isCritical).toBe(true);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should mark 60-minute window as critical', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '12:00');
+
+        expect(result.durationMinutes).toBe(60);
+        expect(result.isCritical).toBe(true);
+      });
+
+      it('should mark 30-minute window as critical', () => {
+        const result = CleaningService.calculateCleaningWindow('13:30', '14:00');
+
+        expect(result.durationMinutes).toBe(30);
+        expect(result.isCritical).toBe(true);
+      });
+
+      it('should NOT mark 120-minute window as critical (exactly threshold)', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '13:00');
+
+        expect(result.durationMinutes).toBe(120);
+        expect(result.isCritical).toBe(false);
+      });
+
+      it('should NOT mark 121-minute window as critical', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '13:01');
+
+        expect(result.durationMinutes).toBe(121);
+        expect(result.isCritical).toBe(false);
+      });
+    });
+
+    describe('Invalid windows (checkin before checkout)', () => {
+      it('should mark as invalid when checkin is before checkout', () => {
+        const result = CleaningService.calculateCleaningWindow('14:00', '11:00');
+
+        expect(result.startTime).toBe('14:00');
+        expect(result.endTime).toBe('11:00');
+        expect(result.durationMinutes).toBe(-180);
+        expect(result.isCritical).toBe(true);
+        expect(result.isInvalid).toBe(true);
+      });
+
+      it('should mark as invalid for 1-minute overlap', () => {
+        const result = CleaningService.calculateCleaningWindow('14:00', '13:59');
+
+        expect(result.durationMinutes).toBe(-1);
+        expect(result.isInvalid).toBe(true);
+      });
+    });
+
+    describe('Default values', () => {
+      it('should use 11:00 default when checkoutTime is null', () => {
+        const result = CleaningService.calculateCleaningWindow(null, '14:00');
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.durationMinutes).toBe(180);
+      });
+
+      it('should use 14:00 default when checkinTime is null', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', null);
+
+        expect(result.endTime).toBe('14:00');
+        expect(result.durationMinutes).toBe(180);
+      });
+
+      it('should use both defaults when both times are null', () => {
+        const result = CleaningService.calculateCleaningWindow(null, null);
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('14:00');
+        expect(result.durationMinutes).toBe(180);
+        expect(result.isCritical).toBe(false);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should use defaults for undefined values', () => {
+        const result = CleaningService.calculateCleaningWindow(undefined, undefined);
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('14:00');
+      });
+
+      it('should use defaults for empty strings', () => {
+        const result = CleaningService.calculateCleaningWindow('', '');
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('14:00');
+      });
+    });
+
+    describe('Edge cases - unusual times', () => {
+      it('should handle midnight checkout', () => {
+        const result = CleaningService.calculateCleaningWindow('00:00', '14:00');
+
+        expect(result.durationMinutes).toBe(840); // 14 hours
+        expect(result.isCritical).toBe(false);
+      });
+
+      it('should handle late night checkin', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '23:59');
+
+        expect(result.durationMinutes).toBe(779); // 12h 59min
+        expect(result.isCritical).toBe(false);
+      });
+
+      it('should handle same checkout and checkin time (zero window)', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', '11:00');
+
+        expect(result.durationMinutes).toBe(0);
+        expect(result.isCritical).toBe(true); // 0 < 120
+        expect(result.isInvalid).toBe(false); // Not negative
+      });
+    });
+  });
+
+  describe('getTomorrowCheckoutsForDashboard', () => {
+    let tomorrow, dayAfterTomorrow;
+
+    beforeEach(() => {
+      tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('No checkouts tomorrow', () => {
+      it('should return empty array when no checkouts tomorrow', async () => {
+        mockModelMethod(Reservation, 'find', []); // No checkouts
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result).toEqual([]);
+        expect(Reservation.find).toHaveBeenCalledWith({
+          status: 'active',
+          plannedCheckOut: { $gte: tomorrow, $lt: dayAfterTomorrow }
+        });
+      });
+    });
+
+    describe('Checkouts with no checkins', () => {
+      it('should return apartments with checkout only (no next checkin)', async () => {
+        const mockApartment = { _id: createMockObjectId(), name: 'Morača' };
+        const mockGuest = { fname: 'John', lname: 'Doe' };
+
+        const mockCheckoutReservation = {
+          _id: createMockObjectId(),
+          apartment: mockApartment,
+          guest: mockGuest,
+          plannedCheckOut: tomorrow,
+          plannedCheckoutTime: '11:00',
+          plannedCheckIn: new Date(tomorrow.getTime() - 86400000), // Yesterday
+          status: 'active'
+        };
+
+        // Mock checkout query
+        const checkoutChainable = createChainableMock([mockCheckoutReservation]);
+        Reservation.find.mockReturnValueOnce(checkoutChainable);
+
+        // Mock checkin query (empty)
+        const checkinChainable = createChainableMock([]);
+        Reservation.find.mockReturnValueOnce(checkinChainable);
+
+        // Mock cleanings query (empty)
+        const cleaningsChainable = createChainableMock([]);
+        ApartmentCleaning.find.mockReturnValue(cleaningsChainable);
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result).toHaveLength(1);
+        expect(result[0].apartment.name).toBe('Morača');
+        expect(result[0].checkoutReservation).toEqual(mockCheckoutReservation);
+        expect(result[0].checkinReservation).toBeNull();
+        expect(result[0].scheduledCleanings).toEqual([]);
+        expect(result[0].isLateCheckout).toBe(false); // 11:00 is default
+        expect(result[0].isEarlyCheckin).toBe(false); // No checkin
+      });
+    });
+
+    describe('Checkouts with same-day checkins', () => {
+      it('should aggregate checkout + checkin + cleaning window', async () => {
+        const mockApartment = { _id: createMockObjectId(), name: 'Tara' };
+        const mockCheckoutGuest = { fname: 'John', lname: 'Doe' };
+        const mockCheckinGuest = { fname: 'Jane', lname: 'Smith' };
+
+        const mockCheckoutReservation = {
+          _id: createMockObjectId(),
+          apartment: mockApartment,
+          guest: mockCheckoutGuest,
+          plannedCheckOut: tomorrow,
+          plannedCheckoutTime: '10:00',
+          status: 'active'
+        };
+
+        const mockCheckinReservation = {
+          _id: createMockObjectId(),
+          apartment: mockApartment._id,
+          guest: mockCheckinGuest,
+          plannedCheckIn: tomorrow,
+          plannedArrivalTime: '15:00',
+          status: 'active'
+        };
+
+        // Mock queries
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckoutReservation]));
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckinReservation]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([]));
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result).toHaveLength(1);
+        expect(result[0].checkinReservation).toEqual(mockCheckinReservation);
+        expect(result[0].cleaningWindow.startTime).toBe('10:00');
+        expect(result[0].cleaningWindow.endTime).toBe('15:00');
+        expect(result[0].cleaningWindow.durationMinutes).toBe(300); // 5 hours
+        expect(result[0].isLateCheckout).toBe(false); // 10:00 < 11:00
+        expect(result[0].isEarlyCheckin).toBe(false); // 15:00 > 14:00
+      });
+    });
+
+    describe('Late checkouts and early checkins', () => {
+      it('should set isLateCheckout=true for checkouts after 11:00', async () => {
+        const mockCheckout = {
+          _id: createMockObjectId(),
+          apartment: { _id: createMockObjectId(), name: 'Apt' },
+          guest: { fname: 'Test', lname: 'User' },
+          plannedCheckOut: tomorrow,
+          plannedCheckoutTime: '12:00', // LATE!
+          status: 'active'
+        };
+
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckout]));
+        Reservation.find.mockReturnValueOnce(createChainableMock([]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([]));
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result[0].isLateCheckout).toBe(true);
+      });
+
+      it('should set isEarlyCheckin=true for checkins before 14:00', async () => {
+        const aptId = createMockObjectId();
+
+        const mockCheckout = {
+          _id: createMockObjectId(),
+          apartment: { _id: aptId, name: 'Apt' },
+          guest: { fname: 'Out', lname: 'Guest' },
+          plannedCheckOut: tomorrow,
+          plannedCheckoutTime: '11:00',
+          status: 'active'
+        };
+
+        const mockCheckin = {
+          _id: createMockObjectId(),
+          apartment: aptId,
+          guest: { fname: 'In', lname: 'Guest' },
+          plannedCheckIn: tomorrow,
+          plannedArrivalTime: '13:00', // EARLY!
+          status: 'active'
+        };
+
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckout]));
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckin]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([]));
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result[0].isEarlyCheckin).toBe(true);
+      });
+    });
+
+    describe('Scheduled cleanings aggregation', () => {
+      it('should include scheduled cleanings for the apartment', async () => {
+        const aptId = createMockObjectId();
+        const cleaningLadyId = createMockObjectId();
+
+        const mockCheckout = {
+          _id: createMockObjectId(),
+          apartment: { _id: aptId, name: 'Apt' },
+          guest: { fname: 'Test', lname: 'User' },
+          plannedCheckOut: tomorrow,
+          status: 'active'
+        };
+
+        const mockCleaning = {
+          _id: createMockObjectId(),
+          apartmentId: aptId,
+          assignedTo: { _id: cleaningLadyId, fname: 'Ana', lname: 'Marić' },
+          scheduledStartTime: new Date(tomorrow.getTime() + 3600000), // Tomorrow + 1h
+          status: 'scheduled'
+        };
+
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckout]));
+        Reservation.find.mockReturnValueOnce(createChainableMock([]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([mockCleaning]));
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result[0].scheduledCleanings).toHaveLength(1);
+        expect(result[0].scheduledCleanings[0]).toEqual(mockCleaning);
+      });
+
+      it('should filter cleanings by apartment (multi-apartment scenario)', async () => {
+        const apt1Id = createMockObjectId();
+        const apt2Id = createMockObjectId();
+
+        const mockCheckout1 = {
+          _id: createMockObjectId(),
+          apartment: { _id: apt1Id, name: 'Apt1' },
+          guest: { fname: 'G1', lname: 'Guest1' },
+          plannedCheckOut: tomorrow,
+          status: 'active'
+        };
+
+        const mockCheckout2 = {
+          _id: createMockObjectId(),
+          apartment: { _id: apt2Id, name: 'Apt2' },
+          guest: { fname: 'G2', lname: 'Guest2' },
+          plannedCheckOut: tomorrow,
+          status: 'active'
+        };
+
+        const cleaning1 = { _id: createMockObjectId(), apartmentId: apt1Id, status: 'scheduled', scheduledStartTime: tomorrow };
+        const cleaning2 = { _id: createMockObjectId(), apartmentId: apt2Id, status: 'scheduled', scheduledStartTime: tomorrow };
+
+        Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckout1, mockCheckout2]));
+        Reservation.find.mockReturnValueOnce(createChainableMock([]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([cleaning1, cleaning2]));
+
+        const result = await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(result).toHaveLength(2);
+        expect(result[0].scheduledCleanings).toHaveLength(1);
+        expect(result[0].scheduledCleanings[0].apartmentId).toEqual(apt1Id);
+        expect(result[1].scheduledCleanings).toHaveLength(1);
+        expect(result[1].scheduledCleanings[0].apartmentId).toEqual(apt2Id);
+      });
+    });
+
+    describe('Sorting', () => {
+      it('should sort apartments by name', async () => {
+        const mockCheckouts = [
+          { _id: createMockObjectId(), apartment: { _id: createMockObjectId(), name: 'Tara' }, guest: {fname: 'A', lname: 'A'}, plannedCheckOut: tomorrow, status: 'active' },
+          { _id: createMockObjectId(), apartment: { _id: createMockObjectId(), name: 'Morača' }, guest: {fname: 'B', lname: 'B'}, plannedCheckOut: tomorrow, status: 'active' },
+          { _id: createMockObjectId(), apartment: { _id: createMockObjectId(), name: 'Ara' }, guest: {fname: 'C', lname: 'C'}, plannedCheckOut: tomorrow, status: 'active' }
+        ];
+
+        const chainable = createChainableMock(mockCheckouts);
+        Reservation.find.mockReturnValueOnce(chainable);
+        Reservation.find.mockReturnValueOnce(createChainableMock([]));
+        ApartmentCleaning.find.mockReturnValue(createChainableMock([]));
+
+        await CleaningService.getTomorrowCheckoutsForDashboard();
+
+        expect(chainable.sort).toHaveBeenCalledWith({ 'apartment.name': 1 });
       });
     });
   });

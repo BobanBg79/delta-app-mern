@@ -483,29 +483,152 @@ class CleaningService {
   }
 
   /**
-   * Get reservations with checkout tomorrow (for scheduling cleanings)
-   *
-   * @returns {Array} Reservations checking out tomorrow
+   * Check if checkout time is late (after 11:00)
+   * @param {String} checkoutTime - "HH:MM" format
+   * @returns {Boolean} True if checkout is after 11:00
    */
-  async getTomorrowCheckouts() {
+  isLateCheckout(checkoutTime) {
+    const DEFAULT_CHECKOUT = "11:00";
+    const checkout = checkoutTime || DEFAULT_CHECKOUT;
+
+    const [hours, minutes] = checkout.split(':').map(Number);
+    const checkoutMinutes = hours * 60 + minutes;
+    const defaultMinutes = 11 * 60; // 11:00
+
+    return checkoutMinutes > defaultMinutes;
+  }
+
+  /**
+   * Check if checkin time is early (before 14:00)
+   * @param {String} checkinTime - "HH:MM" format
+   * @returns {Boolean} True if checkin is before 14:00
+   */
+  isEarlyCheckin(checkinTime) {
+    const DEFAULT_CHECKIN = "14:00";
+    const checkin = checkinTime || DEFAULT_CHECKIN;
+
+    const [hours, minutes] = checkin.split(':').map(Number);
+    const checkinMinutes = hours * 60 + minutes;
+    const defaultMinutes = 14 * 60; // 14:00
+
+    return checkinMinutes < defaultMinutes;
+  }
+
+  /**
+   * Calculate cleaning window between checkout and checkin
+   * @param {String} checkoutTime - "HH:MM" format
+   * @param {String} checkinTime - "HH:MM" format
+   * @returns {Object} Cleaning window details
+   */
+  calculateCleaningWindow(checkoutTime, checkinTime) {
+    const DEFAULT_CHECKOUT = "11:00";
+    const DEFAULT_CHECKIN = "14:00";
+    const CRITICAL_THRESHOLD = 120; // minutes
+
+    const checkout = checkoutTime || DEFAULT_CHECKOUT;
+    const checkin = checkinTime || DEFAULT_CHECKIN;
+
+    // Parse times
+    const [ch, cm] = checkout.split(':').map(Number);
+    const [cih, cim] = checkin.split(':').map(Number);
+
+    // Calculate duration in minutes
+    const checkoutMinutes = ch * 60 + cm;
+    const checkinMinutes = cih * 60 + cim;
+    const diffMinutes = checkinMinutes - checkoutMinutes;
+
+    // Handle edge case: checkin before checkout (data error)
+    if (diffMinutes < 0) {
+      return {
+        startTime: checkout,
+        endTime: checkin,
+        durationMinutes: diffMinutes,
+        isCritical: true,
+        isInvalid: true
+      };
+    }
+
+    return {
+      startTime: checkout,
+      endTime: checkin,
+      durationMinutes: diffMinutes,
+      isCritical: diffMinutes < CRITICAL_THRESHOLD,
+      isInvalid: false
+    };
+  }
+
+  /**
+   * Get tomorrow's checkouts aggregated with checkins and scheduled cleanings
+   * For dashboard visualization
+   * @returns {Array} Aggregated apartment data
+   */
+  async getTomorrowCheckoutsForDashboard() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-
     const dayAfterTomorrow = new Date(tomorrow);
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
-    const reservations = await Reservation.find({
-      plannedCheckOut: {
-        $gte: tomorrow,
-        $lt: dayAfterTomorrow
-      }
+    // 1. Find all active checkouts for tomorrow
+    const checkoutReservations = await Reservation.find({
+      status: 'active',
+      plannedCheckOut: { $gte: tomorrow, $lt: dayAfterTomorrow }
     })
       .populate('apartment')
       .populate('guest')
-      .sort({ plannedCheckOut: 1 });
+      .sort({ 'apartment.name': 1 });
 
-    return reservations;
+    if (checkoutReservations.length === 0) {
+      return []; // No checkouts tomorrow
+    }
+
+    // 2. Extract apartment IDs
+    const apartmentIds = checkoutReservations.map(r => r.apartment._id);
+
+    // 3. Find check-ins for same apartments on same date
+    const checkinReservations = await Reservation.find({
+      status: 'active',
+      plannedCheckIn: { $gte: tomorrow, $lt: dayAfterTomorrow },
+      apartment: { $in: apartmentIds }
+    }).populate('guest');
+
+    // 4. Find scheduled cleanings for tomorrow
+    const scheduledCleanings = await ApartmentCleaning.find({
+      status: 'scheduled',
+      apartmentId: { $in: apartmentIds },
+      scheduledStartTime: { $gte: tomorrow, $lt: dayAfterTomorrow }
+    }).populate('assignedTo', 'fname lname');
+
+    // 5. Aggregate by apartment
+    return checkoutReservations.map(checkout => {
+      const aptId = checkout.apartment._id.toString();
+
+      const checkin = checkinReservations.find(
+        c => c.apartment._id.toString() === aptId
+      );
+
+      const aptCleanings = scheduledCleanings.filter(
+        cl => cl.apartmentId.toString() === aptId
+      );
+
+      const cleaningWindow = this.calculateCleaningWindow(
+        checkout.plannedCheckoutTime,
+        checkin?.plannedArrivalTime
+      );
+
+      const isLateCheckout = this.isLateCheckout(checkout.plannedCheckoutTime);
+      const isEarlyCheckin = checkin ? this.isEarlyCheckin(checkin.plannedArrivalTime) : false;
+
+      return {
+        apartment: checkout.apartment,
+        checkoutReservation: checkout,
+        checkinReservation: checkin || null,
+        scheduledCleanings: aptCleanings,
+        cleaningWindow,
+        isLateCheckout,
+        isEarlyCheckin
+      };
+    });
   }
 }
 
