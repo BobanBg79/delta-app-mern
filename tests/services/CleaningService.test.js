@@ -920,6 +920,57 @@ describe('CleaningService', () => {
         expect(result.isInvalid).toBe(false); // Not negative
       });
     });
+
+    describe('No next reservation (hasNextReservation = false)', () => {
+      it('should use end of day (23:59) when no next reservation', () => {
+        const result = CleaningService.calculateCleaningWindow('11:00', null, false);
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('23:59');
+        expect(result.durationMinutes).toBe(779); // 12h 59min
+        expect(result.isCritical).toBe(false);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should use end of day for late checkout with no next reservation', () => {
+        const result = CleaningService.calculateCleaningWindow('12:30', null, false);
+
+        expect(result.startTime).toBe('12:30');
+        expect(result.endTime).toBe('23:59');
+        expect(result.durationMinutes).toBe(689); // 11h 29min
+        expect(result.isCritical).toBe(false);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should use end of day for early checkout with no next reservation', () => {
+        const result = CleaningService.calculateCleaningWindow('09:00', null, false);
+
+        expect(result.startTime).toBe('09:00');
+        expect(result.endTime).toBe('23:59');
+        expect(result.durationMinutes).toBe(899); // 14h 59min
+        expect(result.isCritical).toBe(false);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should use default checkout (11:00) and end of day when both are null', () => {
+        const result = CleaningService.calculateCleaningWindow(null, null, false);
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('23:59');
+        expect(result.durationMinutes).toBe(779); // 12h 59min
+        expect(result.isCritical).toBe(false);
+        expect(result.isInvalid).toBe(false);
+      });
+
+      it('should ignore checkinTime parameter when hasNextReservation is false', () => {
+        // Even if checkinTime is provided, it should use END_OF_DAY
+        const result = CleaningService.calculateCleaningWindow('11:00', '14:00', false);
+
+        expect(result.startTime).toBe('11:00');
+        expect(result.endTime).toBe('23:59');
+        expect(result.durationMinutes).toBe(779);
+      });
+    });
   });
 
   describe('getTomorrowCheckoutsForDashboard', () => {

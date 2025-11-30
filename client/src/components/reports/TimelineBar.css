@@ -1,0 +1,155 @@
+/* Timeline Bar Container */
+.timeline-bar-container {
+  width: 100%;
+  padding: 20px 10px;
+  position: relative;
+}
+
+/* Timeline Track */
+.timeline-track {
+  position: relative;
+  height: 60px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px 0;
+}
+
+/* Timeline Labels (Time Axis) */
+.timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  position: absolute;
+  top: 5px;
+  left: 0;
+  right: 0;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  color: #666;
+  pointer-events: none;
+}
+
+.timeline-label {
+  font-weight: 500;
+}
+
+/* Cleaning Window Bar */
+.cleaning-window-bar {
+  position: absolute;
+  top: 30px;
+  height: 20px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cleaning-window-bar.normal {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: 1px solid #20c997;
+}
+
+.cleaning-window-bar.critical {
+  background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+  border: 1px solid #fd7e14;
+}
+
+.cleaning-window-bar.invalid {
+  background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+  border: 1px solid #dc3545;
+}
+
+.cleaning-window-label {
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  padding: 0 5px;
+}
+
+/* Checkout Time Marker */
+.checkout-marker {
+  position: absolute;
+  top: 25px;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.checkout-marker-line {
+  width: 3px;
+  height: 30px;
+  background: #007bff;
+  margin: 0 auto;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.checkout-marker.late .checkout-marker-line {
+  background: #dc3545;
+}
+
+.checkout-marker-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #007bff;
+  background: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid #007bff;
+}
+
+.checkout-marker.late .checkout-marker-label {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+/* Default Time Reference Lines */
+.default-checkout-line,
+.default-checkin-line {
+  position: absolute;
+  top: 25px;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.default-line {
+  width: 1px;
+  height: 30px;
+  background: #adb5bd;
+  border-left: 1px dashed #6c757d;
+  opacity: 0.5;
+}
+
+/* Hover Effects */
+.cleaning-window-bar:hover {
+  transform: scaleY(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 15;
+}
+
+.checkout-marker:hover .checkout-marker-line {
+  transform: scaleX(1.5);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .timeline-labels {
+    font-size: 0.65rem;
+  }
+
+  .cleaning-window-label {
+    font-size: 0.6rem;
+  }
+
+  .checkout-marker-label {
+    font-size: 0.65rem;
+  }
+}

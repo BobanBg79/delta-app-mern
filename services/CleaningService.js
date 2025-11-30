@@ -520,13 +520,18 @@ class CleaningService {
    * @param {String} checkinTime - "HH:MM" format
    * @returns {Object} Cleaning window details
    */
-  calculateCleaningWindow(checkoutTime, checkinTime) {
+  calculateCleaningWindow(checkoutTime, checkinTime, hasNextReservation = true) {
     const DEFAULT_CHECKOUT = "11:00";
     const DEFAULT_CHECKIN = "14:00";
+    const END_OF_DAY = "23:59";
     const CRITICAL_THRESHOLD = 120; // minutes
 
     const checkout = checkoutTime || DEFAULT_CHECKOUT;
-    const checkin = checkinTime || DEFAULT_CHECKIN;
+
+    // If no next reservation, use end of day instead of default checkin time
+    const checkin = hasNextReservation
+      ? (checkinTime || DEFAULT_CHECKIN)
+      : END_OF_DAY;
 
     // Parse times
     const [ch, cm] = checkout.split(':').map(Number);
@@ -613,7 +618,8 @@ class CleaningService {
 
       const cleaningWindow = this.calculateCleaningWindow(
         checkout.plannedCheckoutTime,
-        checkin?.plannedArrivalTime
+        checkin?.plannedArrivalTime,
+        !!checkin // hasNextReservation = true if checkin exists, false otherwise
       );
 
       const isLateCheckout = this.isLateCheckout(checkout.plannedCheckoutTime);

@@ -5,6 +5,13 @@ import * as cleaningOperations from '../../modules/cleaning/operations';
 // Mock the cleaning operations module
 jest.mock('../../modules/cleaning/operations');
 
+// Mock the TimelineBar component
+jest.mock('./TimelineBar', () => {
+  return function MockTimelineBar() {
+    return <div data-testid="timeline-bar">Timeline Bar Mock</div>;
+  };
+});
+
 describe('TomorrowCheckoutsReport Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -181,6 +188,7 @@ describe('TomorrowCheckoutsReport Component', () => {
         expect(screen.getByText('Checkout Time')).toBeInTheDocument();
         expect(screen.getByText('Current Guest')).toBeInTheDocument();
         expect(screen.getByText('Next Check-in')).toBeInTheDocument();
+        expect(screen.getByText('Cleaning Timeline')).toBeInTheDocument();
       });
     });
   });

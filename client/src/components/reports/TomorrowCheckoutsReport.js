@@ -6,6 +6,7 @@ import Card from 'react-bootstrap/Card';
 import Badge from 'react-bootstrap/Badge';
 import { getCheckoutTimelineDashboardData } from '../../modules/cleaning/operations';
 import { formatDateDefault } from '../../utils/date';
+import TimelineBar from './TimelineBar';
 
 const TomorrowCheckoutsReport = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -92,11 +93,12 @@ const TomorrowCheckoutsReport = () => {
                   <th className="text-center">Checkout Time</th>
                   <th className="text-center">Current Guest</th>
                   <th className="text-center">Next Check-in</th>
+                  <th className="text-center">Cleaning Timeline</th>
                 </tr>
               </thead>
               <tbody>
                 {dashboardData?.apartments?.map((aptData, index) => {
-                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout } = aptData;
+                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout, cleaningWindow } = aptData;
 
                   return (
                     <tr key={apartment?._id || index}>
@@ -136,6 +138,12 @@ const TomorrowCheckoutsReport = () => {
                         ) : (
                           <span className="text-muted">No next reservation</span>
                         )}
+                      </td>
+                      <td style={{ minWidth: '400px' }}>
+                        <TimelineBar
+                          cleaningWindow={cleaningWindow}
+                          isLateCheckout={isLateCheckout}
+                        />
                       </td>
                     </tr>
                   );
