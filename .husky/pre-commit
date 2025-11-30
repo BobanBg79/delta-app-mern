@@ -1,1 +1,9 @@
-npm test
+echo "🧪 Running backend tests with coverage..."
+npm run test:coverage
+
+if [ $? -ne 0 ]; then
+  echo "❌ Backend tests failed. Commit aborted."
+  exit 1
+fi
+
+echo "✅ Backend tests passed!"

@@ -28,6 +28,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --transformIgnorePatterns \"node_modules/(?!axios)/\"",
+    "test:coverage": "react-scripts test --coverage --watchAll=false --transformIgnorePatterns \"node_modules/(?!axios)/\"",
+    "test:coverage:html": "react-scripts test --coverage --watchAll=false --coverageReporters=html text lcov --transformIgnorePatterns \"node_modules/(?!axios)/\"",
+    "test:coverage:open": "npm run test:coverage:html && start coverage/index.html",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
