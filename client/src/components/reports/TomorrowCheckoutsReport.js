@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import Table from 'react-bootstrap/Table';
 import Alert from 'react-bootstrap/Alert';
 import Spinner from 'react-bootstrap/Spinner';
@@ -9,6 +10,7 @@ import { formatDateDefault } from '../../utils/date';
 import TimelineBar from './TimelineBar';
 
 const TomorrowCheckoutsReport = () => {
+  const history = useHistory();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,6 +45,13 @@ const TomorrowCheckoutsReport = () => {
     return plannedCheckoutTime || '11:00';
   };
 
+  // Navigation handler
+  const handleReservationClick = (reservationId) => {
+    if (reservationId) {
+      history.push(`/reservations/${reservationId}`);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="mb-4">
@@ -72,11 +81,7 @@ const TomorrowCheckoutsReport = () => {
     <Card className="mb-4">
       <Card.Header>
         <h5 className="mb-0">Tomorrow's Checkouts - Cleaning Schedule</h5>
-        {dashboardData?.date && (
-          <small className="text-muted">
-            {formatDateDefault(dashboardData.date)}
-          </small>
-        )}
+        {dashboardData?.date && <small className="text-muted">{formatDateDefault(dashboardData.date)}</small>}
       </Card.Header>
       <Card.Body>
         {dashboardData?.apartments?.length === 0 ? (
@@ -91,17 +96,22 @@ const TomorrowCheckoutsReport = () => {
                   <th className="text-center align-middle">Apartment reservation</th>
                   <th className="text-center align-middle">Checkout Time</th>
                   <th className="text-center align-middle">Cleaning Timeline</th>
+                  <th className="text-center align-middle">Check-in time</th>
                   <th className="text-center align-middle">Current Guest</th>
-                  <th className="text-center align-middle">Next Check-in</th>
                 </tr>
               </thead>
               <tbody>
                 {dashboardData?.apartments?.map((aptData, index) => {
-                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout, cleaningWindow } = aptData;
+                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout, isEarlyCheckin, cleaningWindow } =
+                    aptData;
 
                   return (
                     <tr key={apartment?._id || index}>
-                      <td className="text-center align-middle">
+                      <td
+                        className="text-center align-middle"
+                        onClick={() => handleReservationClick(checkoutReservation?._id)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <strong>{apartment?.name || 'N/A'}</strong>
                         <div className="text-muted" style={{ fontSize: '0.85rem' }}>
                           {formatReservationPeriod(
@@ -110,30 +120,40 @@ const TomorrowCheckoutsReport = () => {
                           )}
                         </div>
                       </td>
-                      <td className="text-center align-middle">
+                      <td
+                        className="text-center align-middle"
+                        onClick={() => handleReservationClick(checkoutReservation?._id)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <strong>{getCheckoutTime(checkoutReservation?.plannedCheckoutTime)}</strong>
+                        {!checkoutReservation?.plannedCheckoutTime && (
+                          <div className="text-muted" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                            (check-out time not provided by guest)
+                          </div>
+                        )}
                         {isLateCheckout && (
-                          <>
-                            {' '}
+                          <div className="mt-1">
                             <Badge bg="danger">Late check-out!</Badge>
-                          </>
+                          </div>
                         )}
                       </td>
-                      <td className="align-middle" style={{ minWidth: '400px' }}>
-                        <TimelineBar
-                          cleaningWindow={cleaningWindow}
-                          isLateCheckout={isLateCheckout}
-                        />
-                      </td>
-                      <td className="text-center align-middle">
-                        {checkoutReservation?.guest?.fname && checkoutReservation?.guest?.lname
-                          ? `${checkoutReservation.guest.fname} ${checkoutReservation.guest.lname}`
-                          : '-'}
+                      <td className="align-middle" style={{ minWidth: '500px', paddingLeft: '16px', paddingRight: '16px' }}>
+                        <TimelineBar cleaningWindow={cleaningWindow} isLateCheckout={isLateCheckout} />
                       </td>
                       <td className="text-center align-middle">
                         {checkinReservation ? (
                           <>
                             <strong>{checkinReservation.plannedArrivalTime || '14:00'}</strong>
+                            {!checkinReservation.plannedArrivalTime && (
+                              <div className="text-muted" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                (check-in time not provided by guest)
+                              </div>
+                            )}
+                            {isEarlyCheckin && (
+                              <div className="mt-1">
+                                <Badge bg="warning">Early check-in!</Badge>
+                              </div>
+                            )}
                             {checkinReservation.guest?.fname && checkinReservation.guest?.lname && (
                               <div className="text-muted" style={{ fontSize: '0.85rem' }}>
                                 {checkinReservation.guest.fname} {checkinReservation.guest.lname}
@@ -143,6 +163,9 @@ const TomorrowCheckoutsReport = () => {
                         ) : (
                           <span className="text-muted">No next reservation</span>
                         )}
+                      </td>
+                      <td className="text-center align-middle">
+                        {checkoutReservation?.guest?.contactPhone || '-'}
                       </td>
                     </tr>
                   );

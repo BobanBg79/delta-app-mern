@@ -5,6 +5,14 @@ import * as cleaningOperations from '../../modules/cleaning/operations';
 // Mock the cleaning operations module
 jest.mock('../../modules/cleaning/operations');
 
+// Mock react-router-dom
+const mockHistoryPush = jest.fn();
+jest.mock('react-router-dom', () => ({
+  useHistory: () => ({
+    push: mockHistoryPush,
+  }),
+}));
+
 // Mock the TimelineBar component
 jest.mock('./TimelineBar', () => {
   return function MockTimelineBar() {
@@ -151,15 +159,30 @@ describe('TomorrowCheckoutsReport Component', () => {
       });
     });
 
-    it('should display current guest name', async () => {
-      cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(mockDashboardData);
+    it('should display current guest contact phone', async () => {
+      const dataWithPhone = {
+        ...mockDashboardData,
+        apartments: [
+          {
+            ...mockDashboardData.apartments[0],
+            checkoutReservation: {
+              ...mockDashboardData.apartments[0].checkoutReservation,
+              guest: {
+                ...mockDashboardData.apartments[0].checkoutReservation.guest,
+                contactPhone: '+382 69 123 456'
+              }
+            }
+          }
+        ]
+      };
+      cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(dataWithPhone);
 
       await act(async () => {
         render(<TomorrowCheckoutsReport />);
       });
 
       await waitFor(() => {
-        expect(screen.getByText('John Doe')).toBeInTheDocument();
+        expect(screen.getByText('+382 69 123 456')).toBeInTheDocument();
       });
     });
 
@@ -186,7 +209,7 @@ describe('TomorrowCheckoutsReport Component', () => {
         expect(screen.getByText('Apartment reservation')).toBeInTheDocument();
         expect(screen.getByText('Checkout Time')).toBeInTheDocument();
         expect(screen.getByText('Current Guest')).toBeInTheDocument();
-        expect(screen.getByText('Next Check-in')).toBeInTheDocument();
+        expect(screen.getByText('Check-in time')).toBeInTheDocument();
         expect(screen.getByText('Cleaning Timeline')).toBeInTheDocument();
       });
     });
@@ -360,8 +383,6 @@ describe('TomorrowCheckoutsReport Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Morača')).toBeInTheDocument();
         expect(screen.getByText('Tara')).toBeInTheDocument();
-        expect(screen.getByText('John Doe')).toBeInTheDocument();
-        expect(screen.getByText('Jane Smith')).toBeInTheDocument();
       });
     });
   });

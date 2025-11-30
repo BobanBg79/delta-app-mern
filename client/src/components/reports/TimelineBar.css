@@ -1,8 +1,9 @@
 /* Timeline Bar Container */
 .timeline-bar-container {
   width: 100%;
-  padding: 0;
+  padding: 0 16px;
   position: relative;
+  border: 1px solid #ddd;
 }
 
 /* Timeline Track */
@@ -10,27 +11,25 @@
   position: relative;
   height: 60px;
   background: #f5f5f5;
-  border: 1px solid #ddd;
   border-radius: 4px;
   padding: 10px 0;
 }
 
 /* Timeline Labels (Time Axis) */
 .timeline-labels {
-  display: flex;
-  justify-content: space-between;
   position: absolute;
   top: 5px;
   left: 0;
   right: 0;
-  padding: 0 10px;
   font-size: 0.75rem;
   color: #666;
   pointer-events: none;
 }
 
 .timeline-label {
+  position: absolute;
   font-weight: 500;
+  transform: translateX(-50%);
 }
 
 /* Cleaning Window Bar */
@@ -111,21 +110,23 @@
   border-color: #dc3545;
 }
 
-/* Default Time Reference Lines */
-.default-checkout-line,
-.default-checkin-line {
+/* Grid Reference Lines */
+.grid-line {
   position: absolute;
   top: 25px;
-  transform: translateX(-50%);
-  z-index: 5;
-}
-
-.default-line {
   width: 1px;
   height: 30px;
-  background: #adb5bd;
-  border-left: 1px dashed #6c757d;
-  opacity: 0.5;
+  border-left: 1px dashed #d0d0d0;
+  opacity: 0.6;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Default times (11:00 and 14:00) have slightly stronger color */
+.grid-line.default-time {
+  border-left-color: #adb5bd;
+  opacity: 0.8;
 }
 
 /* Hover Effects */

@@ -30,15 +30,16 @@ describe('TimelineBar Component', () => {
       const timelineLabels = container.querySelector('.timeline-labels');
       expect(timelineLabels).toBeInTheDocument();
 
-      // Check that timeline labels container has all 6 time labels
+      // Check that timeline labels container has all 7 time labels
       const labels = timelineLabels.querySelectorAll('.timeline-label');
-      expect(labels).toHaveLength(6);
+      expect(labels).toHaveLength(7);
       expect(labels[0].textContent).toBe('00:00');
       expect(labels[1].textContent).toBe('06:00');
       expect(labels[2].textContent).toBe('11:00');
-      expect(labels[3].textContent).toBe('14:00');
-      expect(labels[4].textContent).toBe('18:00');
-      expect(labels[5].textContent).toBe('23:59');
+      expect(labels[3].textContent).toBe('12:00');
+      expect(labels[4].textContent).toBe('14:00');
+      expect(labels[5].textContent).toBe('18:00');
+      expect(labels[6].textContent).toBe('23:59');
     });
   });
 
@@ -62,23 +63,6 @@ describe('TimelineBar Component', () => {
       expect(screen.getByText('3h (11:00 - 14:00)')).toBeInTheDocument();
     });
 
-    it('should render checkout marker as normal when isLateCheckout is false', () => {
-      const cleaningWindow = {
-        startTime: '10:00',
-        endTime: '14:00',
-        durationMinutes: 240,
-        durationFormatted: '4h',
-        isCritical: false,
-        isInvalid: false
-      };
-
-      const { container } = render(
-        <TimelineBar cleaningWindow={cleaningWindow} isLateCheckout={false} />
-      );
-
-      const marker = container.querySelector('.checkout-marker.normal');
-      expect(marker).toBeInTheDocument();
-    });
   });
 
   describe('Critical cleaning window (< 2 hours)', () => {
@@ -124,24 +108,6 @@ describe('TimelineBar Component', () => {
   });
 
   describe('Late checkout scenario', () => {
-    it('should render late checkout marker with red color', () => {
-      const cleaningWindow = {
-        startTime: '12:00',
-        endTime: '14:00',
-        durationMinutes: 120,
-        durationFormatted: '2h',
-        isCritical: false,
-        isInvalid: false
-      };
-
-      const { container } = render(
-        <TimelineBar cleaningWindow={cleaningWindow} isLateCheckout={true} />
-      );
-
-      const marker = container.querySelector('.checkout-marker.late');
-      expect(marker).toBeInTheDocument();
-    });
-
     it('should render late checkout with critical window', () => {
       const cleaningWindow = {
         startTime: '12:30',
@@ -157,10 +123,8 @@ describe('TimelineBar Component', () => {
       );
 
       const bar = container.querySelector('.cleaning-window-bar.critical');
-      const marker = container.querySelector('.checkout-marker.late');
 
       expect(bar).toBeInTheDocument();
-      expect(marker).toBeInTheDocument();
       expect(screen.getByText('1h 30min (12:30 - 14:00)')).toBeInTheDocument();
     });
   });
@@ -262,7 +226,7 @@ describe('TimelineBar Component', () => {
       expect(container.querySelector('.timeline-track')).toBeInTheDocument();
     });
 
-    it('should render default reference lines', () => {
+    it('should render grid reference lines', () => {
       const cleaningWindow = {
         startTime: '11:00',
         endTime: '14:00',
@@ -276,8 +240,13 @@ describe('TimelineBar Component', () => {
         <TimelineBar cleaningWindow={cleaningWindow} isLateCheckout={false} />
       );
 
-      expect(container.querySelector('.default-checkout-line')).toBeInTheDocument();
-      expect(container.querySelector('.default-checkin-line')).toBeInTheDocument();
+      // Should have 7 grid lines (one for each time label)
+      const gridLines = container.querySelectorAll('.grid-line');
+      expect(gridLines).toHaveLength(7);
+
+      // Should have 2 default-time lines (11:00 and 14:00)
+      const defaultTimeLines = container.querySelectorAll('.grid-line.default-time');
+      expect(defaultTimeLines).toHaveLength(2);
     });
   });
 
@@ -305,28 +274,6 @@ describe('TimelineBar Component', () => {
       // width = 58.33% - 45.83% = 12.5%
       expect(bar.style.left).toBe('45.83333333333333%');
       expect(bar.style.width).toBe('12.500000000000007%');
-    });
-
-    it('should position checkout marker correctly in the DOM', () => {
-      const cleaningWindow = {
-        startTime: '11:00',
-        endTime: '14:00',
-        durationMinutes: 180,
-        durationFormatted: '3h',
-        isCritical: false,
-        isInvalid: false
-      };
-
-      const { container } = render(
-        <TimelineBar cleaningWindow={cleaningWindow} isLateCheckout={false} />
-      );
-
-      const marker = container.querySelector('.checkout-marker');
-      expect(marker).toBeInTheDocument();
-      // Check inline styles (positioning)
-      // Timeline: 00:00-24:00 (1440 minutes)
-      // 11:00 = 660/1440 * 100 = 45.83%
-      expect(marker.style.left).toBe('45.83333333333333%');
     });
   });
 });

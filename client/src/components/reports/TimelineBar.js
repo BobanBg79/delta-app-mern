@@ -51,17 +51,43 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
     barClass += ' normal'; // Green - sufficient time
   }
 
+  // Calculate label positions (same formula as bars)
+  const labelPositions = {
+    '00:00': 0,
+    '06:00': 25,
+    '11:00': 45.833333,
+    '12:00': 50,
+    '14:00': 58.333333,
+    '18:00': 75,
+    '23:59': 99.930556,
+  };
+
   return (
     <div className="timeline-bar-container">
       <div className="timeline-track">
         {/* Time axis labels */}
         <div className="timeline-labels">
-          <span className="timeline-label">00:00</span>
-          <span className="timeline-label">06:00</span>
-          <span className="timeline-label">11:00</span>
-          <span className="timeline-label">14:00</span>
-          <span className="timeline-label">18:00</span>
-          <span className="timeline-label">23:59</span>
+          <span className="timeline-label" style={{ left: `${labelPositions['00:00']}%` }}>
+            00:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['06:00']}%` }}>
+            06:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['11:00']}%` }}>
+            11:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['12:00']}%` }}>
+            12:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['14:00']}%` }}>
+            14:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['18:00']}%` }}>
+            18:00
+          </span>
+          <span className="timeline-label" style={{ left: `${labelPositions['23:59']}%` }}>
+            23:59
+          </span>
         </div>
 
         {/* Cleaning window bar */}
@@ -78,24 +104,31 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
         </div>
 
         {/* Checkout time marker */}
-        <div
+        {/* <div
           className={`checkout-marker ${isLateCheckout ? 'late' : 'normal'}`}
           style={{ left: `${checkoutPosition}%` }}
           title={`Checkout: ${startTime}`}
         >
           <div className="checkout-marker-line"></div>
           <div className="checkout-marker-label">{startTime}</div>
-        </div>
+        </div> */}
 
-        {/* Default checkout time reference line (11:00) */}
-        <div className="default-checkout-line" style={{ left: '45.83%' }} title="Default checkout: 11:00">
-          <div className="default-line"></div>
-        </div>
-
-        {/* Default checkin time reference line (14:00) */}
-        <div className="default-checkin-line" style={{ left: '58.33%' }} title="Default checkin: 14:00">
-          <div className="default-line"></div>
-        </div>
+        {/* Grid reference lines for all time labels */}
+        <div className="grid-line" style={{ left: `${labelPositions['00:00']}%` }}></div>
+        <div className="grid-line" style={{ left: `${labelPositions['06:00']}%` }}></div>
+        <div
+          className="grid-line default-time"
+          style={{ left: `${labelPositions['11:00']}%` }}
+          title="Default checkout: 11:00"
+        ></div>
+        <div className="grid-line" style={{ left: `${labelPositions['12:00']}%` }}></div>
+        <div
+          className="grid-line default-time"
+          style={{ left: `${labelPositions['14:00']}%` }}
+          title="Default checkin: 14:00"
+        ></div>
+        <div className="grid-line" style={{ left: `${labelPositions['18:00']}%` }}></div>
+        <div className="grid-line" style={{ left: `${labelPositions['23:59']}%` }}></div>
       </div>
     </div>
   );
