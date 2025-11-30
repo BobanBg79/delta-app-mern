@@ -1035,7 +1035,14 @@ describe('CleaningService', () => {
 
         expect(result).toHaveLength(1);
         expect(result[0].apartment.name).toBe('Morača');
-        expect(result[0].checkoutReservation).toEqual(mockCheckoutReservation);
+        expect(result[0].apartment._id).toEqual(mockApartment._id);
+        // Check only the fields that are returned in optimized response
+        expect(result[0].checkoutReservation._id).toEqual(mockCheckoutReservation._id);
+        expect(result[0].checkoutReservation.plannedCheckIn).toEqual(mockCheckoutReservation.plannedCheckIn);
+        expect(result[0].checkoutReservation.plannedCheckOut).toEqual(mockCheckoutReservation.plannedCheckOut);
+        expect(result[0].checkoutReservation.plannedCheckoutTime).toBe('11:00');
+        expect(result[0].checkoutReservation.guest.fname).toBe('John');
+        expect(result[0].checkoutReservation.guest.lname).toBe('Doe');
         expect(result[0].checkinReservation).toBeNull();
         expect(result[0].scheduledCleanings).toEqual([]);
         expect(result[0].isLateCheckout).toBe(false); // 11:00 is default
@@ -1075,7 +1082,12 @@ describe('CleaningService', () => {
         const result = await CleaningService.getTomorrowCheckoutsForDashboard();
 
         expect(result).toHaveLength(1);
-        expect(result[0].checkinReservation).toEqual(mockCheckinReservation);
+        // Check only the fields that are returned in optimized response
+        expect(result[0].checkinReservation._id).toEqual(mockCheckinReservation._id);
+        expect(result[0].checkinReservation.plannedCheckIn).toEqual(mockCheckinReservation.plannedCheckIn);
+        expect(result[0].checkinReservation.plannedArrivalTime).toBe('15:00');
+        expect(result[0].checkinReservation.guest.fname).toBe('Jane');
+        expect(result[0].checkinReservation.guest.lname).toBe('Smith');
         expect(result[0].cleaningWindow.startTime).toBe('10:00');
         expect(result[0].cleaningWindow.endTime).toBe('15:00');
         expect(result[0].cleaningWindow.durationMinutes).toBe(300); // 5 hours

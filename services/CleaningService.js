@@ -590,13 +590,14 @@ class CleaningService {
     const dayAfterTomorrow = new Date(tomorrow);
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
-    // 1. Find all active checkouts for tomorrow
+    // 1. Find all active checkouts for tomorrow - select only needed fields
     const checkoutReservations = await Reservation.find({
       status: 'active',
       plannedCheckOut: { $gte: tomorrow, $lt: dayAfterTomorrow }
     })
-      .populate('apartment')
-      .populate('guest')
+      .select('_id apartment plannedCheckIn plannedCheckOut plannedCheckoutTime guest')
+      .populate('apartment', 'name') // Only apartment name
+      .populate('guest', 'fname lname contactPhone') // Only guest basic info
       .sort({ 'apartment.name': 1 });
 
     if (checkoutReservations.length === 0) {
@@ -606,12 +607,14 @@ class CleaningService {
     // 2. Extract apartment IDs
     const apartmentIds = checkoutReservations.map(r => r.apartment._id);
 
-    // 3. Find check-ins for same apartments on same date
+    // 3. Find check-ins for same apartments on same date - select only needed fields
     const checkinReservations = await Reservation.find({
       status: 'active',
       plannedCheckIn: { $gte: tomorrow, $lt: dayAfterTomorrow },
       apartment: { $in: apartmentIds }
-    }).populate('guest');
+    })
+      .select('_id apartment plannedCheckIn plannedArrivalTime guest')
+      .populate('guest', 'fname lname'); // Only guest name for checkin
 
     // 4. Find scheduled cleanings for tomorrow
     const scheduledCleanings = await ApartmentCleaning.find({
@@ -642,9 +645,30 @@ class CleaningService {
       const isEarlyCheckin = checkin ? this.isEarlyCheckin(checkin.plannedArrivalTime) : false;
 
       return {
-        apartment: checkout.apartment,
-        checkoutReservation: checkout,
-        checkinReservation: checkin || null,
+        apartment: {
+          _id: checkout.apartment._id,
+          name: checkout.apartment.name
+        },
+        checkoutReservation: {
+          _id: checkout._id,
+          plannedCheckIn: checkout.plannedCheckIn,
+          plannedCheckOut: checkout.plannedCheckOut,
+          plannedCheckoutTime: checkout.plannedCheckoutTime,
+          guest: checkout.guest ? {
+            fname: checkout.guest.fname,
+            lname: checkout.guest.lname,
+            contactPhone: checkout.guest.contactPhone
+          } : null
+        },
+        checkinReservation: checkin ? {
+          _id: checkin._id,
+          plannedCheckIn: checkin.plannedCheckIn,
+          plannedArrivalTime: checkin.plannedArrivalTime,
+          guest: checkin.guest ? {
+            fname: checkin.guest.fname,
+            lname: checkin.guest.lname
+          } : null
+        } : null,
         scheduledCleanings: aptCleanings,
         cleaningWindow,
         isLateCheckout,
