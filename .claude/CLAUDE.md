@@ -126,6 +126,40 @@ This project uses **double-entry bookkeeping**. Every financial transaction affe
 - **Middleware:** `/middleware/` - Auth, permissions, validation
 - **Constants:** `/constants/` - Shared constants and enums
 - **Config:** `/config/` - Database connection, seeding
+- **Postman Collections:** `/postman/` - Postman JSON files for API testing
+
+### API Development & Documentation
+
+**CRITICAL:** When creating or modifying backend routes, **ALWAYS** create/update a corresponding Postman collection file.
+
+**Location:** `/postman/` folder in project root
+
+**Naming Convention:** `[feature-name].postman_collection.json`
+
+**Why this is important:**
+- Ensures all API endpoints are documented and testable
+- Facilitates API testing during development
+- Provides clear examples of request/response formats
+- Makes onboarding new developers easier
+
+**When to create/update Postman files:**
+- After creating a new route in `/routes/api/`
+- After modifying request/response structure of existing routes
+- After adding new query parameters or request body fields
+- After changing authentication/permission requirements
+
+**Example:**
+```
+New route: POST /api/apartment-cleanings
+Postman file: /postman/apartment-cleanings.postman_collection.json
+```
+
+**Postman Collection Structure:**
+- Group related endpoints into folders
+- Include all HTTP methods (GET, POST, PUT, DELETE)
+- Add example request bodies and query parameters
+- Document expected response formats
+- Include authentication headers (JWT token)
 
 ### Testing
 
