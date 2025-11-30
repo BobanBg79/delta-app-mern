@@ -85,15 +85,14 @@ const TomorrowCheckoutsReport = () => {
           </Alert>
         ) : (
           <div className="table-responsive">
-            <Table striped bordered hover size="sm">
+            <Table striped bordered hover size="sm" style={{ '--bs-table-cell-padding': '6px' }}>
               <thead>
                 <tr>
-                  <th className="text-center">Apartment</th>
-                  <th className="text-center">Reservation Period</th>
-                  <th className="text-center">Checkout Time</th>
-                  <th className="text-center">Current Guest</th>
-                  <th className="text-center">Next Check-in</th>
-                  <th className="text-center">Cleaning Timeline</th>
+                  <th className="text-center align-middle">Apartment reservation</th>
+                  <th className="text-center align-middle">Checkout Time</th>
+                  <th className="text-center align-middle">Cleaning Timeline</th>
+                  <th className="text-center align-middle">Current Guest</th>
+                  <th className="text-center align-middle">Next Check-in</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,16 +101,16 @@ const TomorrowCheckoutsReport = () => {
 
                   return (
                     <tr key={apartment?._id || index}>
-                      <td className="text-center">
+                      <td className="text-center align-middle">
                         <strong>{apartment?.name || 'N/A'}</strong>
+                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                          {formatReservationPeriod(
+                            checkoutReservation?.plannedCheckIn,
+                            checkoutReservation?.plannedCheckOut
+                          )}
+                        </div>
                       </td>
-                      <td className="text-center">
-                        {formatReservationPeriod(
-                          checkoutReservation?.plannedCheckIn,
-                          checkoutReservation?.plannedCheckOut
-                        )}
-                      </td>
-                      <td className="text-center">
+                      <td className="text-center align-middle">
                         <strong>{getCheckoutTime(checkoutReservation?.plannedCheckoutTime)}</strong>
                         {isLateCheckout && (
                           <>
@@ -120,12 +119,18 @@ const TomorrowCheckoutsReport = () => {
                           </>
                         )}
                       </td>
-                      <td className="text-center">
+                      <td className="align-middle" style={{ minWidth: '400px' }}>
+                        <TimelineBar
+                          cleaningWindow={cleaningWindow}
+                          isLateCheckout={isLateCheckout}
+                        />
+                      </td>
+                      <td className="text-center align-middle">
                         {checkoutReservation?.guest?.fname && checkoutReservation?.guest?.lname
                           ? `${checkoutReservation.guest.fname} ${checkoutReservation.guest.lname}`
                           : '-'}
                       </td>
-                      <td className="text-center">
+                      <td className="text-center align-middle">
                         {checkinReservation ? (
                           <>
                             <strong>{checkinReservation.plannedArrivalTime || '14:00'}</strong>
@@ -138,12 +143,6 @@ const TomorrowCheckoutsReport = () => {
                         ) : (
                           <span className="text-muted">No next reservation</span>
                         )}
-                      </td>
-                      <td style={{ minWidth: '400px' }}>
-                        <TimelineBar
-                          cleaningWindow={cleaningWindow}
-                          isLateCheckout={isLateCheckout}
-                        />
                       </td>
                     </tr>
                   );

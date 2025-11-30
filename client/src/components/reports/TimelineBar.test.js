@@ -19,6 +19,7 @@ describe('TimelineBar Component', () => {
       startTime: '10:00',
       endTime: '13:00',
       durationMinutes: 180,
+      durationFormatted: '3h',
       isCritical: false,
       isInvalid: false
     };
@@ -47,6 +48,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '14:00',
         durationMinutes: 180,
+        durationFormatted: '3h',
         isCritical: false,
         isInvalid: false
       };
@@ -57,7 +59,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.normal');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('11:00 - 14:00')).toBeInTheDocument();
+      expect(screen.getByText('3h (11:00 - 14:00)')).toBeInTheDocument();
     });
 
     it('should render checkout marker as normal when isLateCheckout is false', () => {
@@ -65,6 +67,7 @@ describe('TimelineBar Component', () => {
         startTime: '10:00',
         endTime: '14:00',
         durationMinutes: 240,
+        durationFormatted: '4h',
         isCritical: false,
         isInvalid: false
       };
@@ -84,6 +87,7 @@ describe('TimelineBar Component', () => {
         startTime: '12:00',
         endTime: '13:30',
         durationMinutes: 90,
+        durationFormatted: '1h 30min',
         isCritical: true,
         isInvalid: false
       };
@@ -94,7 +98,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.critical');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('12:00 - 13:30')).toBeInTheDocument();
+      expect(screen.getByText('1h 30min (12:00 - 13:30)')).toBeInTheDocument();
     });
   });
 
@@ -104,6 +108,7 @@ describe('TimelineBar Component', () => {
         startTime: '14:00',
         endTime: '12:00',
         durationMinutes: -120,
+        durationFormatted: '2h',
         isCritical: false,
         isInvalid: true
       };
@@ -114,7 +119,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.invalid');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('14:00 - 12:00')).toBeInTheDocument();
+      expect(screen.getByText('2h (14:00 - 12:00)')).toBeInTheDocument();
     });
   });
 
@@ -124,6 +129,7 @@ describe('TimelineBar Component', () => {
         startTime: '12:00',
         endTime: '14:00',
         durationMinutes: 120,
+        durationFormatted: '2h',
         isCritical: false,
         isInvalid: false
       };
@@ -141,6 +147,7 @@ describe('TimelineBar Component', () => {
         startTime: '12:30',
         endTime: '14:00',
         durationMinutes: 90,
+        durationFormatted: '1h 30min',
         isCritical: true,
         isInvalid: false
       };
@@ -154,7 +161,7 @@ describe('TimelineBar Component', () => {
 
       expect(bar).toBeInTheDocument();
       expect(marker).toBeInTheDocument();
-      expect(screen.getByText('12:30 - 14:00')).toBeInTheDocument();
+      expect(screen.getByText('1h 30min (12:30 - 14:00)')).toBeInTheDocument();
     });
   });
 
@@ -164,6 +171,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '11:30',
         durationMinutes: 30,
+        durationFormatted: '30 min',
         isCritical: true,
         isInvalid: false
       };
@@ -174,7 +182,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.critical');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('11:00 - 11:30')).toBeInTheDocument();
+      expect(screen.getByText('30 min (11:00 - 11:30)')).toBeInTheDocument();
     });
 
     it('should render long cleaning window (6 hours)', () => {
@@ -182,6 +190,7 @@ describe('TimelineBar Component', () => {
         startTime: '10:00',
         endTime: '16:00',
         durationMinutes: 360,
+        durationFormatted: '6h',
         isCritical: false,
         isInvalid: false
       };
@@ -192,7 +201,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.normal');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('10:00 - 16:00')).toBeInTheDocument();
+      expect(screen.getByText('6h (10:00 - 16:00)')).toBeInTheDocument();
     });
 
     it('should render early checkout (09:00)', () => {
@@ -200,6 +209,7 @@ describe('TimelineBar Component', () => {
         startTime: '09:00',
         endTime: '14:00',
         durationMinutes: 300,
+        durationFormatted: '5h',
         isCritical: false,
         isInvalid: false
       };
@@ -210,7 +220,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.normal');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('09:00 - 14:00')).toBeInTheDocument();
+      expect(screen.getByText('5h (09:00 - 14:00)')).toBeInTheDocument();
     });
 
     it('should render late evening checkin (18:00)', () => {
@@ -218,6 +228,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '18:00',
         durationMinutes: 420,
+        durationFormatted: '7h',
         isCritical: false,
         isInvalid: false
       };
@@ -228,7 +239,7 @@ describe('TimelineBar Component', () => {
 
       const bar = container.querySelector('.cleaning-window-bar.normal');
       expect(bar).toBeInTheDocument();
-      expect(screen.getByText('11:00 - 18:00')).toBeInTheDocument();
+      expect(screen.getByText('7h (11:00 - 18:00)')).toBeInTheDocument();
     });
   });
 
@@ -238,6 +249,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '14:00',
         durationMinutes: 180,
+        durationFormatted: '3h',
         isCritical: false,
         isInvalid: false
       };
@@ -255,6 +267,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '14:00',
         durationMinutes: 180,
+        durationFormatted: '3h',
         isCritical: false,
         isInvalid: false
       };
@@ -274,6 +287,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '14:00',
         durationMinutes: 180,
+        durationFormatted: '3h',
         isCritical: false,
         isInvalid: false
       };
@@ -298,6 +312,7 @@ describe('TimelineBar Component', () => {
         startTime: '11:00',
         endTime: '14:00',
         durationMinutes: 180,
+        durationFormatted: '3h',
         isCritical: false,
         isInvalid: false
       };

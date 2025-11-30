@@ -515,6 +515,20 @@ class CleaningService {
   }
 
   /**
+   * Format duration in minutes to human-readable string
+   * @param {Number} minutes - Duration in minutes
+   * @returns {String} Formatted duration (e.g., "3h", "2h 30min", "45 min")
+   */
+  formatDuration(minutes) {
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+  }
+
+  /**
    * Calculate cleaning window between checkout and checkin
    * @param {String} checkoutTime - "HH:MM" format
    * @param {String} checkinTime - "HH:MM" format
@@ -548,6 +562,7 @@ class CleaningService {
         startTime: checkout,
         endTime: checkin,
         durationMinutes: diffMinutes,
+        durationFormatted: this.formatDuration(Math.abs(diffMinutes)),
         isCritical: true,
         isInvalid: true
       };
@@ -557,6 +572,7 @@ class CleaningService {
       startTime: checkout,
       endTime: checkin,
       durationMinutes: diffMinutes,
+      durationFormatted: this.formatDuration(diffMinutes),
       isCritical: diffMinutes < CRITICAL_THRESHOLD,
       isInvalid: false
     };

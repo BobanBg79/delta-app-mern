@@ -183,8 +183,7 @@ describe('TomorrowCheckoutsReport Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Apartment')).toBeInTheDocument();
-        expect(screen.getByText('Reservation Period')).toBeInTheDocument();
+        expect(screen.getByText('Apartment reservation')).toBeInTheDocument();
         expect(screen.getByText('Checkout Time')).toBeInTheDocument();
         expect(screen.getByText('Current Guest')).toBeInTheDocument();
         expect(screen.getByText('Next Check-in')).toBeInTheDocument();

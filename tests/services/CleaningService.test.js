@@ -780,6 +780,7 @@ describe('CleaningService', () => {
           startTime: '11:00',
           endTime: '14:00',
           durationMinutes: 180,
+          durationFormatted: '3h',
           isCritical: false,
           isInvalid: false
         });

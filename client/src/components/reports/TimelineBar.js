@@ -17,11 +17,11 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
     return <div className="timeline-bar-container">No timeline data</div>;
   }
 
-  const { startTime, endTime, isCritical, isInvalid } = cleaningWindow;
+  const { startTime, endTime, durationFormatted, isCritical, isInvalid } = cleaningWindow;
 
   // Timeline configuration: 00:00 to 24:00 (24 hours = 1440 minutes)
-  const TIMELINE_START = 0 * 60;  // 00:00 (midnight) in minutes
-  const TIMELINE_END = 24 * 60;   // 24:00 (midnight) in minutes
+  const TIMELINE_START = 0 * 60; // 00:00 (midnight) in minutes
+  const TIMELINE_END = 24 * 60; // 24:00 (midnight) in minutes
   const TIMELINE_DURATION = TIMELINE_END - TIMELINE_START; // 1440 minutes
 
   // Helper: Convert "HH:MM" to minutes since midnight
@@ -69,11 +69,11 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
           className={barClass}
           style={{
             left: `${checkoutPosition}%`,
-            width: `${cleaningWindowWidth}%`
+            width: `${cleaningWindowWidth}%`,
           }}
         >
           <span className="cleaning-window-label">
-            {startTime} - {endTime}
+            {durationFormatted} ({startTime} - {endTime})
           </span>
         </div>
 
@@ -84,9 +84,7 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
           title={`Checkout: ${startTime}`}
         >
           <div className="checkout-marker-line"></div>
-          <div className="checkout-marker-label">
-            {startTime}
-          </div>
+          <div className="checkout-marker-label">{startTime}</div>
         </div>
 
         {/* Default checkout time reference line (11:00) */}
