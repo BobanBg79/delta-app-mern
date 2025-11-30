@@ -1,4 +1,6 @@
 import React from 'react';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
 import './TimelineBar.css';
 
 /**
@@ -91,17 +93,28 @@ const TimelineBar = ({ cleaningWindow, isLateCheckout }) => {
         </div>
 
         {/* Cleaning window bar */}
-        <div
-          className={barClass}
-          style={{
-            left: `${checkoutPosition}%`,
-            width: `${cleaningWindowWidth}%`,
-          }}
+        <OverlayTrigger
+          placement="top"
+          overlay={
+            <Tooltip id={`cleaning-window-tooltip`}>
+              <strong>Cleaning Window:</strong> {durationFormatted}
+              <br />
+              <strong>Time:</strong> {startTime} - {endTime}
+            </Tooltip>
+          }
         >
-          <span className="cleaning-window-label">
-            {durationFormatted} ({startTime} - {endTime})
-          </span>
-        </div>
+          <div
+            className={barClass}
+            style={{
+              left: `${checkoutPosition}%`,
+              width: `${cleaningWindowWidth}%`,
+            }}
+          >
+            <span className="cleaning-window-label">
+              {durationFormatted} ({startTime} - {endTime})
+            </span>
+          </div>
+        </OverlayTrigger>
 
         {/* Checkout time marker */}
         {/* <div
