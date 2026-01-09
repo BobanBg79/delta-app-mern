@@ -1175,7 +1175,10 @@ describe('CleaningService', () => {
         const result = await CleaningService.getTomorrowCheckoutsForDashboard();
 
         expect(result[0].scheduledCleanings).toHaveLength(1);
-        expect(result[0].scheduledCleanings[0]).toEqual(mockCleaning);
+        expect(result[0].scheduledCleanings[0]._id).toEqual(mockCleaning._id);
+        expect(result[0].scheduledCleanings[0].scheduledStartTime).toEqual(mockCleaning.scheduledStartTime);
+        expect(result[0].scheduledCleanings[0].assignedTo.fname).toBe('Ana');
+        expect(result[0].scheduledCleanings[0].assignedTo.lname).toBe('Marić');
       });
 
       it('should filter cleanings by apartment (multi-apartment scenario)', async () => {
@@ -1198,8 +1201,8 @@ describe('CleaningService', () => {
           status: 'active'
         };
 
-        const cleaning1 = { _id: createMockObjectId(), apartmentId: apt1Id, status: 'scheduled', scheduledStartTime: tomorrow };
-        const cleaning2 = { _id: createMockObjectId(), apartmentId: apt2Id, status: 'scheduled', scheduledStartTime: tomorrow };
+        const cleaning1 = { _id: createMockObjectId(), apartmentId: apt1Id, status: 'scheduled', scheduledStartTime: tomorrow, assignedTo: null };
+        const cleaning2 = { _id: createMockObjectId(), apartmentId: apt2Id, status: 'scheduled', scheduledStartTime: tomorrow, assignedTo: null };
 
         Reservation.find.mockReturnValueOnce(createChainableMock([mockCheckout1, mockCheckout2]));
         Reservation.find.mockReturnValueOnce(createChainableMock([]));
@@ -1209,9 +1212,9 @@ describe('CleaningService', () => {
 
         expect(result).toHaveLength(2);
         expect(result[0].scheduledCleanings).toHaveLength(1);
-        expect(result[0].scheduledCleanings[0].apartmentId).toEqual(apt1Id);
+        expect(result[0].scheduledCleanings[0]._id).toEqual(cleaning1._id);
         expect(result[1].scheduledCleanings).toHaveLength(1);
-        expect(result[1].scheduledCleanings[0].apartmentId).toEqual(apt2Id);
+        expect(result[1].scheduledCleanings[0]._id).toEqual(cleaning2._id);
       });
     });
 

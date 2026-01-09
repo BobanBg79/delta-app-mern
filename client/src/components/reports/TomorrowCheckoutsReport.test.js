@@ -211,6 +211,7 @@ describe('TomorrowCheckoutsReport Component', () => {
         expect(screen.getByText('Current Guest')).toBeInTheDocument();
         expect(screen.getByText('Check-in time')).toBeInTheDocument();
         expect(screen.getByText('Cleaning Timeline')).toBeInTheDocument();
+        expect(screen.getByText('Scheduled Cleanings')).toBeInTheDocument();
       });
     });
   });
@@ -383,6 +384,79 @@ describe('TomorrowCheckoutsReport Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Morača')).toBeInTheDocument();
         expect(screen.getByText('Tara')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Scheduled cleanings display', () => {
+    it('should display "No scheduled cleaning" when scheduledCleanings is empty', async () => {
+      const dataNoCleanings = {
+        date: '2025-11-30',
+        apartments: [
+          {
+            apartment: { _id: '1', name: 'Morača' },
+            checkoutReservation: {
+              _id: 'res1',
+              plannedCheckIn: '2025-11-29',
+              plannedCheckOut: '2025-11-30',
+              plannedCheckoutTime: '11:00',
+              guest: { fname: 'John', lname: 'Doe' }
+            },
+            checkinReservation: null,
+            scheduledCleanings: [],
+            cleaningWindow: { startTime: '11:00', endTime: '14:00', durationMinutes: 180, isCritical: false, isInvalid: false },
+            isLateCheckout: false,
+            isEarlyCheckin: false
+          }
+        ]
+      };
+      cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(dataNoCleanings);
+
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('No scheduled cleaning')).toBeInTheDocument();
+      });
+    });
+
+    it('should display scheduled cleaning time and assigned person', async () => {
+      const dataWithCleaning = {
+        date: '2025-11-30',
+        apartments: [
+          {
+            apartment: { _id: '1', name: 'Morača' },
+            checkoutReservation: {
+              _id: 'res1',
+              plannedCheckIn: '2025-11-29',
+              plannedCheckOut: '2025-11-30',
+              plannedCheckoutTime: '11:00',
+              guest: { fname: 'John', lname: 'Doe' }
+            },
+            checkinReservation: null,
+            scheduledCleanings: [
+              {
+                _id: 'clean1',
+                scheduledStartTime: '2025-11-30T12:30:00.000Z',
+                assignedTo: { fname: 'Ana', lname: 'Marić' }
+              }
+            ],
+            cleaningWindow: { startTime: '11:00', endTime: '14:00', durationMinutes: 180, isCritical: false, isInvalid: false },
+            isLateCheckout: false,
+            isEarlyCheckin: false
+          }
+        ]
+      };
+      cleaningOperations.getCheckoutTimelineDashboardData.mockResolvedValue(dataWithCleaning);
+
+      await act(async () => {
+        render(<TomorrowCheckoutsReport />);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('12:30')).toBeInTheDocument();
+        expect(screen.getByText('Ana Marić')).toBeInTheDocument();
       });
     });
   });

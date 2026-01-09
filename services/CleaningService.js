@@ -621,7 +621,9 @@ class CleaningService {
       status: 'scheduled',
       apartmentId: { $in: apartmentIds },
       scheduledStartTime: { $gte: tomorrow, $lt: dayAfterTomorrow }
-    }).populate('assignedTo', 'fname lname');
+    })
+      .select('_id apartmentId assignedTo scheduledStartTime')
+      .populate('assignedTo', 'fname lname');
 
     // 5. Aggregate by apartment
     return checkoutReservations.map(checkout => {
@@ -669,7 +671,14 @@ class CleaningService {
             lname: checkin.guest.lname
           } : null
         } : null,
-        scheduledCleanings: aptCleanings,
+        scheduledCleanings: aptCleanings.map(cl => ({
+          _id: cl._id,
+          scheduledStartTime: cl.scheduledStartTime,
+          assignedTo: cl.assignedTo ? {
+            fname: cl.assignedTo.fname,
+            lname: cl.assignedTo.lname
+          } : null
+        })),
         cleaningWindow,
         isLateCheckout,
         isEarlyCheckin

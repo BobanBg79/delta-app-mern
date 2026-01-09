@@ -21,8 +21,10 @@ This feature provides property managers with a visual timeline of tomorrow's apa
 ✅ **Visual Timeline** - See all checkouts on a 00:00-23:59 timeline (full 24-hour day)
 ✅ **Color-Coded Windows** - Instant identification of critical time windows
 ✅ **Late Checkout Detection** - Automatic flagging of checkouts after 11:00
+✅ **Scheduled Cleanings Display** - View existing scheduled cleanings with assigned staff
+✅ **Tooltip Support** - Hover over cleaning windows for detailed information
 ✅ **No Next Reservation Handling** - Cleaning windows extend to end of day when no same-day checkin
-✅ **Comprehensive Testing** - 114 tests (81 backend + 33 frontend) all passing
+✅ **Comprehensive Testing** - 113 tests (81 backend + 32 frontend) all passing
 
 ---
 
@@ -193,10 +195,10 @@ const cleaningWindow = {
 
 ### Frontend Tests
 **Files:**
-- `client/src/components/reports/TomorrowCheckoutsReport.test.js` (16 tests ✅)
-- `client/src/components/reports/TimelineBar.test.js` (17 tests ✅)
+- `client/src/components/reports/TomorrowCheckoutsReport.test.js` (18 tests ✅)
+- `client/src/components/reports/TimelineBar.test.js` (14 tests ✅)
 
-**Total:** 33 tests ✅ (17 TimelineBar + 16 TomorrowCheckoutsReport)
+**Total:** 32 tests ✅ (14 TimelineBar + 18 TomorrowCheckoutsReport)
 
 ---
 

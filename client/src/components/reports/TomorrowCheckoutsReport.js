@@ -97,12 +97,13 @@ const TomorrowCheckoutsReport = () => {
                   <th className="text-center align-middle">Checkout Time</th>
                   <th className="text-center align-middle">Cleaning Timeline</th>
                   <th className="text-center align-middle">Check-in time</th>
+                  <th className="text-center align-middle">Scheduled Cleanings</th>
                   <th className="text-center align-middle">Current Guest</th>
                 </tr>
               </thead>
               <tbody>
                 {dashboardData?.apartments?.map((aptData, index) => {
-                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout, isEarlyCheckin, cleaningWindow } =
+                  const { apartment, checkoutReservation, checkinReservation, isLateCheckout, isEarlyCheckin, cleaningWindow, scheduledCleanings } =
                     aptData;
 
                   return (
@@ -162,6 +163,30 @@ const TomorrowCheckoutsReport = () => {
                           </>
                         ) : (
                           <span className="text-muted">No next reservation</span>
+                        )}
+                      </td>
+                      <td className="text-center align-middle">
+                        {scheduledCleanings && scheduledCleanings.length > 0 ? (
+                          <div>
+                            {scheduledCleanings.map((cleaning, idx) => {
+                              // Format time as HH:MM from ISO string
+                              const timeStr = new Date(cleaning.scheduledStartTime).toISOString().substring(11, 16);
+                              return (
+                                <div key={cleaning._id || idx} className="mb-1">
+                                  <div>
+                                    <strong>{timeStr}</strong>
+                                  </div>
+                                  {cleaning.assignedTo && (
+                                    <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                                      {cleaning.assignedTo.fname} {cleaning.assignedTo.lname}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-muted">No scheduled cleaning</span>
                         )}
                       </td>
                       <td className="text-center align-middle">
