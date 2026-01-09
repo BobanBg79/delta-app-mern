@@ -1,0 +1,14 @@
+node_modules
+client/node_modules
+client/build
+.husky
+.mcp.json
+.git
+.env
+*.log
+.claude
+.continue
+docs
+tests
+coverage
+.vscode
