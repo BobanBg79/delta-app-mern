@@ -13,7 +13,11 @@ const configureAxios = (store) => {
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    config.headers['Content-Type'] = 'application/json';
+    // Don't override Content-Type for FormData (file uploads)
+    // Browser will automatically set the correct multipart/form-data with boundary
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
     return config;
   });
 
