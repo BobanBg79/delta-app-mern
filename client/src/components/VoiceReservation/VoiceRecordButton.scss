@@ -1,0 +1,55 @@
+// client/src/components/VoiceReservation/VoiceRecordButton.scss
+
+.voice-record-container {
+  display: inline-block;
+  position: relative;
+}
+
+.voice-record-btn {
+  min-width: 140px;
+
+  &.recording {
+    animation: pulse 1.5s infinite;
+  }
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: #dc3545;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #dc3545;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse-dot 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.recording-error {
+  font-size: 0.875rem;
+}

@@ -20,7 +20,8 @@ module.exports = {
     'services/**/*.js',
     'models/**/*.js',
     '!**/node_modules/**',
-    '!**/tests/**'
+    '!**/tests/**',
+    '!services/ai/**'  // AI services use external APIs, tested manually
   ],
   
   // Coverage thresholds (gradually increase as we add more tests)
