@@ -67,7 +67,8 @@ const ReservationsList = () => {
   // Load all reservations on component mount (empty search criteria = all reservations)
   useEffect(() => {
     loadReservations({}, 0);
-  }, [dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (reservationsFetching) return <div>Loading reservations...</div>;
 
