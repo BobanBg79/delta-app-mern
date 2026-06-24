@@ -18,23 +18,23 @@ const KontosList = () => {
   ];
 
   useEffect(() => {
+    const fetchKontos = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await getAllKontos(includeInactive);
+        setKontos(response.kontos || []);
+      } catch (err) {
+        console.error('Error fetching kontos:', err);
+        setError(err.errors ? err.errors.join(', ') : 'Failed to load kontos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchKontos();
   }, [includeInactive]);
-
-  const fetchKontos = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await getAllKontos(includeInactive);
-      setKontos(response.kontos || []);
-    } catch (err) {
-      console.error('Error fetching kontos:', err);
-      setError(err.errors ? err.errors.join(', ') : 'Failed to load kontos');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getTypeBadge = (type) => {
     const badges = {

@@ -22,42 +22,42 @@ const KontoDetails = () => {
   ];
 
   useEffect(() => {
+    const fetchKontoDetails = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await getKontoByCode(code);
+        setKonto(response.konto);
+      } catch (err) {
+        console.error('Error fetching konto details:', err);
+        setError(err.errors ? err.errors.join(', ') : 'Failed to load konto details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchTransactions = async () => {
+      setTransactionsLoading(true);
+
+      try {
+        const response = await getKontoTransactions(code, 50, 0);
+        setTransactions(response.transactions || []);
+        setTransactionsMeta({
+          total: response.total || 0,
+          hasMore: response.hasMore || false
+        });
+      } catch (err) {
+        console.error('Error fetching transactions:', err);
+        // Don't set error for transactions, just log it
+      } finally {
+        setTransactionsLoading(false);
+      }
+    };
+
     fetchKontoDetails();
     fetchTransactions();
   }, [code]);
-
-  const fetchKontoDetails = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await getKontoByCode(code);
-      setKonto(response.konto);
-    } catch (err) {
-      console.error('Error fetching konto details:', err);
-      setError(err.errors ? err.errors.join(', ') : 'Failed to load konto details');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTransactions = async () => {
-    setTransactionsLoading(true);
-
-    try {
-      const response = await getKontoTransactions(code, 50, 0);
-      setTransactions(response.transactions || []);
-      setTransactionsMeta({
-        total: response.total || 0,
-        hasMore: response.hasMore || false
-      });
-    } catch (err) {
-      console.error('Error fetching transactions:', err);
-      // Don't set error for transactions, just log it
-    } finally {
-      setTransactionsLoading(false);
-    }
-  };
 
   const getTypeBadge = (type) => {
     const badges = {

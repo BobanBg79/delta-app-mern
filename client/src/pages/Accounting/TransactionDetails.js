@@ -14,24 +14,24 @@ const TransactionDetails = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const fetchTransactionDetails = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await axios.get(`/api/accounting/transaction/${id}`);
+        setTransaction(response.data.transaction);
+        setRelatedTransactions(response.data.relatedTransactions || []);
+      } catch (err) {
+        console.error('Error fetching transaction details:', err);
+        setError(err.response?.data?.errors?.join(', ') || 'Failed to load transaction details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchTransactionDetails();
   }, [id]);
-
-  const fetchTransactionDetails = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await axios.get(`/api/accounting/transaction/${id}`);
-      setTransaction(response.data.transaction);
-      setRelatedTransactions(response.data.relatedTransactions || []);
-    } catch (err) {
-      console.error('Error fetching transaction details:', err);
-      setError(err.response?.data?.errors?.join(', ') || 'Failed to load transaction details');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatBalance = (balance) => {
     return new Intl.NumberFormat('de-DE', {

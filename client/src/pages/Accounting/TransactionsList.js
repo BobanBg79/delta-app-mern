@@ -1,5 +1,5 @@
 // client/src/pages/Accounting/TransactionsList.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
 import { Container, Table, Alert, Spinner, Badge, Button } from 'react-bootstrap';
 import axios from 'axios';
@@ -18,11 +18,7 @@ const TransactionsList = () => {
     pageSize: 20,
   });
 
-  useEffect(() => {
-    fetchTransactions(0);
-  }, []);
-
-  const fetchTransactions = async (page = 0) => {
+  const fetchTransactions = useCallback(async (page = 0) => {
     setLoading(true);
     setError(null);
 
@@ -52,7 +48,11 @@ const TransactionsList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [paginationData.pageSize]);
+
+  useEffect(() => {
+    fetchTransactions(0);
+  }, [fetchTransactions]);
 
   const handlePageChange = async (newPage) => {
     await fetchTransactions(newPage);
