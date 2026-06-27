@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Spinner from 'react-bootstrap/Spinner';
 import axios from 'axios';
+import ReportCardState from './reports/ReportCardState';
 
 const MonthlyIncomeReport = () => {
   const [stats, setStats] = useState(null);
@@ -28,27 +28,8 @@ const MonthlyIncomeReport = () => {
     fetchMonthlyStats();
   }, []); // Empty dependency array means this runs once on mount
 
-  if (loading) {
-    return (
-      <Card className="mb-4">
-        <Card.Body className="text-center">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="mb-4 border-danger">
-        <Card.Body>
-          <Card.Title className="text-danger">Error</Card.Title>
-          <p>{error}</p>
-        </Card.Body>
-      </Card>
-    );
+  if (loading || error) {
+    return <ReportCardState loading={loading} error={error} />;
   }
 
   return (

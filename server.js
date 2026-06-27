@@ -31,6 +31,7 @@ app.use('/api/apartment-cleanings', require('./routes/api/apartment-cleanings'))
 app.use('/api/roles', require('./routes/api/roles'));
 app.use('/api/permissions', require('./routes/api/permissions'));
 app.use('/api/ai', require('./routes/api/ai'));
+app.use('/api/reports', require('./routes/api/reports'));
 
 // Add this debug route alongside your existing permissions debug route
 app.get('/api/debug/roles', async (req, res) => {

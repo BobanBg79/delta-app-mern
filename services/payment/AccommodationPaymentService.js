@@ -200,16 +200,33 @@ class AccommodationPaymentService {
    * @returns {Number} totalPaid
    */
   async getTotalPaidForReservation(reservationId) {
-    const result = await AccommodationPayment.aggregate([
+    const paidByReservation = await this.getTotalPaidForReservations([reservationId]);
+    return paidByReservation[reservationId.toString()] || 0;
+  }
+
+  /**
+   * Get total paid amount for many reservations at once (no N+1).
+   * Payments add to total, refunds subtract from total.
+   * Reservations with no completed payments are simply absent from the map.
+   *
+   * @param {ObjectId[]} reservationIds
+   * @returns {Object} map of reservationId (string) -> totalPaid
+   */
+  async getTotalPaidForReservations(reservationIds) {
+    if (!reservationIds || reservationIds.length === 0) return {};
+
+    const objectIds = reservationIds.map((id) => mongoose.Types.ObjectId(id));
+
+    const results = await AccommodationPayment.aggregate([
       {
         $match: {
-          reservationId: mongoose.Types.ObjectId(reservationId),
+          reservationId: { $in: objectIds },
           status: 'completed'
         }
       },
       {
         $group: {
-          _id: null,
+          _id: '$reservationId',
           totalPaid: {
             $sum: {
               $cond: [
@@ -223,7 +240,10 @@ class AccommodationPaymentService {
       }
     ]);
 
-    return result.length > 0 ? result[0].totalPaid : 0;
+    return results.reduce((map, row) => {
+      map[row._id.toString()] = row.totalPaid;
+      return map;
+    }, {});
   }
 
   /**

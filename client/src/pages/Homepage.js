@@ -4,6 +4,7 @@ import Col from 'react-bootstrap/Col';
 import MonthlyIncomeReport from '../components/MonthlyIncomeReport';
 import CleaningLadyScheduledCleaningsReport from '../components/reports/CleaningLadyScheduledCleaningsReport';
 import TomorrowCheckoutsReport from '../components/reports/TomorrowCheckoutsReport';
+import UnpaidReservationsReport from '../components/reports/UnpaidReservationsReport';
 import { hasPermission } from '../utils/permissions';
 import { USER_PERMISSIONS } from '../constants';
 
@@ -24,6 +25,10 @@ const Homepage = () => {
 
   const userPermissions = user?.role?.permissions || [];
   const canCreateCleaning = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_CLEANING);
+  const canViewUnpaidReport = hasPermission(
+    userPermissions,
+    USER_PERMISSIONS.CAN_VIEW_UNPAID_RESERVATIONS_REPORT
+  );
 
   return (
     <Row>
@@ -36,6 +41,12 @@ const Homepage = () => {
           )}
           <h2>{`Welcome ${user.fname} ${user.lname}`}</h2>
         </div>
+
+        {canViewUnpaidReport && (
+          <div className="mt-4">
+            <UnpaidReservationsReport />
+          </div>
+        )}
 
         {canCreateCleaning && (
           <div className="mt-4">
