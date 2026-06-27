@@ -54,6 +54,20 @@ export const createUser = (userData) => async (dispatch) => {
   }
 };
 
+// Change a user's password (ADMIN only)
+export const changeUserPassword = (userId, password) => async (dispatch) => {
+  try {
+    await axios.put(`/api/users/${userId}/password`, { password });
+    dispatch(showMessageToast('Password updated successfully!', SUCCESS));
+    return { success: true };
+  } catch (err) {
+    console.error('Error changing password:', err);
+    const errorMsg = err.response?.data?.errors?.[0]?.msg || 'Failed to update password';
+    dispatch(showMessageToast(errorMsg, ERROR));
+    return { error: true };
+  }
+};
+
 // Update user
 export const updateUser = (userId, userData) => async (dispatch) => {
   try {

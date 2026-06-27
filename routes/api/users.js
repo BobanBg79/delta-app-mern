@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { check, validationResult } = require('express-validator');
 const auth = require('../../middleware/auth');
 const { requirePermission } = require('../../middleware/permission'); // Add permission middleware
@@ -10,6 +9,8 @@ const User = require('../../models/User');
 const Role = require('../../models/Role');
 const KontoService = require('../../services/accounting/KontoService');
 const { CASH_REGISTER_ROLES } = require('../../constants/userRoles');
+const { VALIDATION_PATTERNS, VALIDATION_MESSAGES } = require('../../constants/validation');
+const { hashPassword } = require('../../utils/passwordUtils');
 
 // @route    POST api/users/register
 // @desc     Create user
@@ -21,13 +22,7 @@ router.post(
   check('username', 'Username must be a valid email').isEmail(),
   check('fname', 'First name is required').notEmpty().trim(),
   check('lname', 'Last name is required').notEmpty().trim(),
-  check(
-    'password',
-    'Password must be at least 8 characters with at least one uppercase letter and one special character'
-  )
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
-    .withMessage('Password must contain at least one uppercase letter and one special character'),
+  check('password', VALIDATION_MESSAGES.PASSWORD_INVALID).matches(VALIDATION_PATTERNS.PASSWORD),
   check('role', 'Role ID is required').notEmpty().isMongoId(),
   // check('employeeId', 'Employee ID must be a valid ObjectId').optional().isMongoId(),
   async (req, res) => {
@@ -71,8 +66,7 @@ router.post(
 
       user = new User(userData);
 
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
+      user.password = await hashPassword(password);
 
       await user.save();
 
@@ -337,6 +331,65 @@ router.put(
 
       res.status(500).json({
         errors: [{ msg: 'Server error while updating user' }],
+      });
+    }
+  }
+);
+
+// @route    PUT api/users/:id/password
+// @desc     Change a user's password (ADMIN only, no current password required)
+// @access   Private (ADMIN role only)
+router.put(
+  '/:id/password',
+  auth,
+  check('id', 'Invalid user ID').isMongoId(),
+  check('password', VALIDATION_MESSAGES.PASSWORD_INVALID).matches(VALIDATION_PATTERNS.PASSWORD),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      // Only ADMIN can change passwords (own or anyone else's)
+      const requestingUser = await User.findById(req.user.id).populate('role', 'name');
+      if (!requestingUser || requestingUser.role?.name !== 'ADMIN') {
+        return res.status(403).json({
+          errors: [{ msg: 'Access denied. Only an admin can change passwords.' }],
+        });
+      }
+
+      const { password } = req.body;
+
+      const hashedPassword = await hashPassword(password);
+
+      // Update ONLY the password field. Using findByIdAndUpdate avoids
+      // re-validating the whole document (e.g. legacy users missing
+      // createdBy). The password itself is already validated above.
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        { $set: { password: hashedPassword } },
+        { new: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+      console.error('Change password error:', err.message);
+
+      if (err.kind === 'ObjectId') {
+        return res.status(404).json({
+          errors: [{ msg: 'User not found' }],
+        });
+      }
+
+      res.status(500).json({
+        errors: [{ msg: 'Server error while changing password' }],
       });
     }
   }

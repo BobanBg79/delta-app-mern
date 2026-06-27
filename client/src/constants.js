@@ -1,5 +1,12 @@
 export const accessToken = 'access_token';
 
+// Password rule - matches server-side validator (models/User.js & users route)
+// At least 8 chars, one uppercase letter, one special character.
+export const PASSWORD_REGEX =
+  /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+export const PASSWORD_RULE_MSG =
+  'Password must be at least 8 characters with at least one uppercase letter and one special character';
+
 // User permissions - matches server-side permission definitions
 export const USER_PERMISSIONS = {
   // User permissions

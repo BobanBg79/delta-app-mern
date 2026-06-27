@@ -14,9 +14,14 @@ const VALIDATION_PATTERNS = {
 
   // ISO8601 date (YYYY-MM-DD)
   DATE_ISO: /^\d{4}-\d{2}-\d{2}$/,
+
+  // Password: min 8 chars, at least one uppercase letter and one special character
+  PASSWORD: /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/,
 };
 
 const VALIDATION_MESSAGES = {
+  PASSWORD_INVALID:
+    'Password must be at least 8 characters with at least one uppercase letter and one special character',
   PHONE_REQUIRED: 'Contact number is required',
   PHONE_INVALID: 'Please provide a valid phone number',
   TIME_INVALID: 'Time must be in HH:MM format',

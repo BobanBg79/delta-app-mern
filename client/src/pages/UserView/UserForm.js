@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import RolePermissions from '../../components/RolePermissions';
 import { getRoles } from '../../modules/role/operations';
+import { PASSWORD_REGEX, PASSWORD_RULE_MSG } from '../../constants';
 
 const UserForm = ({
   formState,
@@ -88,12 +89,11 @@ const UserForm = ({
                     value={password}
                     onChange={onInputChange(['password'])}
                     minLength={8}
-                    pattern="^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':&quot;\\|,./?]).*$"
+                    pattern={PASSWORD_REGEX.source}
                     placeholder="Password"
                   />
                   <Form.Control.Feedback type="invalid">
-                    Password must be at least 8 characters with at least one uppercase letter and one special
-                    character.
+                    {PASSWORD_RULE_MSG}
                   </Form.Control.Feedback>
                 </FloatingLabel>
                 <Form.Text className="text-muted">

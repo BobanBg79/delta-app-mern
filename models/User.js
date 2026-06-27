@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { VALIDATION_PATTERNS, VALIDATION_MESSAGES } = require('../constants/validation');
 
 const UserSchema = new mongoose.Schema(
   {
@@ -35,9 +36,9 @@ const UserSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: function (v) {
-          return /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/.test(v);
+          return VALIDATION_PATTERNS.PASSWORD.test(v);
         },
-        message: 'Password must be at least 8 characters with at least one uppercase letter and one special character',
+        message: VALIDATION_MESSAGES.PASSWORD_INVALID,
       },
     },
     role: {

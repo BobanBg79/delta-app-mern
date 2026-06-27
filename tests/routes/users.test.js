@@ -5,6 +5,7 @@ const usersRouter = require('../../routes/api/users');
 const User = require('../../models/User');
 const Role = require('../../models/Role');
 const KontoService = require('../../services/accounting/KontoService');
+const { hashPassword } = require('../../utils/passwordUtils');
 const {
   suppressConsoleOutput,
   restoreConsoleOutput,
@@ -15,6 +16,7 @@ const {
 jest.mock('../../models/User');
 jest.mock('../../models/Role');
 jest.mock('../../services/accounting/KontoService');
+jest.mock('../../utils/passwordUtils');
 
 // Generate valid MongoDB ObjectIds for testing
 const mockUserId = new mongoose.Types.ObjectId();
@@ -241,6 +243,127 @@ describe('User Routes - Self-Deactivation Prevention', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.user.isActive).toBe(true);
+    });
+  });
+
+  describe('PUT /api/users/:id/password - Change Password (ADMIN only)', () => {
+    const validPassword = 'NewPass1!';
+
+    // The requesting user is always mockUserId (set by mocked auth middleware).
+    // Mock User.findById(...).populate('role','name') to return them with a role.
+    const mockRequestingUserAsAdmin = (roleName = 'ADMIN') => {
+      User.findById.mockReturnValue({
+        populate: jest.fn().mockResolvedValue({
+          _id: mockUserId,
+          role: { _id: mockRoleId, name: roleName },
+        }),
+      });
+    };
+
+    beforeEach(() => {
+      hashPassword.mockResolvedValue('hashed-password');
+    });
+
+    it('should allow an admin to change another user\'s password', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+      User.findByIdAndUpdate.mockResolvedValue({ _id: mockOtherUserId });
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Password updated successfully');
+    });
+
+    it('should allow an admin to change their own password', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+      User.findByIdAndUpdate.mockResolvedValue({ _id: mockUserId });
+
+      // Target id is the requesting admin's own id (mockUserId)
+      const response = await request(app)
+        .put(`/api/users/${mockUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Password updated successfully');
+    });
+
+    it('should hash the password and update ONLY the password field', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+      User.findByIdAndUpdate.mockResolvedValue({ _id: mockOtherUserId });
+
+      await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(hashPassword).toHaveBeenCalledWith(validPassword);
+      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+        mockOtherUserId.toString(),
+        { $set: { password: 'hashed-password' } },
+        { new: true }
+      );
+    });
+
+    it('should reject a non-admin requesting user with 403', async () => {
+      mockRequestingUserAsAdmin('MANAGER');
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(response.status).toBe(403);
+      expect(response.body.errors[0].msg).toBe(
+        'Access denied. Only an admin can change passwords.'
+      );
+      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 when the requesting user is not found', async () => {
+      User.findById.mockReturnValue({
+        populate: jest.fn().mockResolvedValue(null),
+      });
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(response.status).toBe(403);
+      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 when the target user does not exist', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+      User.findByIdAndUpdate.mockResolvedValue(null);
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: validPassword });
+
+      expect(response.status).toBe(404);
+      expect(response.body.errors[0].msg).toBe('User not found');
+    });
+
+    it('should reject with 400 when password is missing', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should reject with 400 when password does not meet complexity rules', async () => {
+      mockRequestingUserAsAdmin('ADMIN');
+
+      const response = await request(app)
+        .put(`/api/users/${mockOtherUserId}/password`)
+        .send({ password: 'weak' });
+
+      expect(response.status).toBe(400);
+      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
     });
   });
 });
