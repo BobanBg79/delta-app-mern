@@ -12,10 +12,19 @@ const PermissionSchema = new mongoose.Schema(
           // Validate CAN_{OPERATION}_{ENTITY} format or special permissions
           const standardPattern = /^CAN_(VIEW|CREATE|UPDATE|DEACTIVATE)_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO|CLEANING)$/;
           const sensitiveDataPattern = /^CAN_VIEW_(USER|ROLE|EMPLOYEE|APARTMENT|RESERVATION|KONTO|CLEANING)_SENSITIVE_DATA$/;
+          // Reports are read-only, query-derived views. Each report is its own
+          // permission so different roles can be granted different reports.
+          const reportPattern = /^CAN_VIEW_[A-Z_]+_REPORT$/;
           const specialPermissions = /^CAN_COMPLETE_CLEANING$/;
-          return standardPattern.test(v) || sensitiveDataPattern.test(v) || specialPermissions.test(v);
+          return (
+            standardPattern.test(v) ||
+            sensitiveDataPattern.test(v) ||
+            reportPattern.test(v) ||
+            specialPermissions.test(v)
+          );
         },
-        message: 'Permission must follow format: CAN_{OPERATION}_{ENTITY} or CAN_VIEW_{ENTITY}_SENSITIVE_DATA or be a special permission',
+        message:
+          'Permission must follow format: CAN_{OPERATION}_{ENTITY}, CAN_VIEW_{ENTITY}_SENSITIVE_DATA, CAN_VIEW_{NAME}_REPORT or be a special permission',
       },
     },
   },
@@ -50,7 +59,17 @@ PermissionSchema.statics.getAllPermissions = function () {
     'CAN_COMPLETE_CLEANING'
   ];
 
-  return [...standardPermissions, ...sensitiveDataPermissions, ...specialPermissions];
+  // Add report permissions (read-only, query-derived views; one per report)
+  const reportPermissions = [
+    'CAN_VIEW_UNPAID_RESERVATIONS_REPORT'
+  ];
+
+  return [
+    ...standardPermissions,
+    ...sensitiveDataPermissions,
+    ...specialPermissions,
+    ...reportPermissions,
+  ];
 };
 
 module.exports = mongoose.model('Permission', PermissionSchema);

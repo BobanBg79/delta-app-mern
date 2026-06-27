@@ -113,6 +113,9 @@ All permissions must follow strict naming conventions:
 // Sensitive data view permissions
 /^CAN_VIEW_(ENTITY)_SENSITIVE_DATA$/
 
+// Report permissions (read-only, query-derived views; one per report)
+/^CAN_VIEW_[A-Z_]+_REPORT$/
+
 // Special workflow permissions
 /^CAN_COMPLETE_CLEANING$/
 ```
@@ -121,9 +124,27 @@ All permissions must follow strict naming conventions:
 - ✅ `CAN_VIEW_USER` - Valid
 - ✅ `CAN_DEACTIVATE_APARTMENT` - Valid
 - ✅ `CAN_VIEW_USER_SENSITIVE_DATA` - Valid
+- ✅ `CAN_VIEW_UNPAID_RESERVATIONS_REPORT` - Valid (report permission)
 - ✅ `CAN_COMPLETE_CLEANING` - Valid (special permission)
 - ❌ `CAN_DELETE_USER` - Invalid (DELETE not allowed)
 - ❌ `CAN_CUSTOM_ACTION` - Invalid (doesn't follow pattern)
+
+### Report Permissions
+
+Reports are **read-only, query-derived views** (not entities), so they do not
+fit the `CAN_{OP}_{ENTITY}` CRUD model — there is no create/update/delete, only
+view. Each report is also its **own** permission, because different roles may be
+granted different reports (e.g. a report a HANDY_MAN sees but a CLEANING_LADY
+does not, and vice versa).
+
+- Naming: `CAN_VIEW_{NAME}_REPORT` (e.g. `CAN_VIEW_UNPAID_RESERVATIONS_REPORT`).
+- Added to `getAllPermissions()` in the `reportPermissions` array.
+- The frontend permission editor (`GroupedPermissions`) groups by the last
+  word of the permission name, so report permissions automatically appear under
+  a **"Report"** section — the same way `_SENSITIVE_DATA` permissions appear
+  under "Data".
+- Backend routes are protected with `requirePermission('CAN_VIEW_..._REPORT')`,
+  never with a role-name check.
 
 ## Sync Scenarios
 
@@ -331,6 +352,7 @@ hasPermission(permissions, 'CAN_DEACTIVATE_USER');
 New permissions must follow the established pattern:
 - Standard: `CAN_{OPERATION}_{ENTITY}`
 - Sensitive: `CAN_VIEW_{ENTITY}_SENSITIVE_DATA`
+- Report: `CAN_VIEW_{NAME}_REPORT` (read-only, one per report)
 - Special: Only for workflow-specific actions (e.g., `CAN_COMPLETE_CLEANING`)
 
 ### 4. Test Permission Sync
