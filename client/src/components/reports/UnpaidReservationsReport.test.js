@@ -86,6 +86,39 @@ describe('UnpaidReservationsReport', () => {
       expect(screen.getByText(/0601234567/)).toBeInTheDocument();
     });
 
+    it('should show the year once when check-in and check-out are the same year', async () => {
+      // sampleReservation: 01.06.2026 - 03.06.2026
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('01.06. - 03.06.2026')).toBeInTheDocument();
+      });
+    });
+
+    it('should show both years for a cross-year reservation', async () => {
+      axios.get.mockResolvedValue({
+        data: {
+          reservations: [
+            {
+              ...sampleReservation,
+              plannedCheckIn: '2025-12-28T00:00:00.000Z',
+              plannedCheckOut: '2026-01-02T00:00:00.000Z',
+            },
+          ],
+        },
+      });
+
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('28.12.2025 - 02.01.2026')).toBeInTheDocument();
+      });
+    });
+
     it('should navigate to the reservation details when a row is clicked', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);

@@ -16,6 +16,20 @@ const formatDate = (date) =>
     year: 'numeric',
   });
 
+// Show the year once at the end when check-in and check-out share a year,
+// otherwise show the year on both dates (e.g. cross-year reservations).
+const formatPeriod = (checkIn, checkOut) => {
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  const dayMonth = (d) =>
+    d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${dayMonth(start)} - ${formatDate(end)}`;
+  }
+  return `${formatDate(start)} - ${formatDate(end)}`;
+};
+
 const UnpaidReservationsReport = () => {
   const history = useHistory();
   const [reservations, setReservations] = useState([]);
@@ -63,7 +77,10 @@ const UnpaidReservationsReport = () => {
           <Table striped hover responsive className="mb-0">
             <thead>
               <tr>
-                <th>Apartment / Period / Agent / Contact</th>
+                <th>Apartment</th>
+                <th>Period</th>
+                <th>Agent</th>
+                <th>Contact</th>
                 <th className="text-end">Total</th>
                 <th className="text-end">Paid</th>
                 <th className="text-end">Outstanding</th>
@@ -77,18 +94,11 @@ const UnpaidReservationsReport = () => {
                   style={{ cursor: 'pointer' }}
                 >
                   <td>
-                    <div>
-                      <strong>{r.apartmentName || '—'}</strong>
-                    </div>
-                    <small className="text-muted">
-                      {formatDate(r.plannedCheckIn)} - {formatDate(r.plannedCheckOut)}
-                    </small>
-                    <div>
-                      <small className="text-muted">
-                        {r.bookingAgentName} · {r.phoneNumber || 'no contact'}
-                      </small>
-                    </div>
+                    <strong>{r.apartmentName || '—'}</strong>
                   </td>
+                  <td>{formatPeriod(r.plannedCheckIn, r.plannedCheckOut)}</td>
+                  <td>{r.bookingAgentName}</td>
+                  <td>{r.phoneNumber || '—'}</td>
                   <td className="text-end">{formatEur(r.totalAmount)}</td>
                   <td className="text-end">{formatEur(r.totalPaid)}</td>
                   <td className="text-end">
