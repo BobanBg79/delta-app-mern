@@ -4,3 +4,6 @@ node_modules
 # Test coverage
 coverage
 *.lcov
+
+# Local MCP config (contains secrets)
+.mcp.json
