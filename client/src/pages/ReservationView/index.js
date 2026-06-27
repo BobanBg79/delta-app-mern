@@ -8,6 +8,7 @@ import ReservationPaymentSection from './ReservationPaymentSection';
 import ApartmentCleaningSection from './ApartmentCleaningSection';
 import ReservationModel from './ReservationModel';
 import { VoiceReservationInput } from '../../components/VoiceReservation';
+import ReservationSummaryCard from './ReservationSummaryCard';
 import { getReservation, createReservation, updateReservation } from '../../modules/reservation/operations';
 import { reservationActions } from '../../modules/reservation';
 import { hasPermission } from '../../utils/permissions';
@@ -73,17 +74,18 @@ const ReservationView = () => {
       )}
 
       <FormContainer formContainerProps={formContainerProps}>
-        <ReservationFormWithLayout />
+        <ReservationFormWithLayout reservation={reservation}/>
       </FormContainer>
     </>
   );
 };
 
 // Wrapper component to handle the two-column layout
-const ReservationFormWithLayout = (props) => {
+const ReservationFormWithLayout = ({ reservation, ...props }) => {
   return (
     <>
       <Col xs={12} lg={6}>
+        <ReservationSummaryCard entity={reservation} />
         <ReservationForm {...props} />
       </Col>
       <Col xs={12} lg={6}>
