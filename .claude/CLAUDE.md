@@ -118,6 +118,28 @@ This project uses **double-entry bookkeeping**. Every financial transaction affe
    - Keep API clean and focused on business logic, not accounting implementation
    - Example: `completeCleaning()` returns only the `cleaning` document, not `{ cleaning, transactions }`
 
+### Authorization — ALWAYS permission-based, NEVER role-based
+
+**CRITICAL:** All access control in this project is based on **permissions**, not on role names. A role is just a bag of permissions; code must never branch on `role.name === 'ADMIN'` (or any role name) to gate access.
+
+1. **Backend:** protect every route with the `requirePermission('CAN_...')` middleware from `/middleware/permission.js`. Never check `role.name` in a route handler to decide access.
+   ```javascript
+   // ✅ Good
+   router.get('/x', auth, requirePermission('CAN_VIEW_RESERVATION'), handler);
+
+   // ❌ Bad — role-based gate
+   const user = await User.findById(req.user.id).populate('role', 'name');
+   if (user.role?.name !== 'ADMIN') return res.status(403)...
+   ```
+2. **Frontend:** gate UI with `hasPermission(userPermissions, USER_PERMISSIONS.CAN_...)`, not with `role.name === '...'`. (Showing/hiding UI is convenience only — the backend permission check is the real gate.)
+3. **Permission naming** (validated in `models/Permission.js`):
+   - Standard CRUD: `CAN_{VIEW|CREATE|UPDATE|DEACTIVATE}_{ENTITY}`
+   - Sensitive data: `CAN_VIEW_{ENTITY}_SENSITIVE_DATA`
+   - Reports (read-only, one per report): `CAN_VIEW_{NAME}_REPORT`
+   - Special workflow: e.g. `CAN_COMPLETE_CLEANING`
+4. **Adding a new permission:** add it to `Permission.getAllPermissions()`. On the next server start, `seedPermissions()` inserts it and `updateAdminRolePermissions()` grants it to ADMIN automatically. **ADMIN always gets every permission; all other roles are configured manually** via the role management UI. Also add the constant to `client/src/constants.js` (`USER_PERMISSIONS`).
+5. See `docs/rolesAndPermissions/adminRolePermissionSync.md` for the full sync mechanism.
+
 ### Code Location Patterns
 
 - **Models:** `/models/` - Mongoose schemas
