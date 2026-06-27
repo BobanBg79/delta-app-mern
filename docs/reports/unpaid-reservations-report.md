@@ -41,7 +41,27 @@ GET /api/reports/unpaid-reservations
 |----------|-------|
 | Auth | Required |
 | Permission | `CAN_VIEW_UNPAID_RESERVATIONS_REPORT` |
-| Query param | `fromDate` (optional) — numeric timestamp or ISO string |
+
+### Query parameters (all optional)
+
+| Param | Meaning |
+|-------|---------|
+| `fromDate` | Check-in lower bound (numeric timestamp or ISO) |
+| `toDate` | Check-in upper bound (numeric timestamp or ISO); defaults to "before today" |
+| `apartmentId` | Only reservations for this apartment |
+| `minDiff` | Only reservations whose outstanding amount (diff) is >= this |
+| `maxDiff` | Only reservations whose outstanding amount (diff) is <= this |
+| `page` | Page index (0-based, default 0) |
+| `pageSize` | Items per page (default 10) |
+
+### Where filtering happens
+
+- **DB-level** (in the Mongo query): `fromDate`/`toDate` (check-in window), `apartmentId`, plus the always-on `status: 'active'` and `plannedCheckIn < today`.
+- **In memory** (after the payments aggregate): `minDiff`/`maxDiff`, because the outstanding amount (diff) is derived from payments and does not exist on the reservation. Sorting and pagination also happen in memory for the same reason.
+
+### Sorting
+
+Results are sorted by check-in date **descending** (newest reservations first).
 
 ### The `fromDate` parameter
 
@@ -71,11 +91,16 @@ Date parsing: a numeric timestamp string is parsed as a Number; otherwise it is 
       "totalPaid": 40,
       "diff": 60
     }
-  ]
+  ],
+  "total": 23,
+  "page": 0,
+  "pageSize": 10
 }
 ```
 
-Sorted by check-in date ascending (oldest debt first).
+`total` is the count after all filters (used by the client to compute the
+number of pages); the client derives page count as `ceil(total / pageSize)`
+rather than relying on a `hasMore` flag.
 
 ---
 
@@ -89,6 +114,18 @@ Sorted by check-in date ascending (oldest debt first).
 4. `AccommodationPaymentService.getTotalPaidForReservations(ids)` — a single aggregate that sums completed payments per reservation (refunds counted as negative), returning a `{ reservationId: totalPaid }` map.
 
 The number of queries does not grow with the number of reservations or payments.
+
+### Frontend
+
+| File | Responsibility |
+|------|----------------|
+| `components/reports/UnpaidReservationsReport.js` | Fetches with filters + page, renders the table and pagination |
+| `components/reports/UnpaidReservationsFilters.js` | Filter bar: apartment, check-in period, "owes more/less than" (min/max diff), Search/Clear |
+| `components/reports/ReportCardState.js` | Shared loading/error card |
+
+The homepage always sends `fromDate = now - 12 months` and page 0 on load;
+the user's period filter overrides the window. Filters are preserved when
+changing pages. Page size is 10.
 
 ### Why totalPaid is derived
 
@@ -107,6 +144,9 @@ The per-row `diff` is `totalAmount - totalPaid`. When the write-off feature exis
 - Authorization: rejected without the permission (403), allowed with it.
 - Report logic: only `totalPaid < totalAmount` rows returned, diff calculation, "Direct Reservation" default, empty list shortcut, sort order.
 - Date filtering: always bounded by today; no lower bound without `fromDate`; numeric timestamp parsed into a valid lower bound; a reservation 370 days old falls outside a 12-month window.
+- Search & pagination: `apartmentId` passed into the DB query; `minDiff`/`maxDiff` filter the outstanding amount; pagination returns `total`/`page`/`pageSize` and slices correctly on the last page; sort is newest-check-in first.
+
+Frontend: `components/reports/UnpaidReservationsReport.test.js` covers loading/error/empty states, row rendering, compact period (same-year vs cross-year), row-click navigation, and that the request uses a ~12-month `fromDate`.
 
 ---
 

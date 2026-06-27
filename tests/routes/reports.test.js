@@ -158,19 +158,10 @@ describe('GET /api/reports/unpaid-reservations', () => {
       expect(AccommodationPayment.aggregate).not.toHaveBeenCalled();
     });
 
-    it('should sort results by check-in date ascending', async () => {
+    it('should sort results by check-in date descending (newest first)', async () => {
       const older = new mongoose.Types.ObjectId();
       const newer = new mongoose.Types.ObjectId();
       mockReservationFind([
-        {
-          _id: newer,
-          totalAmount: 100,
-          plannedCheckIn: new Date('2026-06-10'),
-          plannedCheckOut: new Date('2026-06-12'),
-          apartment: { name: 'B' },
-          bookingAgent: null,
-          phoneNumber: '',
-        },
         {
           _id: older,
           totalAmount: 100,
@@ -180,15 +171,113 @@ describe('GET /api/reports/unpaid-reservations', () => {
           bookingAgent: null,
           phoneNumber: '',
         },
+        {
+          _id: newer,
+          totalAmount: 100,
+          plannedCheckIn: new Date('2026-06-10'),
+          plannedCheckOut: new Date('2026-06-12'),
+          apartment: { name: 'B' },
+          bookingAgent: null,
+          phoneNumber: '',
+        },
       ]);
       AccommodationPayment.aggregate.mockResolvedValue([]);
 
       const response = await request(app).get('/api/reports/unpaid-reservations');
 
       expect(response.body.reservations.map((r) => r._id)).toEqual([
-        older.toString(),
         newer.toString(),
+        older.toString(),
       ]);
+    });
+  });
+
+  describe('Search filters & pagination', () => {
+    beforeEach(() => {
+      mockRolePermissions([REPORT_PERMISSION]);
+    });
+
+    const threeUnpaid = () => {
+      const ids = [
+        new mongoose.Types.ObjectId(),
+        new mongoose.Types.ObjectId(),
+        new mongoose.Types.ObjectId(),
+      ];
+      mockReservationFind(
+        ids.map((id, i) => ({
+          _id: id,
+          totalAmount: 100,
+          plannedCheckIn: new Date(`2026-06-0${i + 1}`),
+          plannedCheckOut: new Date(`2026-06-0${i + 2}`),
+          apartment: { name: `Apt ${i}` },
+          bookingAgent: null,
+          phoneNumber: '',
+        }))
+      );
+      // diffs: id0 -> 100, id1 -> 50, id2 -> 10
+      AccommodationPayment.aggregate.mockResolvedValue([
+        { _id: ids[1], totalPaid: 50 },
+        { _id: ids[2], totalPaid: 90 },
+      ]);
+      return ids;
+    };
+
+    it('should pass apartmentId into the DB query', async () => {
+      mockReservationFind([]);
+      const apartmentId = new mongoose.Types.ObjectId().toString();
+
+      await request(app)
+        .get('/api/reports/unpaid-reservations')
+        .query({ apartmentId });
+
+      expect(Reservation.find.mock.calls[0][0].apartment).toBe(apartmentId);
+    });
+
+    it('should filter by minDiff (outstanding amount)', async () => {
+      threeUnpaid();
+
+      const response = await request(app)
+        .get('/api/reports/unpaid-reservations')
+        .query({ minDiff: 50 });
+
+      // only diffs >= 50 remain (100 and 50)
+      const diffs = response.body.reservations.map((r) => r.diff).sort((a, b) => a - b);
+      expect(diffs).toEqual([50, 100]);
+    });
+
+    it('should filter by maxDiff (outstanding amount)', async () => {
+      threeUnpaid();
+
+      const response = await request(app)
+        .get('/api/reports/unpaid-reservations')
+        .query({ maxDiff: 50 });
+
+      // only diffs <= 50 remain (50 and 10)
+      const diffs = response.body.reservations.map((r) => r.diff).sort((a, b) => a - b);
+      expect(diffs).toEqual([10, 50]);
+    });
+
+    it('should paginate and return total/page/pageSize', async () => {
+      threeUnpaid();
+
+      const response = await request(app)
+        .get('/api/reports/unpaid-reservations')
+        .query({ page: 0, pageSize: 2 });
+
+      expect(response.body.total).toBe(3);
+      expect(response.body.page).toBe(0);
+      expect(response.body.pageSize).toBe(2);
+      expect(response.body.reservations).toHaveLength(2);
+    });
+
+    it('should return the remaining items on the last page', async () => {
+      threeUnpaid();
+
+      const response = await request(app)
+        .get('/api/reports/unpaid-reservations')
+        .query({ page: 1, pageSize: 2 });
+
+      expect(response.body.reservations).toHaveLength(1);
     });
   });
 

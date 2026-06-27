@@ -8,6 +8,11 @@ jest.mock('axios', () => ({
   default: { get: jest.fn() },
 }));
 
+// Mock react-redux useSelector (filters read apartments from the store)
+jest.mock('react-redux', () => ({
+  useSelector: (fn) => fn({ apartments: { apartments: [] } }),
+}));
+
 // Mock react-router-dom's useHistory
 const mockHistoryPush = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -64,7 +69,7 @@ describe('UnpaidReservationsReport', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/no unpaid reservations/i)).toBeInTheDocument();
+        expect(screen.getByText(/no unpaid reservations for these filters/i)).toBeInTheDocument();
       });
     });
   });

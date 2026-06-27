@@ -22,35 +22,51 @@ router.get(
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    // Optional lower bound. The caller decides the window: the homepage sends
-    // fromDate = now - 12 months (actionable, recent debts), while a future
-    // "all debts" report can omit it to get everything. Keeps the candidate
-    // list bounded without hard-coding a business window on the server.
-    // Date param may be a numeric timestamp string or an ISO string.
-    const { fromDate } = req.query;
-    const checkInFilter = { $lt: startOfToday };
-    if (fromDate) {
-      const asNumber = Number(fromDate);
-      checkInFilter.$gte = new Date(Number.isNaN(asNumber) ? fromDate : asNumber);
-    }
+    const { fromDate, toDate, apartmentId, minDiff, maxDiff, page, pageSize } = req.query;
 
-    // Active reservations whose check-in is before today (and after fromDate, if given)
-    const reservations = await Reservation.find({
+    // Parse a date query param that may be a numeric timestamp string or ISO.
+    const parseDate = (value) => {
+      const asNumber = Number(value);
+      return new Date(Number.isNaN(asNumber) ? value : asNumber);
+    };
+
+    // Check-in window. Upper bound defaults to "before today"; an explicit
+    // toDate (from the period filter) narrows it further. fromDate is the
+    // optional lower bound (homepage sends now - 12 months).
+    const checkInFilter = { $lt: startOfToday };
+    if (toDate) checkInFilter.$lt = parseDate(toDate);
+    if (fromDate) checkInFilter.$gte = parseDate(fromDate);
+
+    const query = {
       status: 'active',
       plannedCheckIn: checkInFilter,
-    })
+    };
+    if (apartmentId) query.apartment = apartmentId;
+
+    // Active reservations matching the (DB-level) filters
+    const reservations = await Reservation.find(query)
       .populate('apartment', 'name')
       .populate('bookingAgent', 'name')
       .lean();
 
+    const pageNum = Math.max(0, Number(page) || 0);
+    const size = Math.max(1, Number(pageSize) || 10);
+
     if (reservations.length === 0) {
-      return res.json({ reservations: [] });
+      return res.json({ reservations: [], total: 0, page: pageNum, pageSize: size });
     }
 
     // Sum completed payments per reservation in one batch query (no N+1).
     const reservationIds = reservations.map((r) => r._id);
     const paidByReservation =
       await AccommodationPaymentService.getTotalPaidForReservations(reservationIds);
+
+    // minDiff / maxDiff filter on the outstanding amount (diff), which is
+    // derived and therefore filtered in memory.
+    const minDiffNum = minDiff !== undefined ? Number(minDiff) : null;
+    const maxDiffNum = maxDiff !== undefined ? Number(maxDiff) : null;
+    const withinDiffRange = (diff) =>
+      (minDiffNum === null || diff >= minDiffNum) && (maxDiffNum === null || diff <= maxDiffNum);
 
     const unpaid = reservations
       .map((r) => {
@@ -71,10 +87,15 @@ router.get(
           diff,
         };
       })
-      .filter((r) => r.totalPaid < r.totalAmount)
-      .sort((a, b) => new Date(a.plannedCheckIn) - new Date(b.plannedCheckIn));
+      .filter((r) => r.totalPaid < r.totalAmount && withinDiffRange(r.diff))
+      // Default sort: newest check-in first
+      .sort((a, b) => new Date(b.plannedCheckIn) - new Date(a.plannedCheckIn));
 
-    res.json({ reservations: unpaid });
+    const total = unpaid.length;
+    const start = pageNum * size;
+    const pageItems = unpaid.slice(start, start + size);
+
+    res.json({ reservations: pageItems, total, page: pageNum, pageSize: size });
   } catch (error) {
     console.error('Unpaid reservations report error:', error.message);
     res.status(500).json({ errors: [{ msg: 'Server error' }] });

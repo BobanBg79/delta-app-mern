@@ -29,6 +29,12 @@ jest.mock('../components/reports/TomorrowCheckoutsReport', () => {
   };
 });
 
+jest.mock('../components/reports/UnpaidReservationsReport', () => {
+  return function UnpaidReservationsReport() {
+    return <div data-testid="unpaid-reservations-report">Unpaid Reservations Report</div>;
+  };
+});
+
 // Helper to create mock Redux store
 const createMockStore = (userState) => {
   const rootReducer = (state = {}, action) => {
