@@ -238,11 +238,31 @@ router.patch('/konto/:code/deactivate', auth, requirePermission('CAN_DEACTIVATE_
 // @access   Private
 router.get('/transactions', auth, requirePermission('CAN_VIEW_KONTO'), async (req, res) => {
   try {
-    const { limit = 50, offset = 0 } = req.query;
+    const { limit = 50, offset = 0, startDate, endDate, kontoCode, type, sourceType } = req.query;
     const Transaction = require('../../models/Transaction');
 
-    const total = await Transaction.countDocuments();
-    const transactions = await Transaction.find({})
+    // Build optional filter from query params.
+    // Date params may arrive as a numeric timestamp string or an ISO string;
+    // a numeric timestamp must be parsed as a Number, otherwise new Date()
+    // produces an Invalid Date.
+    const parseDate = (value) => {
+      const asNumber = Number(value);
+      return new Date(Number.isNaN(asNumber) ? value : asNumber);
+    };
+
+    const filter = {};
+
+    if (startDate || endDate) {
+      filter.transactionDate = {};
+      if (startDate) filter.transactionDate.$gte = parseDate(startDate);
+      if (endDate) filter.transactionDate.$lte = parseDate(endDate);
+    }
+    if (kontoCode) filter.kontoCode = kontoCode;
+    if (type) filter.type = type;
+    if (sourceType) filter.sourceType = sourceType;
+
+    const total = await Transaction.countDocuments(filter);
+    const transactions = await Transaction.find(filter)
       .sort({ transactionDate: -1, createdAt: -1 })
       .skip(parseInt(offset))
       .limit(parseInt(limit))

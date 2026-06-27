@@ -5,42 +5,47 @@ import { Container, Table, Alert, Spinner, Badge, Button } from 'react-bootstrap
 import axios from 'axios';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import Pagination from '../../components/Pagination';
+import TransactionFilters from './TransactionFilters';
+
+const PAGE_SIZE = 10;
 
 const TransactionsList = () => {
   const history = useHistory();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentSearchCriteria, setCurrentSearchCriteria] = useState({});
   const [paginationData, setPaginationData] = useState({
     currentPage: 0,
     totalPages: 0,
     totalCount: 0,
-    pageSize: 20,
+    pageSize: PAGE_SIZE,
   });
 
-  const fetchTransactions = useCallback(async (page = 0) => {
+  const fetchTransactions = useCallback(async (searchCriteria = {}, page = 0) => {
     setLoading(true);
     setError(null);
 
     try {
-      const offset = page * paginationData.pageSize;
+      const offset = page * PAGE_SIZE;
       const response = await axios.get('/api/accounting/transactions', {
         params: {
-          limit: paginationData.pageSize,
-          offset
+          limit: PAGE_SIZE,
+          offset,
+          ...searchCriteria,
         }
       });
 
       setTransactions(response.data.transactions || []);
 
       const total = response.data.total || 0;
-      const totalPages = Math.ceil(total / paginationData.pageSize);
+      const totalPages = Math.ceil(total / PAGE_SIZE);
 
       setPaginationData({
         currentPage: page,
         totalPages,
         totalCount: total,
-        pageSize: paginationData.pageSize,
+        pageSize: PAGE_SIZE,
       });
     } catch (err) {
       console.error('Error fetching transactions:', err);
@@ -48,14 +53,22 @@ const TransactionsList = () => {
     } finally {
       setLoading(false);
     }
-  }, [paginationData.pageSize]);
+  }, []);
 
   useEffect(() => {
-    fetchTransactions(0);
+    // On mount, load the latest transactions (most recent first, capped at PAGE_SIZE)
+    fetchTransactions({}, 0);
   }, [fetchTransactions]);
 
+  const onFilterSearchHandler = async (searchCriteria) => {
+    const criteria = searchCriteria || {};
+    setCurrentSearchCriteria(criteria);
+    // New search always starts from the first page
+    await fetchTransactions(criteria, 0);
+  };
+
   const handlePageChange = async (newPage) => {
-    await fetchTransactions(newPage);
+    await fetchTransactions(currentSearchCriteria, newPage);
   };
 
   const formatBalance = (balance) => {
@@ -78,52 +91,31 @@ const TransactionsList = () => {
     { label: 'Transactions', path: null }
   ];
 
-  if (loading) {
-    return (
-      <Container fluid className="py-4">
-        <Breadcrumbs items={breadcrumbItems} />
+  const renderContent = () => {
+    if (loading) {
+      return (
         <div className="text-center py-5">
           <Spinner animation="border" />
           <p className="mt-2">Loading transactions...</p>
         </div>
-      </Container>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <Container fluid className="py-4">
-        <Breadcrumbs items={breadcrumbItems} />
+    if (error) {
+      return (
         <Alert variant="danger">
           <Alert.Heading>Error</Alert.Heading>
           {error}
         </Alert>
-      </Container>
-    );
-  }
+      );
+    }
 
-  return (
-    <Container fluid className="py-4">
-      <Breadcrumbs items={breadcrumbItems} />
+    if (transactions.length === 0) {
+      return <Alert variant="info">No transactions found</Alert>;
+    }
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-          All Transactions
-          {paginationData.totalCount > 0 && (
-            <Badge bg="secondary" className="ms-2">
-              {paginationData.totalCount} total
-            </Badge>
-          )}
-        </h2>
-        <Button variant="secondary" onClick={() => history.push('/accounting')}>
-          Back to Accounting
-        </Button>
-      </div>
-
-      {transactions.length === 0 ? (
-        <Alert variant="info">No transactions found</Alert>
-      ) : (
-        <>
+    return (
+      <>
           <Table striped bordered hover responsive>
             <thead>
               <tr>
@@ -201,7 +193,30 @@ const TransactionsList = () => {
             onPageChange={handlePageChange}
           />
         </>
-      )}
+    );
+  };
+
+  return (
+    <Container fluid className="py-4">
+      <Breadcrumbs items={breadcrumbItems} />
+
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          All Transactions
+          {paginationData.totalCount > 0 && (
+            <Badge bg="secondary" className="ms-2">
+              {paginationData.totalCount} total
+            </Badge>
+          )}
+        </h2>
+        <Button variant="secondary" onClick={() => history.push('/accounting')}>
+          Back to Accounting
+        </Button>
+      </div>
+
+      <TransactionFilters onSearch={onFilterSearchHandler} currentSearchCriteria={currentSearchCriteria} />
+
+      {renderContent()}
     </Container>
   );
 };
