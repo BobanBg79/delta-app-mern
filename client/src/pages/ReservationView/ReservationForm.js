@@ -197,6 +197,7 @@ const ReservationForm = ({
 
   useEffect(() => {
     onInputChange(['pricePerNight'])({ target: { value: '' } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plannedCheckIn, plannedCheckOut]);
 
   useEffect(() => {
@@ -211,6 +212,7 @@ const ReservationForm = ({
     } else if (!pricePerNight) {
       onInputChange(['totalAmount'])({ target: { value: '' } });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pricePerNight]);
 
   return (
