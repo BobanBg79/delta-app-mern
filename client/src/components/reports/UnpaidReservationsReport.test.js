@@ -11,11 +11,12 @@ jest.mock('axios', () => ({
 // Mock react-redux. By default the auth user has the write-off permission so
 // the selection UI renders; individual tests can override mockAuthUser.
 let mockAuthUser = { role: { permissions: ['CAN_WRITE_OFF_RESERVATION'] } };
+let mockApartments = [];
 const mockDispatch = jest.fn((action) => action);
 jest.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
   useSelector: (fn) =>
-    fn({ apartments: { apartments: [] }, auth: { user: mockAuthUser } }),
+    fn({ apartments: { apartments: mockApartments }, auth: { user: mockAuthUser } }),
 }));
 
 // Mock react-router-dom's useHistory
@@ -47,6 +48,7 @@ describe('UnpaidReservationsReport', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthUser = { role: { permissions: ['CAN_WRITE_OFF_RESERVATION'] } };
+    mockApartments = [];
   });
 
   describe('Loading state', () => {
@@ -176,6 +178,36 @@ describe('UnpaidReservationsReport', () => {
       const delta = Date.now() - config.params.fromDate;
       expect(delta).toBeGreaterThan(aboutOneYearMs - 5 * 24 * 60 * 60 * 1000);
       expect(delta).toBeLessThan(aboutOneYearMs + 5 * 24 * 60 * 60 * 1000);
+    });
+  });
+
+  describe('Apartment column filter', () => {
+    beforeEach(() => {
+      mockApartments = [
+        { _id: 'apt-1', name: 'Onyx' },
+        { _id: 'apt-2', name: 'Jorgovan' },
+      ];
+      axios.get.mockResolvedValue({ data: { reservations: [sampleReservation], total: 1 } });
+    });
+
+    it('should refetch with apartmentId when an apartment is picked from the header', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+      axios.get.mockClear();
+
+      // open the header dropdown and pick an apartment
+      fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      await act(async () => {
+        fireEvent.click(screen.getByText('Jorgovan'));
+      });
+
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+      const [, config] = axios.get.mock.calls[0];
+      expect(config.params.apartmentId).toBe('apt-2');
+      expect(config.params.page).toBe(0);
     });
   });
 

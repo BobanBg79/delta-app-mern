@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
 import Button from 'react-bootstrap/Button';
@@ -11,11 +10,8 @@ import { setHoursForSearchReservation } from '../../utils/date';
 
 const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => {
   const [dateRange, setDateRange] = useState([null, null]);
-  const [apartmentId, setApartmentId] = useState('');
   const [minDiff, setMinDiff] = useState('');
   const [maxDiff, setMaxDiff] = useState('');
-
-  const { apartments: apartmentsArray = [] } = useSelector((state) => state.apartments);
 
   // Sync local state with external criteria (e.g. after a clear)
   useEffect(() => {
@@ -25,7 +21,6 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
     } else {
       setDateRange([null, null]);
     }
-    setApartmentId(currentSearchCriteria.apartmentId || '');
     setMinDiff(currentSearchCriteria.minDiff ?? '');
     setMaxDiff(currentSearchCriteria.maxDiff ?? '');
   }, [currentSearchCriteria]);
@@ -44,7 +39,8 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
       filterFalsy({
         fromDate,
         toDate,
-        apartmentId,
+        // apartmentId is controlled by the column-header dropdown; preserve it.
+        apartmentId: currentSearchCriteria.apartmentId,
         minDiff,
         maxDiff,
       })
@@ -53,7 +49,6 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
 
   const handleClear = () => {
     setDateRange([null, null]);
-    setApartmentId('');
     setMinDiff('');
     setMaxDiff('');
     onSearch(null);
@@ -63,22 +58,6 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
     <Row className="mb-3">
       <Col xs={12}>
         <h6>Filter</h6>
-      </Col>
-      <Col xs={12} md={3} className="mb-2">
-        <FloatingLabel label="Apartment (Optional)">
-          <Form.Select
-            value={apartmentId}
-            onChange={(e) => setApartmentId(e.target.value)}
-            aria-label="apartment filter"
-          >
-            <option value="">All apartments</option>
-            {apartmentsArray.map(({ _id, name }) => (
-              <option key={_id} value={_id}>
-                {name}
-              </option>
-            ))}
-          </Form.Select>
-        </FloatingLabel>
       </Col>
       <Col xs={12} md={4} className="mb-2">
         <DateRangePicker

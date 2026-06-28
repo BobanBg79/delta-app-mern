@@ -7,6 +7,7 @@ import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import Dropdown from 'react-bootstrap/Dropdown';
 import axios from 'axios';
 import ReportCardState from './ReportCardState';
 import UnpaidReservationsFilters from './UnpaidReservationsFilters';
@@ -66,10 +67,25 @@ const UnpaidReservationsReport = () => {
   });
 
   const { user: authUser } = useSelector((state) => state.auth);
+  const { apartments: apartmentsArray = [] } = useSelector((state) => state.apartments);
   const canWriteOff = hasPermission(
     authUser?.role?.permissions || [],
     USER_PERMISSIONS.CAN_WRITE_OFF_RESERVATION
   );
+
+  const selectedApartmentId = currentSearchCriteria.apartmentId || '';
+  const selectedApartmentName =
+    apartmentsArray.find((a) => a._id === selectedApartmentId)?.name || null;
+
+  // Column-header apartment filter applies immediately (page 0), keeping other filters
+  const onApartmentFilter = async (apartmentId) => {
+    const criteria = { ...currentSearchCriteria };
+    if (apartmentId) criteria.apartmentId = apartmentId;
+    else delete criteria.apartmentId;
+    setCurrentSearchCriteria(criteria);
+    setSelectedIds([]);
+    await fetchUnpaid(criteria, 0);
+  };
 
   const toggleSelected = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -178,7 +194,36 @@ const UnpaidReservationsReport = () => {
                     />
                   </th>
                 )}
-                <th>Apartment</th>
+                <th>
+                  <Dropdown>
+                    <Dropdown.Toggle
+                      as="span"
+                      role="button"
+                      style={{ cursor: 'pointer' }}
+                      aria-label="apartment filter"
+                    >
+                      Apartment{selectedApartmentName ? `: ${selectedApartmentName}` : ''}
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu style={{ maxHeight: 300, overflowY: 'auto' }}>
+                      <Dropdown.Item
+                        active={!selectedApartmentId}
+                        onClick={() => onApartmentFilter('')}
+                      >
+                        All apartments
+                      </Dropdown.Item>
+                      <Dropdown.Divider />
+                      {apartmentsArray.map((a) => (
+                        <Dropdown.Item
+                          key={a._id}
+                          active={a._id === selectedApartmentId}
+                          onClick={() => onApartmentFilter(a._id)}
+                        >
+                          {a.name}
+                        </Dropdown.Item>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </th>
                 <th>Period</th>
                 <th>Agent</th>
                 <th>Contact</th>
