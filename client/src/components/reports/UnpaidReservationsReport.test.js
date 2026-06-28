@@ -104,7 +104,7 @@ describe('UnpaidReservationsReport', () => {
         expect(screen.getByText(/no unpaid reservations for these filters/i)).toBeInTheDocument()
       );
       // header still rendered (column headers + apartment filter)
-      expect(screen.getByText('Period')).toBeInTheDocument();
+      expect(screen.getByText('Check-in')).toBeInTheDocument();
       expect(screen.getByLabelText(/apartment filter/i)).toBeInTheDocument();
     });
   });
@@ -126,37 +126,19 @@ describe('UnpaidReservationsReport', () => {
       expect(screen.getByText(/0601234567/)).toBeInTheDocument();
     });
 
-    it('should show the year once when check-in and check-out are the same year', async () => {
-      // sampleReservation: 01.06.2026 - 03.06.2026
+    it('should show check-in and check-out in separate columns', async () => {
+      // sampleReservation: check-in 01.06.2026, check-out 03.06.2026
       await act(async () => {
         render(<UnpaidReservationsReport />);
       });
 
       await waitFor(() => {
-        expect(screen.getByText('01.06. - 03.06.2026')).toBeInTheDocument();
+        expect(screen.getByText('01.06.2026')).toBeInTheDocument();
       });
-    });
-
-    it('should show both years for a cross-year reservation', async () => {
-      axios.get.mockResolvedValue({
-        data: {
-          reservations: [
-            {
-              ...sampleReservation,
-              plannedCheckIn: '2025-12-28T00:00:00.000Z',
-              plannedCheckOut: '2026-01-02T00:00:00.000Z',
-            },
-          ],
-        },
-      });
-
-      await act(async () => {
-        render(<UnpaidReservationsReport />);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('28.12.2025 - 02.01.2026')).toBeInTheDocument();
-      });
+      expect(screen.getByText('03.06.2026')).toBeInTheDocument();
+      // column headers present
+      expect(screen.getByText('Check-in')).toBeInTheDocument();
+      expect(screen.getByText('Check-out')).toBeInTheDocument();
     });
 
     it('should navigate to the reservation details when a row is clicked', async () => {

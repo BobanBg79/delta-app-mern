@@ -37,20 +37,6 @@ const formatDate = (date) =>
     year: 'numeric',
   });
 
-// Show the year once at the end when check-in and check-out share a year,
-// otherwise show the year on both dates (e.g. cross-year reservations).
-const formatPeriod = (checkIn, checkOut) => {
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
-  const dayMonth = (d) =>
-    d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${dayMonth(start)} - ${formatDate(end)}`;
-  }
-  return `${formatDate(start)} - ${formatDate(end)}`;
-};
-
 const UnpaidReservationsReport = () => {
   const history = useHistory();
   const dispatch = useDispatch();
@@ -183,7 +169,7 @@ const UnpaidReservationsReport = () => {
     );
   };
 
-  const columnCount = (canWriteOff ? 1 : 0) + 7;
+  const columnCount = (canWriteOff ? 1 : 0) + 8;
 
   // The header (columns + filters) is always shown; loading/error/empty render
   // as a single full-width row inside the table body.
@@ -235,7 +221,8 @@ const UnpaidReservationsReport = () => {
         <td>
           <strong>{r.apartmentName || '—'}</strong>
         </td>
-        <td>{formatPeriod(r.plannedCheckIn, r.plannedCheckOut)}</td>
+        <td>{formatDate(r.plannedCheckIn)}</td>
+        <td>{formatDate(r.plannedCheckOut)}</td>
         <td>{r.bookingAgentName}</td>
         <td>{r.phoneNumber || '—'}</td>
         <td className="text-end">{formatEur(r.totalAmount)}</td>
@@ -353,7 +340,8 @@ const UnpaidReservationsReport = () => {
                     </Dropdown.Menu>
                   </Dropdown>
                 </th>
-                <th>Period</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
                 <th>Agent</th>
                 <th>Contact</th>
                 <th className="text-end">Total</th>
