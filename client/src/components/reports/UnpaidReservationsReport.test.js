@@ -48,6 +48,9 @@ describe('UnpaidReservationsReport', () => {
 
   describe('Error state', () => {
     it('should show an error message when the request fails', async () => {
+      // The component logs the error in its catch block; silence that expected
+      // console.error so it doesn't clutter the test output.
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
       axios.get.mockRejectedValue(new Error('boom'));
 
       await act(async () => {
@@ -57,6 +60,8 @@ describe('UnpaidReservationsReport', () => {
       await waitFor(() => {
         expect(screen.getByText(/failed to load unpaid reservations/i)).toBeInTheDocument();
       });
+
+      consoleError.mockRestore();
     });
   });
 
