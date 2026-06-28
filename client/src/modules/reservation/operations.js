@@ -127,6 +127,33 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
   }
 };
 
+// Toggle the debt write-off flag (business status only, no accounting entry)
+export const setDebtWriteOff = (reservationId, debtWrittenOff) => async (dispatch) => {
+  try {
+    const response = await axios.put(`/api/reservations/${reservationId}/write-off`, {
+      debtWrittenOff,
+    });
+    const { reservation } = response.data;
+    if (reservation.guest) {
+      reservation.guestId = reservation.guest._id || reservation.guest;
+    } else {
+      reservation.guestId = '';
+    }
+    dispatch(setReservation(reservation));
+    dispatch(
+      showMessageToast(
+        debtWrittenOff ? 'Debt written off.' : 'Write-off removed.',
+        SUCCESS
+      )
+    );
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Failed to update write-off';
+    dispatch(showMessageToast(errorMessage, ERROR));
+    return { error: true };
+  }
+};
+
 export const getAllReservations = () => async (dispatch) => {
   try {
     dispatch(setReservationsFetchStart());
