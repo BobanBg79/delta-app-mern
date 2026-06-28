@@ -190,7 +190,7 @@ describe('UnpaidReservationsReport', () => {
       axios.get.mockResolvedValue({ data: { reservations: [sampleReservation], total: 1 } });
     });
 
-    it('should refetch with apartmentIds when an apartment is checked in the header', async () => {
+    it('should refetch with apartmentIds only after Apply (not on each check)', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);
       });
@@ -198,10 +198,14 @@ describe('UnpaidReservationsReport', () => {
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
       axios.get.mockClear();
 
-      // open the header dropdown and check an apartment
+      // open dropdown and check an apartment — should NOT refetch yet
       fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      fireEvent.click(screen.getByLabelText('Jorgovan'));
+      expect(axios.get).not.toHaveBeenCalled();
+
+      // Apply -> single refetch with the selection
       await act(async () => {
-        fireEvent.click(screen.getByLabelText('Jorgovan'));
+        fireEvent.click(screen.getByRole('button', { name: /apply/i }));
       });
 
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
@@ -210,15 +214,16 @@ describe('UnpaidReservationsReport', () => {
       expect(config.params.page).toBe(0);
     });
 
-    it('should show a chip for the selected apartment and remove it on x', async () => {
+    it('should show a chip after Apply and remove it immediately on x', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);
       });
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
 
       fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      fireEvent.click(screen.getByLabelText('Jorgovan'));
       await act(async () => {
-        fireEvent.click(screen.getByLabelText('Jorgovan'));
+        fireEvent.click(screen.getByRole('button', { name: /apply/i }));
       });
 
       // chip appears
@@ -227,7 +232,7 @@ describe('UnpaidReservationsReport', () => {
       );
 
       axios.get.mockClear();
-      // remove via the chip x
+      // remove via the chip x — applies immediately
       await act(async () => {
         fireEvent.click(screen.getByLabelText(/remove Jorgovan filter/i));
       });

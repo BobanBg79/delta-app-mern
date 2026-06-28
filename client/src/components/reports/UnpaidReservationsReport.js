@@ -59,6 +59,8 @@ const UnpaidReservationsReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState({});
+  const [aptDropdownOpen, setAptDropdownOpen] = useState(false);
+  const [draftApartmentIds, setDraftApartmentIds] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -89,14 +91,24 @@ const UnpaidReservationsReport = () => {
     await fetchUnpaid(criteria, 0);
   };
 
-  // Toggle one apartment in/out of the multiselect
-  const toggleApartment = (id) => {
-    const next = selectedApartmentIds.includes(id)
-      ? selectedApartmentIds.filter((x) => x !== id)
-      : [...selectedApartmentIds, id];
-    applyApartmentIds(next);
+  // Dropdown: build a draft selection, then apply on the Apply button.
+  const onAptDropdownToggle = (isOpen) => {
+    if (isOpen) setDraftApartmentIds(selectedApartmentIds); // seed from active filters
+    setAptDropdownOpen(isOpen);
   };
 
+  const toggleDraftApartment = (id) =>
+    setDraftApartmentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+
+  const applyDraftApartments = () => {
+    setAptDropdownOpen(false);
+    applyApartmentIds(draftApartmentIds);
+  };
+
+  // Chips above the table remove a filter immediately
+  const removeApartment = (id) => applyApartmentIds(selectedApartmentIds.filter((x) => x !== id));
   const clearApartments = () => applyApartmentIds([]);
 
   const toggleSelected = (id) =>
@@ -193,7 +205,7 @@ const UnpaidReservationsReport = () => {
                   <span
                     role="button"
                     aria-label={`remove ${apartmentName(id)} filter`}
-                    onClick={() => toggleApartment(id)}
+                    onClick={() => removeApartment(id)}
                     style={{ cursor: 'pointer' }}
                   >
                     ×
@@ -231,7 +243,11 @@ const UnpaidReservationsReport = () => {
                   </th>
                 )}
                 <th>
-                  <Dropdown autoClose="outside">
+                  <Dropdown
+                    autoClose="outside"
+                    show={aptDropdownOpen}
+                    onToggle={onAptDropdownToggle}
+                  >
                     <Dropdown.Toggle
                       as="span"
                       role="button"
@@ -247,7 +263,7 @@ const UnpaidReservationsReport = () => {
                     <Dropdown.Menu
                       renderOnMount
                       popperConfig={{ strategy: 'fixed' }}
-                      style={{ maxHeight: 300, overflowY: 'auto' }}
+                      style={{ maxHeight: 320, overflowY: 'auto' }}
                     >
                       {apartmentsArray.length === 0 && (
                         <Dropdown.ItemText className="text-muted">No apartments</Dropdown.ItemText>
@@ -258,11 +274,29 @@ const UnpaidReservationsReport = () => {
                             type="checkbox"
                             id={`apt-filter-${a._id}`}
                             label={a.name}
-                            checked={selectedApartmentIds.includes(a._id)}
-                            onChange={() => toggleApartment(a._id)}
+                            checked={draftApartmentIds.includes(a._id)}
+                            onChange={() => toggleDraftApartment(a._id)}
                           />
                         </div>
                       ))}
+                      {apartmentsArray.length > 0 && (
+                        <>
+                          <Dropdown.Divider />
+                          <div className="px-3 pb-1 d-flex justify-content-between">
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0"
+                              onClick={() => setDraftApartmentIds([])}
+                            >
+                              Clear
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={applyDraftApartments}>
+                              Apply
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </Dropdown.Menu>
                   </Dropdown>
                 </th>
