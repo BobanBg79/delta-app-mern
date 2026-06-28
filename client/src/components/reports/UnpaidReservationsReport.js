@@ -394,6 +394,7 @@ const UnpaidReservationsReport = () => {
                   >
                     <Dropdown.Toggle
                       as="span"
+                      bsPrefix="report-filter-toggle"
                       role="button"
                       style={{ cursor: 'pointer' }}
                       aria-label="apartment filter"
@@ -452,6 +453,7 @@ const UnpaidReservationsReport = () => {
                   >
                     <Dropdown.Toggle
                       as="span"
+                      bsPrefix="report-filter-toggle"
                       role="button"
                       style={{ cursor: 'pointer' }}
                       aria-label="check-in filter"
@@ -501,6 +503,7 @@ const UnpaidReservationsReport = () => {
                   >
                     <Dropdown.Toggle
                       as="span"
+                      bsPrefix="report-filter-toggle"
                       role="button"
                       style={{ cursor: 'pointer' }}
                       aria-label="outstanding filter"
