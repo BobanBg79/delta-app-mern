@@ -92,6 +92,21 @@ describe('UnpaidReservationsReport', () => {
         expect(screen.getByText(/no unpaid reservations for these filters/i)).toBeInTheDocument();
       });
     });
+
+    it('should keep the table header (columns + filter) visible when empty', async () => {
+      axios.get.mockResolvedValue({ data: { reservations: [] } });
+
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() =>
+        expect(screen.getByText(/no unpaid reservations for these filters/i)).toBeInTheDocument()
+      );
+      // header still rendered (column headers + apartment filter)
+      expect(screen.getByText('Period')).toBeInTheDocument();
+      expect(screen.getByLabelText(/apartment filter/i)).toBeInTheDocument();
+    });
   });
 
   describe('Data state', () => {

@@ -3,7 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import Card from 'react-bootstrap/Card';
 import Table from 'react-bootstrap/Table';
-import Alert from 'react-bootstrap/Alert';
+import Spinner from 'react-bootstrap/Spinner';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
@@ -12,7 +12,6 @@ import Badge from 'react-bootstrap/Badge';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
-import ReportCardState from './ReportCardState';
 import UnpaidReservationsFilters from './UnpaidReservationsFilters';
 import Pagination from '../Pagination';
 import { batchWriteOff } from '../../modules/reservation/operations';
@@ -184,17 +183,71 @@ const UnpaidReservationsReport = () => {
     );
   };
 
-  const renderBody = () => {
-    if (loading || error) {
-      return <ReportCardState loading={loading} error={error} />;
+  const columnCount = (canWriteOff ? 1 : 0) + 7;
+
+  // The header (columns + filters) is always shown; loading/error/empty render
+  // as a single full-width row inside the table body.
+  const renderRows = () => {
+    if (loading) {
+      return (
+        <tr>
+          <td colSpan={columnCount} className="text-center py-4">
+            <Spinner animation="border" role="status" size="sm" />
+            <span className="ms-2 text-muted">Loading...</span>
+          </td>
+        </tr>
+      );
+    }
+    if (error) {
+      return (
+        <tr>
+          <td colSpan={columnCount} className="text-center text-danger py-4">
+            {error}
+          </td>
+        </tr>
+      );
     }
     if (reservations.length === 0) {
       return (
-        <Alert variant="success" className="mb-0">
-          No unpaid reservations for these filters.
-        </Alert>
+        <tr>
+          <td colSpan={columnCount} className="text-center text-muted py-4">
+            No unpaid reservations for these filters.
+          </td>
+        </tr>
       );
     }
+    return reservations.map((r) => (
+      <tr
+        key={r._id}
+        onClick={() => history.push(`/reservations/${r._id}`)}
+        style={{ cursor: 'pointer' }}
+      >
+        {canWriteOff && (
+          <td onClick={(e) => e.stopPropagation()}>
+            <Form.Check
+              type="checkbox"
+              aria-label={`select ${r.apartmentName}`}
+              checked={selectedIds.includes(r._id)}
+              onChange={() => toggleSelected(r._id)}
+            />
+          </td>
+        )}
+        <td>
+          <strong>{r.apartmentName || '—'}</strong>
+        </td>
+        <td>{formatPeriod(r.plannedCheckIn, r.plannedCheckOut)}</td>
+        <td>{r.bookingAgentName}</td>
+        <td>{r.phoneNumber || '—'}</td>
+        <td className="text-end">{formatEur(r.totalAmount)}</td>
+        <td className="text-end">{formatEur(r.totalPaid)}</td>
+        <td className="text-end">
+          <strong className="text-danger">{formatEur(r.diff)}</strong>
+        </td>
+      </tr>
+    ));
+  };
+
+  const renderBody = () => {
     return (
       <>
           {selectedApartmentIds.length > 0 && (
@@ -308,46 +361,18 @@ const UnpaidReservationsReport = () => {
                 <th className="text-end">Outstanding</th>
               </tr>
             </thead>
-            <tbody>
-              {reservations.map((r) => (
-                <tr
-                  key={r._id}
-                  onClick={() => history.push(`/reservations/${r._id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {canWriteOff && (
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <Form.Check
-                        type="checkbox"
-                        aria-label={`select ${r.apartmentName}`}
-                        checked={selectedIds.includes(r._id)}
-                        onChange={() => toggleSelected(r._id)}
-                      />
-                    </td>
-                  )}
-                  <td>
-                    <strong>{r.apartmentName || '—'}</strong>
-                  </td>
-                  <td>{formatPeriod(r.plannedCheckIn, r.plannedCheckOut)}</td>
-                  <td>{r.bookingAgentName}</td>
-                  <td>{r.phoneNumber || '—'}</td>
-                  <td className="text-end">{formatEur(r.totalAmount)}</td>
-                  <td className="text-end">{formatEur(r.totalPaid)}</td>
-                  <td className="text-end">
-                    <strong className="text-danger">{formatEur(r.diff)}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody>{renderRows()}</tbody>
           </Table>
 
-          <Pagination
-            currentPage={paginationData.currentPage}
-            totalPages={paginationData.totalPages}
-            totalCount={paginationData.totalCount}
-            pageSize={paginationData.pageSize}
-            onPageChange={handlePageChange}
-          />
+          {!loading && !error && reservations.length > 0 && (
+            <Pagination
+              currentPage={paginationData.currentPage}
+              totalPages={paginationData.totalPages}
+              totalCount={paginationData.totalCount}
+              pageSize={paginationData.pageSize}
+              onPageChange={handlePageChange}
+            />
+          )}
         </>
     );
   };
