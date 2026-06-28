@@ -361,12 +361,11 @@ const UnpaidReservationsReport = () => {
               )}
             </div>
           )}
-          {canWriteOff && (
+          {canWriteOff && selectedIds.length > 0 && (
             <div className="mb-2">
               <Button
                 variant="outline-danger"
                 size="sm"
-                disabled={selectedIds.length === 0}
                 onClick={() => setShowConfirm(true)}
               >
                 Write off selected ({selectedIds.length})

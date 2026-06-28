@@ -377,13 +377,18 @@ describe('UnpaidReservationsReport', () => {
       expect(screen.queryByLabelText(/select Onyx/i)).not.toBeInTheDocument();
     });
 
-    it('should disable the write-off button until a row is selected', async () => {
+    it('should not show the write-off button until a row is selected', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);
       });
 
       await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
-      expect(screen.getByRole('button', { name: /write off selected/i })).toBeDisabled();
+      // hidden with nothing selected
+      expect(screen.queryByRole('button', { name: /write off selected/i })).not.toBeInTheDocument();
+
+      // appears after selecting a row
+      fireEvent.click(screen.getByLabelText(/select Onyx/i));
+      expect(screen.getByRole('button', { name: /write off selected \(1\)/i })).toBeInTheDocument();
     });
 
     it('should open a confirmation modal and dispatch batchWriteOff on confirm', async () => {
@@ -431,9 +436,9 @@ describe('UnpaidReservationsReport', () => {
       // both row checkboxes checked -> button shows count 2
       expect(screen.getByRole('button', { name: /write off selected \(2\)/i })).toBeInTheDocument();
 
-      // toggle off
+      // toggle off -> button disappears
       fireEvent.click(selectAll);
-      expect(screen.getByRole('button', { name: /write off selected \(0\)/i })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: /write off selected/i })).not.toBeInTheDocument();
     });
 
     it('should not dispatch when the modal is cancelled', async () => {
