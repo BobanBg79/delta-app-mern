@@ -15,9 +15,16 @@ To insert a Table of Contents, use Insert → Table of Contents in the Confluenc
 - Shows reservations that are **active**, whose **check-in is before today**, and where **totalPaid < totalAmount**.
 - Reservations whose debt has been **written off** are excluded — once we stop expecting the money, it should not show as outstanding. See `docs/reservations/debt-write-off.md`.
 - Users with `CAN_WRITE_OFF_RESERVATION` can **batch write off** from the report: select rows (or "select all on this page"), click "Write off selected (n)", and confirm in a modal. Without the permission the selection UI is hidden.
-- Each row shows the apartment, the reservation period, the booking agent (or "Direct Reservation"), the guest contact, and three amounts: **Total**, **Paid**, **Outstanding (diff)**.
+- Columns: **Apartment**, **Check-in**, **Check-out**, **Agent** (or "Direct Reservation"), **Contact**, **Total**, **Paid**, **Outstanding (diff)**.
 - Clicking a row opens that reservation's details.
-- The report is **actionable and recent**: the homepage only looks back **12 months**. Unpaid reservations older than that do not appear here. A separate "all debts" report (future) can show everything.
+- **Default time window**: on load the report filters to check-ins from the **start of the current year** onward (keeps the list recent and bounded). This default is shown as a removable chip, so the user sees it immediately and can change or clear it.
+
+### Column-header filters
+
+- **Apartment** header: a funnel icon opens a multiselect of apartments; check several and press **Apply** (one refetch). Selection applies as `apartmentIds`.
+- **Check-in** header: a funnel icon opens a date-range picker (from/to); set a range and press **Apply**.
+- Active filters appear as **chips** above the table (e.g. "Check-in: 01.01.2026 – today", "Apartment: Onyx"); each chip has an **x** to remove that one filter immediately. A **Clear all** link appears only when **two or more** chips are active.
+- The filter row below the header holds only the **amount-owed** filter (owes more/less than).
 
 ---
 
@@ -50,7 +57,7 @@ GET /api/reports/unpaid-reservations
 |-------|---------|
 | `fromDate` | Check-in lower bound (numeric timestamp or ISO) |
 | `toDate` | Check-in upper bound (numeric timestamp or ISO); defaults to "before today" |
-| `apartmentId` | Only reservations for this apartment |
+| `apartmentIds` | Comma-separated apartment ids (one or many → `$in`). Legacy single `apartmentId` still accepted. |
 | `minDiff` | Only reservations whose outstanding amount (diff) is >= this |
 | `maxDiff` | Only reservations whose outstanding amount (diff) is <= this |
 | `page` | Page index (0-based, default 0) |
@@ -58,7 +65,7 @@ GET /api/reports/unpaid-reservations
 
 ### Where filtering happens
 
-- **DB-level** (in the Mongo query): `fromDate`/`toDate` (check-in window), `apartmentId`, plus the always-on `status: 'active'`, `plannedCheckIn < today`, and `debtWrittenOff: { $ne: true }` (exclude written-off).
+- **DB-level** (in the Mongo query): `fromDate`/`toDate` (check-in window), `apartmentIds` (`$in`), plus the always-on `status: 'active'`, `plannedCheckIn < today`, and `debtWrittenOff: { $ne: true }` (exclude written-off).
 - **In memory** (after the payments aggregate): `minDiff`/`maxDiff`, because the outstanding amount (diff) is derived from payments and does not exist on the reservation. Sorting and pagination also happen in memory for the same reason.
 
 ### Sorting
@@ -73,7 +80,7 @@ The endpoint is parameterized so one endpoint can serve different reports. The *
 - If `fromDate` is omitted: no lower bound — all past-check-in unpaid reservations (future "all debts" report).
 - The upper bound (`plannedCheckIn < today`) always applies.
 
-The **homepage** sends `fromDate = now - 12 months` (as a numeric timestamp) to keep the list recent and bounded. As the system accumulates reservations over the years, this prevents the first query from returning an ever-growing list.
+The **homepage** sends `fromDate = start of the current year` (as a numeric timestamp) to keep the list recent and bounded, and surfaces it as a removable chip. As the system accumulates reservations over the years, this prevents the first query from returning an ever-growing list.
 
 Date parsing: a numeric timestamp string is parsed as a Number; otherwise it is treated as an ISO date string. (A numeric string passed straight to `new Date()` would produce an Invalid Date.)
 
@@ -121,21 +128,21 @@ The number of queries does not grow with the number of reservations or payments.
 
 | File | Responsibility |
 |------|----------------|
-| `components/reports/UnpaidReservationsReport.js` | Fetches with filters + page, renders the table and pagination |
-| `components/reports/UnpaidReservationsFilters.js` | Filter bar: apartment, check-in period, "owes more/less than" (min/max diff), Search/Clear |
-| `components/reports/ReportCardState.js` | Shared loading/error card |
+| `components/reports/UnpaidReservationsReport.js` | Fetches with filters + page; renders the table, header filters (apartment + check-in), chips, and pagination |
+| `components/reports/UnpaidReservationsFilters.js` | The amount-owed filter row ("owes more/less than"), Search/Clear |
 
-The homepage always sends `fromDate = now - 12 months` and page 0 on load;
-the user's period filter overrides the window. Filters are preserved when
-changing pages. Page size is 10.
+On load the report seeds `fromDate = start of the current year` and page 0.
+The table header (columns + apartment/check-in filters) is always rendered;
+loading, error, and empty states show as a single full-width row in the table
+body. Filters are preserved when changing pages. Page size is 10.
 
 ### Why totalPaid is derived
 
 The Reservation document has no payment data (no `totalPaid` field). Paid amounts are always derived by aggregating `AccommodationPayment` records. This is why filtering by "paid vs unpaid" happens in memory after the aggregate, not in the database query.
 
-### Future: write-off
+### Write-off
 
-The per-row `diff` is `totalAmount - totalPaid`. When the write-off feature exists, the formula becomes `totalPaid + writtenOff < totalAmount`, so written-off reservations drop out of the report. A placeholder comment marks where to subtract the written-off amount.
+The per-row `diff` is `totalAmount - totalPaid`. Reservations whose debt is written off are excluded at the DB level (`debtWrittenOff: { $ne: true }`) rather than via a diff adjustment, because write-off is a boolean status (no amount) in this cash-basis system. See `docs/reservations/debt-write-off.md`.
 
 ---
 
@@ -145,10 +152,10 @@ The per-row `diff` is `totalAmount - totalPaid`. When the write-off feature exis
 
 - Authorization: rejected without the permission (403), allowed with it.
 - Report logic: only `totalPaid < totalAmount` rows returned, diff calculation, "Direct Reservation" default, empty list shortcut, sort order.
-- Date filtering: always bounded by today; no lower bound without `fromDate`; numeric timestamp parsed into a valid lower bound; a reservation 370 days old falls outside a 12-month window.
-- Search & pagination: `apartmentId` passed into the DB query; `minDiff`/`maxDiff` filter the outstanding amount; pagination returns `total`/`page`/`pageSize` and slices correctly on the last page; sort is newest-check-in first.
+- Date filtering: always bounded by today; no lower bound without `fromDate`; numeric timestamp parsed into a valid lower bound.
+- Search & pagination: single and multiple `apartmentIds` (comma-separated → `$in`); `minDiff`/`maxDiff` filter the outstanding amount; pagination returns `total`/`page`/`pageSize` and slices correctly on the last page; sort is newest-check-in first; written-off reservations excluded.
 
-Frontend: `components/reports/UnpaidReservationsReport.test.js` covers loading/error/empty states, row rendering, compact period (same-year vs cross-year), row-click navigation, and that the request uses a ~12-month `fromDate`.
+Frontend: `components/reports/UnpaidReservationsReport.test.js` covers loading/error/empty states (header stays visible), separate check-in/check-out columns, row-click navigation, default `fromDate` = start of current year with its chip, apartment header multiselect (Apply only) and chip removal, check-in date chip, "Clear all" shown only with 2+ chips, and the batch write-off flow (select all, confirm/cancel).
 
 ---
 
