@@ -233,6 +233,14 @@ describe('GET /api/reports/unpaid-reservations', () => {
       expect(Reservation.find.mock.calls[0][0].apartment).toBe(apartmentId);
     });
 
+    it('should exclude written-off reservations in the DB query', async () => {
+      mockReservationFind([]);
+
+      await request(app).get('/api/reports/unpaid-reservations');
+
+      expect(Reservation.find.mock.calls[0][0].debtWrittenOff).toEqual({ $ne: true });
+    });
+
     it('should filter by minDiff (outstanding amount)', async () => {
       threeUnpaid();
 

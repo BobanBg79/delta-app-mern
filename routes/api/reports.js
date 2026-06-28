@@ -40,6 +40,9 @@ router.get(
     const query = {
       status: 'active',
       plannedCheckIn: checkInFilter,
+      // Exclude reservations whose debt has been written off — we no longer
+      // chase that money, so they should not appear as outstanding.
+      debtWrittenOff: { $ne: true },
     };
     if (apartmentId) query.apartment = apartmentId;
 
