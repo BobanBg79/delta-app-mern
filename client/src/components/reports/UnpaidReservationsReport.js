@@ -263,7 +263,7 @@ const UnpaidReservationsReport = () => {
                     <Dropdown.Menu
                       renderOnMount
                       popperConfig={{ strategy: 'fixed' }}
-                      style={{ maxHeight: 320, overflowY: 'auto' }}
+                      style={{ minWidth: 260 }}
                     >
                       {apartmentsArray.length === 0 && (
                         <Dropdown.ItemText className="text-muted">No apartments</Dropdown.ItemText>
