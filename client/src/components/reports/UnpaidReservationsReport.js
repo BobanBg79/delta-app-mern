@@ -1,12 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import Card from 'react-bootstrap/Card';
 import Table from 'react-bootstrap/Table';
 import Alert from 'react-bootstrap/Alert';
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
+import Modal from 'react-bootstrap/Modal';
 import axios from 'axios';
 import ReportCardState from './ReportCardState';
 import UnpaidReservationsFilters from './UnpaidReservationsFilters';
 import Pagination from '../Pagination';
+import { batchWriteOff } from '../../modules/reservation/operations';
+import { hasPermission } from '../../utils/permissions';
+import { USER_PERMISSIONS } from '../../constants';
 
 const PAGE_SIZE = 10;
 
@@ -43,16 +50,40 @@ const formatPeriod = (checkIn, checkOut) => {
 
 const UnpaidReservationsReport = () => {
   const history = useHistory();
+  const dispatch = useDispatch();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentSearchCriteria, setCurrentSearchCriteria] = useState({});
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [paginationData, setPaginationData] = useState({
     currentPage: 0,
     totalPages: 0,
     totalCount: 0,
     pageSize: PAGE_SIZE,
   });
+
+  const { user: authUser } = useSelector((state) => state.auth);
+  const canWriteOff = hasPermission(
+    authUser?.role?.permissions || [],
+    USER_PERMISSIONS.CAN_WRITE_OFF_RESERVATION
+  );
+
+  const toggleSelected = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const confirmWriteOff = async () => {
+    setSubmitting(true);
+    const result = await dispatch(batchWriteOff(selectedIds));
+    setSubmitting(false);
+    setShowConfirm(false);
+    if (!result?.error) {
+      setSelectedIds([]);
+      await fetchUnpaid(currentSearchCriteria, paginationData.currentPage);
+    }
+  };
 
   const fetchUnpaid = useCallback(async (searchCriteria = {}, page = 0) => {
     setLoading(true);
@@ -109,9 +140,22 @@ const UnpaidReservationsReport = () => {
     }
     return (
       <>
+          {canWriteOff && (
+            <div className="mb-2">
+              <Button
+                variant="outline-danger"
+                size="sm"
+                disabled={selectedIds.length === 0}
+                onClick={() => setShowConfirm(true)}
+              >
+                Write off selected ({selectedIds.length})
+              </Button>
+            </div>
+          )}
           <Table striped hover responsive className="mb-0">
             <thead>
               <tr>
+                {canWriteOff && <th style={{ width: '1%' }}></th>}
                 <th>Apartment</th>
                 <th>Period</th>
                 <th>Agent</th>
@@ -128,6 +172,16 @@ const UnpaidReservationsReport = () => {
                   onClick={() => history.push(`/reservations/${r._id}`)}
                   style={{ cursor: 'pointer' }}
                 >
+                  {canWriteOff && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <Form.Check
+                        type="checkbox"
+                        aria-label={`select ${r.apartmentName}`}
+                        checked={selectedIds.includes(r._id)}
+                        onChange={() => toggleSelected(r._id)}
+                      />
+                    </td>
+                  )}
                   <td>
                     <strong>{r.apartmentName || '—'}</strong>
                   </td>
@@ -167,6 +221,25 @@ const UnpaidReservationsReport = () => {
         />
         {renderBody()}
       </Card.Body>
+
+      <Modal show={showConfirm} onHide={() => setShowConfirm(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Write off selected debts</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          You are about to write off the debt on <strong>{selectedIds.length}</strong>{' '}
+          reservation(s). They will no longer appear as outstanding in this report. This does not
+          create any accounting entry and can be undone per reservation. Continue?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowConfirm(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmWriteOff} disabled={submitting}>
+            Confirm write-off
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   );
 };

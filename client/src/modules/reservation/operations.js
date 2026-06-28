@@ -127,6 +127,20 @@ export const updateReservation = (reservationId, data) => async (dispatch) => {
   }
 };
 
+// Write off the debt on several reservations at once (used by the unpaid report)
+export const batchWriteOff = (reservationIds) => async (dispatch) => {
+  try {
+    const response = await axios.put('/api/reservations/write-off-batch', { reservationIds });
+    const { modified } = response.data;
+    dispatch(showMessageToast(`Wrote off ${modified} reservation(s).`, SUCCESS));
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error.response?.data?.errors?.[0]?.msg || 'Failed to write off reservations';
+    dispatch(showMessageToast(errorMessage, ERROR));
+    return { error: true };
+  }
+};
+
 // Toggle the debt write-off flag (business status only, no accounting entry)
 export const setDebtWriteOff = (reservationId, debtWrittenOff) => async (dispatch) => {
   try {

@@ -8,9 +8,14 @@ jest.mock('axios', () => ({
   default: { get: jest.fn() },
 }));
 
-// Mock react-redux useSelector (filters read apartments from the store)
+// Mock react-redux. By default the auth user has the write-off permission so
+// the selection UI renders; individual tests can override mockAuthUser.
+let mockAuthUser = { role: { permissions: ['CAN_WRITE_OFF_RESERVATION'] } };
+const mockDispatch = jest.fn((action) => action);
 jest.mock('react-redux', () => ({
-  useSelector: (fn) => fn({ apartments: { apartments: [] } }),
+  useDispatch: () => mockDispatch,
+  useSelector: (fn) =>
+    fn({ apartments: { apartments: [] }, auth: { user: mockAuthUser } }),
 }));
 
 // Mock react-router-dom's useHistory
@@ -18,6 +23,13 @@ const mockHistoryPush = jest.fn();
 jest.mock('react-router-dom', () => ({
   useHistory: () => ({ push: mockHistoryPush }),
 }));
+
+// Mock the batch write-off thunk
+jest.mock('../../modules/reservation/operations', () => ({
+  batchWriteOff: jest.fn(() => ({ type: 'MOCK_BATCH_WRITE_OFF' })),
+}));
+// eslint-disable-next-line import/first
+import { batchWriteOff } from '../../modules/reservation/operations';
 
 const sampleReservation = {
   _id: 'res-1',
@@ -34,6 +46,7 @@ const sampleReservation = {
 describe('UnpaidReservationsReport', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = { role: { permissions: ['CAN_WRITE_OFF_RESERVATION'] } };
   });
 
   describe('Loading state', () => {
@@ -163,6 +176,68 @@ describe('UnpaidReservationsReport', () => {
       const delta = Date.now() - config.params.fromDate;
       expect(delta).toBeGreaterThan(aboutOneYearMs - 5 * 24 * 60 * 60 * 1000);
       expect(delta).toBeLessThan(aboutOneYearMs + 5 * 24 * 60 * 60 * 1000);
+    });
+  });
+
+  describe('Batch write-off', () => {
+    beforeEach(() => {
+      axios.get.mockResolvedValue({ data: { reservations: [sampleReservation], total: 1 } });
+    });
+
+    it('should NOT show selection UI without the write-off permission', async () => {
+      mockAuthUser = { role: { permissions: [] } };
+
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
+      expect(screen.queryByText(/write off selected/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/select Onyx/i)).not.toBeInTheDocument();
+    });
+
+    it('should disable the write-off button until a row is selected', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
+      expect(screen.getByRole('button', { name: /write off selected/i })).toBeDisabled();
+    });
+
+    it('should open a confirmation modal and dispatch batchWriteOff on confirm', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
+
+      // select the row
+      fireEvent.click(screen.getByLabelText(/select Onyx/i));
+      // open confirmation
+      fireEvent.click(screen.getByRole('button', { name: /write off selected/i }));
+
+      expect(screen.getByText(/about to write off the debt/i)).toBeInTheDocument();
+
+      // confirm
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /confirm write-off/i }));
+      });
+
+      expect(batchWriteOff).toHaveBeenCalledWith(['res-1']);
+    });
+
+    it('should not dispatch when the modal is cancelled', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
+      fireEvent.click(screen.getByLabelText(/select Onyx/i));
+      fireEvent.click(screen.getByRole('button', { name: /write off selected/i }));
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(batchWriteOff).not.toHaveBeenCalled();
     });
   });
 });
