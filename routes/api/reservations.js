@@ -100,8 +100,8 @@ router.get(
 
 // @route   GET api/reservations/monthly-stats
 // @desc    Get monthly statistics for reservations checking in during the current month
-// @access  Private
-router.get('/monthly-stats', auth, async (req, res) => {
+// @access  Private (requires CAN_VIEW_MONTHLY_INCOME_REPORT)
+router.get('/monthly-stats', auth, requirePermission('CAN_VIEW_MONTHLY_INCOME_REPORT'), async (req, res) => {
   try {
     // Get current month's start and end dates
     const now = new Date();

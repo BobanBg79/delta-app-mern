@@ -21,7 +21,6 @@ const ROLE_LABELS = {
 const Homepage = () => {
   const { user } = useSelector((state) => state.auth);
   const roleName = user?.role?.name;
-  const isAdmin = roleName === 'ADMIN';
   const isCleaningLady = roleName === 'CLEANING_LADY';
 
   const userPermissions = user?.role?.permissions || [];
@@ -33,6 +32,10 @@ const Homepage = () => {
   const canViewReservations = hasPermission(
     userPermissions,
     USER_PERMISSIONS.CAN_VIEW_RESERVATION
+  );
+  const canViewMonthlyIncomeReport = hasPermission(
+    userPermissions,
+    USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT
   );
 
   return (
@@ -78,7 +81,7 @@ const Homepage = () => {
           </div>
         )}
 
-        {isAdmin && (
+        {canViewMonthlyIncomeReport && (
           <div className="mt-4">
             <MonthlyIncomeReport />
           </div>

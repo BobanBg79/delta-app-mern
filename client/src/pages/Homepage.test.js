@@ -157,13 +157,17 @@ describe('Homepage Component', () => {
   });
 
   describe('MonthlyIncomeReport visibility', () => {
-    it('should show MonthlyIncomeReport when user is ADMIN', () => {
+    it('should show MonthlyIncomeReport when user has CAN_VIEW_MONTHLY_INCOME_REPORT permission', () => {
+      hasPermission.mockImplementation(
+        (_perms, perm) => perm === USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT
+      );
+
       const mockUser = {
-        fname: 'Admin',
-        lname: 'User',
+        fname: 'Income',
+        lname: 'Viewer',
         role: {
-          name: 'ADMIN',
-          permissions: []
+          name: 'MANAGER',
+          permissions: [{ _id: '1', name: USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT }]
         }
       };
 
@@ -178,10 +182,10 @@ describe('Homepage Component', () => {
       expect(screen.getByTestId('monthly-income-report')).toBeInTheDocument();
     });
 
-    it('should NOT show MonthlyIncomeReport when user is not ADMIN', () => {
+    it('should NOT show MonthlyIncomeReport when user lacks CAN_VIEW_MONTHLY_INCOME_REPORT permission', () => {
       const mockUser = {
-        fname: 'Manager',
-        lname: 'User',
+        fname: 'No',
+        lname: 'Income',
         role: {
           name: 'MANAGER',
           permissions: []
@@ -245,16 +249,17 @@ describe('Homepage Component', () => {
   });
 
   describe('Multiple reports scenario', () => {
-    it('should show both TomorrowCheckoutsReport and MonthlyIncomeReport for ADMIN with permissions', () => {
-      hasPermission.mockReturnValue(true); // User HAS permission
+    it('should show both TomorrowCheckoutsReport and MonthlyIncomeReport when user has both permissions', () => {
+      hasPermission.mockReturnValue(true); // User HAS all permissions
 
       const mockUser = {
-        fname: 'Super',
-        lname: 'Admin',
+        fname: 'Multi',
+        lname: 'Permission',
         role: {
-          name: 'ADMIN',
+          name: 'MANAGER',
           permissions: [
-            { _id: '1', name: USER_PERMISSIONS.CAN_CREATE_CLEANING }
+            { _id: '1', name: USER_PERMISSIONS.CAN_CREATE_CLEANING },
+            { _id: '2', name: USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT }
           ]
         }
       };
@@ -271,13 +276,17 @@ describe('Homepage Component', () => {
       expect(screen.getByTestId('monthly-income-report')).toBeInTheDocument();
     });
 
-    it('should only show MonthlyIncomeReport for ADMIN without CAN_CREATE_CLEANING permission', () => {
+    it('should show MonthlyIncomeReport but not TomorrowCheckoutsReport when user has only the income permission', () => {
+      hasPermission.mockImplementation(
+        (_perms, perm) => perm === USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT
+      );
+
       const mockUser = {
-        fname: 'Admin',
-        lname: 'User',
+        fname: 'Income',
+        lname: 'Only',
         role: {
-          name: 'ADMIN',
-          permissions: []
+          name: 'MANAGER',
+          permissions: [{ _id: '1', name: USER_PERMISSIONS.CAN_VIEW_MONTHLY_INCOME_REPORT }]
         }
       };
 
@@ -386,11 +395,13 @@ describe('Homepage Component', () => {
 
   describe('Component structure and styling', () => {
     it('should apply mt-4 class to report containers', () => {
+      hasPermission.mockReturnValue(true); // show at least one gated report
+
       const mockUser = {
         fname: 'Test',
         lname: 'User',
         role: {
-          name: 'ADMIN',
+          name: 'MANAGER',
           permissions: [
             { _id: '1', name: USER_PERMISSIONS.CAN_CREATE_CLEANING }
           ]

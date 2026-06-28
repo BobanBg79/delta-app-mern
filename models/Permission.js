@@ -63,7 +63,8 @@ PermissionSchema.statics.getAllPermissions = function () {
 
   // Add report permissions (read-only, query-derived views; one per report)
   const reportPermissions = [
-    'CAN_VIEW_UNPAID_RESERVATIONS_REPORT'
+    'CAN_VIEW_UNPAID_RESERVATIONS_REPORT',
+    'CAN_VIEW_MONTHLY_INCOME_REPORT'
   ];
 
   return [
