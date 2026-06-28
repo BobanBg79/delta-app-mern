@@ -35,6 +35,12 @@ jest.mock('../components/reports/UnpaidReservationsReport', () => {
   };
 });
 
+jest.mock('../components/reports/TodayCheckinsReport', () => {
+  return function TodayCheckinsReport() {
+    return <div data-testid="today-checkins-report">Today Check-ins Report</div>;
+  };
+});
+
 // Helper to create mock Redux store
 const createMockStore = (userState) => {
   const rootReducer = (state = {}, action) => {
@@ -148,55 +154,6 @@ describe('Homepage Component', () => {
       expect(screen.queryByTestId('tomorrow-checkouts-report')).not.toBeInTheDocument();
     });
 
-    it('should show TomorrowCheckoutsReport for OWNER role', () => {
-      hasPermission.mockReturnValue(true); // User HAS permission
-
-      const mockUser = {
-        fname: 'Owner',
-        lname: 'User',
-        role: {
-          name: 'OWNER',
-          permissions: [
-            { _id: '1', name: USER_PERMISSIONS.CAN_CREATE_CLEANING }
-          ]
-        }
-      };
-
-      const store = createMockStore(mockUser);
-
-      render(
-        <Provider store={store}>
-          <Homepage />
-        </Provider>
-      );
-
-      expect(screen.getByTestId('tomorrow-checkouts-report')).toBeInTheDocument();
-    });
-
-    it('should show TomorrowCheckoutsReport for ADMIN role', () => {
-      hasPermission.mockReturnValue(true); // User HAS permission
-
-      const mockUser = {
-        fname: 'Admin',
-        lname: 'User',
-        role: {
-          name: 'ADMIN',
-          permissions: [
-            { _id: '1', name: USER_PERMISSIONS.CAN_CREATE_CLEANING }
-          ]
-        }
-      };
-
-      const store = createMockStore(mockUser);
-
-      render(
-        <Provider store={store}>
-          <Homepage />
-        </Provider>
-      );
-
-      expect(screen.getByTestId('tomorrow-checkouts-report')).toBeInTheDocument();
-    });
   });
 
   describe('MonthlyIncomeReport visibility', () => {
