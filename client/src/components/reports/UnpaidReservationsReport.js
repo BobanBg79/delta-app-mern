@@ -124,6 +124,10 @@ const UnpaidReservationsReport = () => {
         page,
         pageSize: PAGE_SIZE,
       };
+      // Send apartmentIds as a comma-separated value for a clean URL.
+      if (Array.isArray(params.apartmentIds)) {
+        params.apartmentIds = params.apartmentIds.join(',');
+      }
       const response = await axios.get('/api/reports/unpaid-reservations', { params });
       setReservations(response.data.reservations || []);
       const total = response.data.total || 0;

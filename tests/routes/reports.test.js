@@ -233,18 +233,18 @@ describe('GET /api/reports/unpaid-reservations', () => {
       expect(Reservation.find.mock.calls[0][0].apartment).toBe(apartmentId);
     });
 
-    it('should filter by a single apartmentIds value', async () => {
+    it('should filter by a single comma-separated apartmentIds value', async () => {
       mockReservationFind([]);
       const id = new mongoose.Types.ObjectId().toString();
 
       await request(app)
         .get('/api/reports/unpaid-reservations')
-        .query({ apartmentIds: [id] });
+        .query({ apartmentIds: id });
 
       expect(Reservation.find.mock.calls[0][0].apartment).toBe(id);
     });
 
-    it('should filter by multiple apartmentIds with $in', async () => {
+    it('should filter by multiple comma-separated apartmentIds with $in', async () => {
       mockReservationFind([]);
       const ids = [
         new mongoose.Types.ObjectId().toString(),
@@ -253,7 +253,7 @@ describe('GET /api/reports/unpaid-reservations', () => {
 
       await request(app)
         .get('/api/reports/unpaid-reservations')
-        .query({ apartmentIds: ids });
+        .query({ apartmentIds: ids.join(',') });
 
       expect(Reservation.find.mock.calls[0][0].apartment).toEqual({ $in: ids });
     });

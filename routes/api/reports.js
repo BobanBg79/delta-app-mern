@@ -46,10 +46,13 @@ router.get(
       debtWrittenOff: { $ne: true },
     };
     // Apartment filter: accept a single apartmentId (legacy) or apartmentIds
-    // (one or many). Multiple apartments -> $in.
+    // (comma-separated string, or an array). Multiple apartments -> $in.
+    const apartmentIdsList =
+      typeof apartmentIds === 'string' ? apartmentIds.split(',') : apartmentIds || [];
     const apartmentList = []
-      .concat(apartmentIds || [])
+      .concat(apartmentIdsList)
       .concat(apartmentId || [])
+      .map((s) => (typeof s === 'string' ? s.trim() : s))
       .filter(Boolean);
     if (apartmentList.length === 1) {
       query.apartment = apartmentList[0];

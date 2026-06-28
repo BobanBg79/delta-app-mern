@@ -7,6 +7,10 @@ description: Use when you need to verify a feature works in the running Delta Ap
 
 Drive the running app with the **chrome-devtools** MCP server to confirm a change actually works end-to-end, not just in unit tests.
 
+## Before every commit
+
+Always do both, in this order: (1) run the test suites (server `npm test`, client `CI=true npm test`), and (2) verify the change in the browser. Don't commit on green tests alone — UI changes especially need a real browser check.
+
 ## Prerequisites
 
 1. The app must be running. If it is not, use the **run-app** skill first (backend on 5000, frontend on 3000).

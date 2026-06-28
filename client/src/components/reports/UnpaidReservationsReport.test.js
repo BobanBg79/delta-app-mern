@@ -206,7 +206,7 @@ describe('UnpaidReservationsReport', () => {
 
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
       const [, config] = axios.get.mock.calls[0];
-      expect(config.params.apartmentIds).toEqual(['apt-2']);
+      expect(config.params.apartmentIds).toBe('apt-2');
       expect(config.params.page).toBe(0);
     });
 
