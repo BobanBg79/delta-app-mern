@@ -21,10 +21,13 @@ To insert a Table of Contents, use Insert → Table of Contents in the Confluenc
 
 ### Column-header filters
 
-- **Apartment** header: a funnel icon opens a multiselect of apartments; check several and press **Apply** (one refetch). Selection applies as `apartmentIds`.
-- **Check-in** header: a funnel icon opens a date-range picker (from/to); set a range and press **Apply**.
-- Active filters appear as **chips** above the table (e.g. "Check-in: 01.01.2026 – today", "Apartment: Onyx"); each chip has an **x** to remove that one filter immediately. A **Clear all** link appears only when **two or more** chips are active.
-- The filter row below the header holds only the **amount-owed** filter (owes more/less than).
+All filters live in the column headers — there is no separate filter row. Each filterable header shows a **funnel icon** (highlighted when that filter is active) and opens a small dropdown; the dropdown holds a draft selection that is applied only on its **Apply** button (so changing several values is one refetch).
+
+- **Apartment** header: multiselect of apartments (checkboxes) → Apply. Sent as `apartmentIds`.
+- **Check-in** header: a date-range picker (from/to) → Apply. Sent as `fromDate`/`toDate`.
+- **Outstanding** header: two number inputs (owes more than / owes less than) → Apply. Sent as `minDiff`/`maxDiff`.
+- Active filters appear as **chips** above the table (e.g. "Check-in: 01.01.2026 – today", "Apartment: Onyx", "Outstanding: ≥ 50"); each chip has an **x** to remove that one filter immediately. A **Clear all** link appears only when **two or more** chips are active.
+- The chips/write-off area sits in a fixed-height (50px) container so the table doesn't jump when chips or the write-off button appear or disappear.
 
 ---
 
@@ -126,13 +129,10 @@ The number of queries does not grow with the number of reservations or payments.
 
 ### Frontend
 
-| File | Responsibility |
-|------|----------------|
-| `components/reports/UnpaidReservationsReport.js` | Fetches with filters + page; renders the table, header filters (apartment + check-in), chips, and pagination |
-| `components/reports/UnpaidReservationsFilters.js` | The amount-owed filter row ("owes more/less than"), Search/Clear |
+The whole report (table, column-header filters, chips, pagination, write-off) lives in `components/reports/UnpaidReservationsReport.js` — there is no longer a separate filter component.
 
 On load the report seeds `fromDate = start of the current year` and page 0.
-The table header (columns + apartment/check-in filters) is always rendered;
+The table header (columns + apartment/check-in/outstanding filters) is always rendered;
 loading, error, and empty states show as a single full-width row in the table
 body. Filters are preserved when changing pages. Page size is 10.
 
