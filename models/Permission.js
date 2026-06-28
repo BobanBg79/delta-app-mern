@@ -15,7 +15,7 @@ const PermissionSchema = new mongoose.Schema(
           // Reports are read-only, query-derived views. Each report is its own
           // permission so different roles can be granted different reports.
           const reportPattern = /^CAN_VIEW_[A-Z_]+_REPORT$/;
-          const specialPermissions = /^CAN_COMPLETE_CLEANING$/;
+          const specialPermissions = /^(CAN_COMPLETE_CLEANING|CAN_UPDATE_USER_PASSWORD)$/;
           return (
             standardPattern.test(v) ||
             sensitiveDataPattern.test(v) ||
@@ -56,7 +56,8 @@ PermissionSchema.statics.getAllPermissions = function () {
 
   // Add special permissions (workflow-specific, not standard CRUD)
   const specialPermissions = [
-    'CAN_COMPLETE_CLEANING'
+    'CAN_COMPLETE_CLEANING',
+    'CAN_UPDATE_USER_PASSWORD'
   ];
 
   // Add report permissions (read-only, query-derived views; one per report)

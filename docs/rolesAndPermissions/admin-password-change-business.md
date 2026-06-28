@@ -20,16 +20,14 @@ This feature closes that gap by giving administrators a simple, direct way to re
 
 ## Who Can Use It
 
-Only users with the **ADMIN** role can change passwords.
+Access is controlled by the **`CAN_UPDATE_USER_PASSWORD`** permission, not by role name.
 
-| Action | Allowed |
-|--------|---------|
-| Admin changes another user's password | Yes |
-| Admin changes their own password | Yes |
-| Non-admin changes their own password | No |
-| Non-admin changes another user's password | No |
+- ADMIN has this permission automatically.
+- Any other role (Owner, Manager, Host, Cleaning Lady, Handy Man) can be granted it manually through the role management UI.
+- A user who has the permission can change the password of **any** user, including their own.
+- A user without the permission cannot change any password and must ask someone who has it.
 
-Non-admin users (Owner, Manager, Host, Cleaning Lady, Handy Man) cannot change passwords. If they forget their password, they must contact an administrator.
+By default only ADMIN has it, so out of the box this behaves as "admin only" — but it can be delegated to another role without code changes.
 
 ---
 

@@ -246,26 +246,17 @@ describe('User Routes - Self-Deactivation Prevention', () => {
     });
   });
 
-  describe('PUT /api/users/:id/password - Change Password (ADMIN only)', () => {
+  describe('PUT /api/users/:id/password - Change Password', () => {
+    // Access is gated by requirePermission('CAN_UPDATE_USER_PASSWORD'), which is
+    // mocked to allow through here (the permission middleware is tested
+    // separately). These tests cover the handler logic.
     const validPassword = 'NewPass1!';
-
-    // The requesting user is always mockUserId (set by mocked auth middleware).
-    // Mock User.findById(...).populate('role','name') to return them with a role.
-    const mockRequestingUserAsAdmin = (roleName = 'ADMIN') => {
-      User.findById.mockReturnValue({
-        populate: jest.fn().mockResolvedValue({
-          _id: mockUserId,
-          role: { _id: mockRoleId, name: roleName },
-        }),
-      });
-    };
 
     beforeEach(() => {
       hashPassword.mockResolvedValue('hashed-password');
     });
 
-    it('should allow an admin to change another user\'s password', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
+    it('should change another user\'s password', async () => {
       User.findByIdAndUpdate.mockResolvedValue({ _id: mockOtherUserId });
 
       const response = await request(app)
@@ -276,11 +267,9 @@ describe('User Routes - Self-Deactivation Prevention', () => {
       expect(response.body.message).toBe('Password updated successfully');
     });
 
-    it('should allow an admin to change their own password', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
+    it('should change the requesting user\'s own password', async () => {
       User.findByIdAndUpdate.mockResolvedValue({ _id: mockUserId });
 
-      // Target id is the requesting admin's own id (mockUserId)
       const response = await request(app)
         .put(`/api/users/${mockUserId}/password`)
         .send({ password: validPassword });
@@ -290,7 +279,6 @@ describe('User Routes - Self-Deactivation Prevention', () => {
     });
 
     it('should hash the password and update ONLY the password field', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
       User.findByIdAndUpdate.mockResolvedValue({ _id: mockOtherUserId });
 
       await request(app)
@@ -305,35 +293,7 @@ describe('User Routes - Self-Deactivation Prevention', () => {
       );
     });
 
-    it('should reject a non-admin requesting user with 403', async () => {
-      mockRequestingUserAsAdmin('MANAGER');
-
-      const response = await request(app)
-        .put(`/api/users/${mockOtherUserId}/password`)
-        .send({ password: validPassword });
-
-      expect(response.status).toBe(403);
-      expect(response.body.errors[0].msg).toBe(
-        'Access denied. Only an admin can change passwords.'
-      );
-      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
-    });
-
-    it('should return 403 when the requesting user is not found', async () => {
-      User.findById.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(null),
-      });
-
-      const response = await request(app)
-        .put(`/api/users/${mockOtherUserId}/password`)
-        .send({ password: validPassword });
-
-      expect(response.status).toBe(403);
-      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
-    });
-
     it('should return 404 when the target user does not exist', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
       User.findByIdAndUpdate.mockResolvedValue(null);
 
       const response = await request(app)
@@ -345,8 +305,6 @@ describe('User Routes - Self-Deactivation Prevention', () => {
     });
 
     it('should reject with 400 when password is missing', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
-
       const response = await request(app)
         .put(`/api/users/${mockOtherUserId}/password`)
         .send({});
@@ -356,8 +314,6 @@ describe('User Routes - Self-Deactivation Prevention', () => {
     });
 
     it('should reject with 400 when password does not meet complexity rules', async () => {
-      mockRequestingUserAsAdmin('ADMIN');
-
       const response = await request(app)
         .put(`/api/users/${mockOtherUserId}/password`)
         .send({ password: 'weak' });

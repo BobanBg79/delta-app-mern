@@ -337,11 +337,12 @@ router.put(
 );
 
 // @route    PUT api/users/:id/password
-// @desc     Change a user's password (ADMIN only, no current password required)
-// @access   Private (ADMIN role only)
+// @desc     Change a user's password (no current password required)
+// @access   Private (requires CAN_UPDATE_USER_PASSWORD)
 router.put(
   '/:id/password',
   auth,
+  requirePermission('CAN_UPDATE_USER_PASSWORD'),
   check('id', 'Invalid user ID').isMongoId(),
   check('password', VALIDATION_MESSAGES.PASSWORD_INVALID).matches(VALIDATION_PATTERNS.PASSWORD),
   async (req, res) => {
@@ -351,14 +352,6 @@ router.put(
     }
 
     try {
-      // Only ADMIN can change passwords (own or anyone else's)
-      const requestingUser = await User.findById(req.user.id).populate('role', 'name');
-      if (!requestingUser || requestingUser.role?.name !== 'ADMIN') {
-        return res.status(403).json({
-          errors: [{ msg: 'Access denied. Only an admin can change passwords.' }],
-        });
-      }
-
       const { password } = req.body;
 
       const hashedPassword = await hashPassword(password);

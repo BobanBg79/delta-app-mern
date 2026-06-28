@@ -20,8 +20,8 @@ const UserView = () => {
   const { user, fetching } = useSelector((state) => state.user);
   const { user: authUser } = useSelector((state) => state.auth);
   const userPermissions = authUser?.role?.permissions || [];
-  const isAdmin = authUser?.role?.name === 'ADMIN';
-  const canChangePassword = isAdmin && !!userId;
+  const canChangePassword =
+    !!userId && hasPermission(userPermissions, USER_PERMISSIONS.CAN_UPDATE_USER_PASSWORD);
 
   // Check for appropriate permission based on mode (create vs update)
   const userCanCreateUser = hasPermission(userPermissions, USER_PERMISSIONS.CAN_CREATE_USER);

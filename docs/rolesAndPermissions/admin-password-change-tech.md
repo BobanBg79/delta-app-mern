@@ -21,18 +21,17 @@ PUT /api/users/:id/password
 | Property | Value |
 |----------|-------|
 | Auth | Required (JWT via auth middleware) |
-| Authorization | Requesting user must have the ADMIN role |
+| Authorization | Requires the `CAN_UPDATE_USER_PASSWORD` permission |
 | Request body | `{ "password": "<new password>" }` |
 | Success response | `200 { "message": "Password updated successfully" }` |
 
 ### Authorization Check
 
-The endpoint does not use the generic permission middleware. Instead, it loads the requesting user (from the JWT) and verifies the role directly:
-
-- The requesting user is fetched via `User.findById(req.user.id).populate('role', 'name')`.
-- If the user is missing or their role name is not `ADMIN`, the endpoint returns `403`.
-
-This mirrors the existing admin-only check pattern used elsewhere (for example in the roles route).
+Access is **permission-based**, not role-based. The route is protected with
+`requirePermission('CAN_UPDATE_USER_PASSWORD')`. ADMIN receives this permission
+automatically on server start; other roles can be granted it manually via the
+role management UI. (This is a special, workflow-specific permission, like
+`CAN_COMPLETE_CLEANING`.)
 
 ### Response Codes
 
@@ -40,7 +39,7 @@ This mirrors the existing admin-only check pattern used elsewhere (for example i
 |------|-----------|
 | 200 | Password updated successfully |
 | 400 | Password missing or does not meet complexity rules |
-| 403 | Requesting user is not an admin (or not found) |
+| 403 | Requesting user lacks `CAN_UPDATE_USER_PASSWORD` |
 | 404 | Target user does not exist |
 | 500 | Unexpected server error |
 
@@ -90,7 +89,7 @@ This removes earlier duplication and a mismatch where the registration pattern d
 
 | Layer | File | Responsibility |
 |-------|------|----------------|
-| Page | `UserView/index.js` | Shows the Change password button (admin + edit mode), holds modal open/close state |
+| Page | `UserView/index.js` | Shows the Change password button (has-permission + edit mode), holds modal open/close state |
 | Modal | `UserView/ChangePasswordModal.js` | Two password fields, client-side validation, submit |
 | Redux op | `modules/users/operations.js` | `changeUserPassword(userId, password)` calls the endpoint |
 
@@ -98,7 +97,7 @@ This removes earlier duplication and a mismatch where the registration pattern d
 
 The Change password button is rendered only when both conditions are true:
 
-- The logged-in user has the ADMIN role
+- The logged-in user has the `CAN_UPDATE_USER_PASSWORD` permission (`hasPermission`)
 - The page is in edit mode (an existing user is open, not the create form)
 
 This is a UI convenience only. The backend remains the authoritative gate via the 403 check.
@@ -122,7 +121,7 @@ Success and error feedback is delivered through the centralized toast system. On
 
 | Area | Coverage |
 |------|----------|
-| Password change route | Admin changes another user, admin changes own password, non-admin rejected (403), requesting user not found (403), target user not found (404), password missing (400), password fails complexity (400) |
+| Password change route | Changes another user's password, changes own password, target user not found (404), password missing (400), password fails complexity (400). Authorization (CAN_UPDATE_USER_PASSWORD) is enforced by requirePermission and covered by the permission middleware tests. |
 | Hashing utility | Generates a cost-10 salt, hashes the plain password with it, returns the hash, and hashes whatever input it receives |
 
 All backend tests run as part of the standard server test suite.

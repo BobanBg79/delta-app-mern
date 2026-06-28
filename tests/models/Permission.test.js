@@ -13,6 +13,10 @@ describe('Permission model', () => {
       expect(all).toContain('CAN_VIEW_UNPAID_RESERVATIONS_REPORT');
     });
 
+    it('should include the change-password special permission', () => {
+      expect(all).toContain('CAN_UPDATE_USER_PASSWORD');
+    });
+
     it('should not contain duplicates', () => {
       expect(new Set(all).size).toBe(all.length);
     });
@@ -28,6 +32,10 @@ describe('Permission model', () => {
 
     it('should accept a report permission (CAN_VIEW_*_REPORT)', () => {
       expect(isValid('CAN_VIEW_UNPAID_RESERVATIONS_REPORT')).toBe(true);
+    });
+
+    it('should accept the change-password special permission', () => {
+      expect(isValid('CAN_UPDATE_USER_PASSWORD')).toBe(true);
     });
 
     it('should accept standard and sensitive-data permissions', () => {
