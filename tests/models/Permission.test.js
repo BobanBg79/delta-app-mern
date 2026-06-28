@@ -17,6 +17,10 @@ describe('Permission model', () => {
       expect(all).toContain('CAN_UPDATE_USER_PASSWORD');
     });
 
+    it('should include the write-off special permission', () => {
+      expect(all).toContain('CAN_WRITE_OFF_RESERVATION');
+    });
+
     it('should not contain duplicates', () => {
       expect(new Set(all).size).toBe(all.length);
     });
@@ -36,6 +40,10 @@ describe('Permission model', () => {
 
     it('should accept the change-password special permission', () => {
       expect(isValid('CAN_UPDATE_USER_PASSWORD')).toBe(true);
+    });
+
+    it('should accept the write-off special permission', () => {
+      expect(isValid('CAN_WRITE_OFF_RESERVATION')).toBe(true);
     });
 
     it('should accept standard and sensitive-data permissions', () => {

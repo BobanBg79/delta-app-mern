@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const { requirePermission } = require('../../middleware/permission');
 const reservationsGuestCheck = require('../../middleware/reservationsGuestCheck');
 const reservationDatesCheck = require('../../middleware/reservations/reservationDatesCheck');
 const reservationExistsCheck = require('../../middleware/reservations/reservationExistsCheck');
@@ -375,5 +376,49 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).send({ errors: [{ msg: 'Server error' }] });
   }
 });
+
+// @route   PUT api/reservations/:id/write-off
+// @desc     Toggle the debt write-off flag on a reservation (business status
+//           only — no accounting transaction; the system is cash-basis).
+// @access   Private (requires CAN_WRITE_OFF_RESERVATION)
+router.put(
+  '/:id/write-off',
+  auth,
+  requirePermission('CAN_WRITE_OFF_RESERVATION'),
+  check('id', 'Invalid reservation ID').isMongoId(),
+  check('debtWrittenOff', 'debtWrittenOff must be a boolean').isBoolean(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { debtWrittenOff } = req.body;
+
+      const update = debtWrittenOff
+        ? { debtWrittenOff: true, writtenOffAt: new Date(), writtenOffBy: req.user.id }
+        : { debtWrittenOff: false, writtenOffAt: null, writtenOffBy: null };
+
+      const reservation = await Reservation.findByIdAndUpdate(
+        req.params.id,
+        { $set: update },
+        { new: true }
+      );
+
+      if (!reservation) {
+        return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
+      }
+
+      res.json({ reservation });
+    } catch (error) {
+      console.error('Write-off error:', error.message);
+      if (error.kind === 'ObjectId') {
+        return res.status(404).json({ errors: [{ msg: 'Reservation not found' }] });
+      }
+      res.status(500).send({ errors: [{ msg: 'Server error' }] });
+    }
+  }
+);
 
 module.exports = router;

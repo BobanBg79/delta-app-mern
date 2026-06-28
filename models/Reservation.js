@@ -106,6 +106,24 @@ const ReservationSchema = new mongoose.Schema({
     default: '',
     maxlength: [255, 'Reservation notes cannot exceed 255 characters'],
   },
+  // Debt write-off: a pure business flag. The system is cash-basis, so an
+  // unpaid remainder was never booked as revenue/receivable — writing it off
+  // is a status decision ("we don't expect this money"), not an accounting
+  // entry. The amount is irrelevant (it's a boolean); if the guest later pays
+  // anyway, that payment is booked normally through the regular payment flow.
+  debtWrittenOff: {
+    type: Boolean,
+    default: false,
+  },
+  writtenOffAt: {
+    type: Date,
+    default: null,
+  },
+  writtenOffBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
 });
 
 // Virtual for number of nights
