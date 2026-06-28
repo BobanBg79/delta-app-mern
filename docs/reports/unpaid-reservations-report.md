@@ -13,6 +13,7 @@ To insert a Table of Contents, use Insert → Table of Contents in the Confluenc
 ## Business Behavior
 
 - Shows reservations that are **active**, whose **check-in is before today**, and where **totalPaid < totalAmount**.
+- Reservations whose debt has been **written off** are excluded — once we stop expecting the money, it should not show as outstanding. See `docs/reservations/debt-write-off.md`.
 - Each row shows the apartment, the reservation period, the booking agent (or "Direct Reservation"), the guest contact, and three amounts: **Total**, **Paid**, **Outstanding (diff)**.
 - Clicking a row opens that reservation's details.
 - The report is **actionable and recent**: the homepage only looks back **12 months**. Unpaid reservations older than that do not appear here. A separate "all debts" report (future) can show everything.
@@ -56,7 +57,7 @@ GET /api/reports/unpaid-reservations
 
 ### Where filtering happens
 
-- **DB-level** (in the Mongo query): `fromDate`/`toDate` (check-in window), `apartmentId`, plus the always-on `status: 'active'` and `plannedCheckIn < today`.
+- **DB-level** (in the Mongo query): `fromDate`/`toDate` (check-in window), `apartmentId`, plus the always-on `status: 'active'`, `plannedCheckIn < today`, and `debtWrittenOff: { $ne: true }` (exclude written-off).
 - **In memory** (after the payments aggregate): `minDiff`/`maxDiff`, because the outstanding amount (diff) is derived from payments and does not exist on the reservation. Sorting and pagination also happen in memory for the same reason.
 
 ### Sorting
