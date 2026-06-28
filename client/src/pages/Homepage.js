@@ -38,13 +38,26 @@ const Homepage = () => {
   return (
     <Row>
       <Col className="mx-auto">
-        <div className="text-end text-muted mb-2">
-          {roleName && (
+        <div className="d-flex justify-content-between align-items-center mb-2 text-muted">
+          <h2 className="mb-0">{`Welcome ${user.fname} ${user.lname}`}</h2>
+          <div className="text-end">
+            {roleName && (
+              <div>
+                Role: <strong>{ROLE_LABELS[roleName] || roleName}</strong>
+              </div>
+            )}
             <div>
-              Role: <strong>{ROLE_LABELS[roleName] || roleName}</strong>
+              Today is{' '}
+              <strong>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </strong>
             </div>
-          )}
-          <h2>{`Welcome ${user.fname} ${user.lname}`}</h2>
+          </div>
         </div>
 
         {canViewReservations && (
