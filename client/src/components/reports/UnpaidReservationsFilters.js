@@ -1,26 +1,17 @@
 import { useState, useEffect } from 'react';
-import { DateRangePicker } from 'rsuite';
-import 'rsuite/dist/rsuite.min.css';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import { setHoursForSearchReservation } from '../../utils/date';
 
+// Outstanding-amount filter. The apartment and check-in date filters live in
+// the table column headers; this row only holds the min/max owed filter.
 const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => {
-  const [dateRange, setDateRange] = useState([null, null]);
   const [minDiff, setMinDiff] = useState('');
   const [maxDiff, setMaxDiff] = useState('');
 
-  // Sync local state with external criteria (e.g. after a clear)
   useEffect(() => {
-    const { fromDate, toDate } = currentSearchCriteria;
-    if (fromDate && toDate) {
-      setDateRange([new Date(fromDate), new Date(toDate)]);
-    } else {
-      setDateRange([null, null]);
-    }
     setMinDiff(currentSearchCriteria.minDiff ?? '');
     setMaxDiff(currentSearchCriteria.maxDiff ?? '');
   }, [currentSearchCriteria]);
@@ -29,18 +20,12 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
     const filterFalsy = (obj) =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined));
 
-    // Normalize the date range to start-of-day / end-of-day (same as other searches).
-    const [fromDate, toDate] =
-      dateRange?.[0] && dateRange?.[1]
-        ? setHoursForSearchReservation(dateRange)
-        : [null, null];
-
+    // Preserve filters controlled by the column headers (date range, apartments).
     onSearch(
       filterFalsy({
-        fromDate,
-        toDate,
-        // apartmentId is controlled by the column-header dropdown; preserve it.
-        apartmentId: currentSearchCriteria.apartmentId,
+        fromDate: currentSearchCriteria.fromDate,
+        toDate: currentSearchCriteria.toDate,
+        apartmentIds: currentSearchCriteria.apartmentIds,
         minDiff,
         maxDiff,
       })
@@ -48,25 +33,31 @@ const UnpaidReservationsFilters = ({ onSearch, currentSearchCriteria = {} }) => 
   };
 
   const handleClear = () => {
-    setDateRange([null, null]);
     setMinDiff('');
     setMaxDiff('');
-    onSearch(null);
+    // Keep the date/apartment header filters; only clear the owed-amount filter.
+    handleSearchWith({ minDiff: '', maxDiff: '' });
+  };
+
+  // Apply specific min/max while preserving header-controlled filters
+  const handleSearchWith = ({ minDiff: mn, maxDiff: mx }) => {
+    const filterFalsy = (obj) =>
+      Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined));
+    onSearch(
+      filterFalsy({
+        fromDate: currentSearchCriteria.fromDate,
+        toDate: currentSearchCriteria.toDate,
+        apartmentIds: currentSearchCriteria.apartmentIds,
+        minDiff: mn,
+        maxDiff: mx,
+      })
+    );
   };
 
   return (
     <Row className="mb-3">
       <Col xs={12}>
-        <h6>Filter</h6>
-      </Col>
-      <Col xs={12} md={4} className="mb-2">
-        <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
-          format="dd.MM.yyyy"
-          placeholder="Check-in period (optional)"
-          style={{ width: '100%' }}
-        />
+        <h6>Filter by amount owed</h6>
       </Col>
       <Col xs={6} md={2} className="mb-2">
         <FloatingLabel label="Owes more than">

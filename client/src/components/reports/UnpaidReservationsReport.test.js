@@ -157,7 +157,7 @@ describe('UnpaidReservationsReport', () => {
   });
 
   describe('Request window', () => {
-    it('should request with a fromDate ~12 months in the past', async () => {
+    it('should request with fromDate = start of the current year by default', async () => {
       axios.get.mockResolvedValue({ data: { reservations: [] } });
 
       await act(async () => {
@@ -168,13 +168,18 @@ describe('UnpaidReservationsReport', () => {
 
       const [url, config] = axios.get.mock.calls[0];
       expect(url).toBe('/api/reports/unpaid-reservations');
-      expect(config.params.fromDate).toEqual(expect.any(Number));
+      const expected = new Date(new Date().getFullYear(), 0, 1).getTime();
+      expect(config.params.fromDate).toBe(expected);
+    });
 
-      // fromDate should be roughly one year ago (allow a wide margin)
-      const aboutOneYearMs = 365 * 24 * 60 * 60 * 1000;
-      const delta = Date.now() - config.params.fromDate;
-      expect(delta).toBeGreaterThan(aboutOneYearMs - 5 * 24 * 60 * 60 * 1000);
-      expect(delta).toBeLessThan(aboutOneYearMs + 5 * 24 * 60 * 60 * 1000);
+    it('should show the default check-in chip on load', async () => {
+      axios.get.mockResolvedValue({ data: { reservations: [] } });
+
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText(/check-in:/i)).toBeInTheDocument());
     });
   });
 
@@ -197,12 +202,15 @@ describe('UnpaidReservationsReport', () => {
 
       // open dropdown and check an apartment — should NOT refetch yet
       fireEvent.click(screen.getByLabelText(/apartment filter/i));
-      fireEvent.click(screen.getByLabelText('Jorgovan'));
+      const jorgovan = screen.getByLabelText('Jorgovan');
+      fireEvent.click(jorgovan);
       expect(axios.get).not.toHaveBeenCalled();
 
-      // Apply -> single refetch with the selection
+      // Apply (the one inside the apartment dropdown) -> single refetch
+      const aptMenu = jorgovan.closest('.dropdown-menu');
+      const applyBtn = [...aptMenu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+        fireEvent.click(applyBtn);
       });
 
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
@@ -218,9 +226,12 @@ describe('UnpaidReservationsReport', () => {
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
 
       fireEvent.click(screen.getByLabelText(/apartment filter/i));
-      fireEvent.click(screen.getByLabelText('Jorgovan'));
+      const jorgovan = screen.getByLabelText('Jorgovan');
+      fireEvent.click(jorgovan);
+      const aptMenu = jorgovan.closest('.dropdown-menu');
+      const applyBtn = [...aptMenu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+        fireEvent.click(applyBtn);
       });
 
       // chip appears
@@ -236,6 +247,60 @@ describe('UnpaidReservationsReport', () => {
 
       const [, config] = axios.get.mock.calls[0];
       expect(config.params.apartmentIds).toBeUndefined();
+    });
+
+    it('should NOT show Clear all with only one active chip', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      // remove the default check-in chip -> only filter left is none -> add one apartment
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText(/remove check-in filter/i));
+      });
+
+      fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      const jorgovan = screen.getByLabelText('Jorgovan');
+      fireEvent.click(jorgovan);
+      const aptMenu = jorgovan.closest('.dropdown-menu');
+      const applyBtn = [...aptMenu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      // exactly one chip (Apartment) -> no Clear all
+      await waitFor(() => expect(screen.getByText(/Apartment: Jorgovan/i)).toBeInTheDocument());
+      expect(screen.queryByText(/clear all/i)).not.toBeInTheDocument();
+    });
+
+    it('should clear all filters (date + apartments) via Clear all', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      // select an apartment so chips + Clear all are shown
+      fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      const jorgovan = screen.getByLabelText('Jorgovan');
+      fireEvent.click(jorgovan);
+      const aptMenu = jorgovan.closest('.dropdown-menu');
+      const applyBtn = [...aptMenu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      await waitFor(() => expect(screen.getByText(/clear all/i)).toBeInTheDocument());
+
+      axios.get.mockClear();
+      await act(async () => {
+        fireEvent.click(screen.getByText(/clear all/i));
+      });
+
+      const [, config] = axios.get.mock.calls[0];
+      expect(config.params.apartmentIds).toBeUndefined();
+      expect(config.params.fromDate).toBeUndefined();
+      expect(config.params.toDate).toBeUndefined();
     });
   });
 

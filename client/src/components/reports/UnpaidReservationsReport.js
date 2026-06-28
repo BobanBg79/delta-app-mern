@@ -11,7 +11,10 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import Badge from 'react-bootstrap/Badge';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter } from '@fortawesome/free-solid-svg-icons';
+import { DateRangePicker } from 'rsuite';
+import 'rsuite/dist/rsuite.min.css';
 import axios from 'axios';
+import { setHoursForSearchReservation } from '../../utils/date';
 import UnpaidReservationsFilters from './UnpaidReservationsFilters';
 import Pagination from '../Pagination';
 import { batchWriteOff } from '../../modules/reservation/operations';
@@ -20,12 +23,9 @@ import { USER_PERMISSIONS } from '../../constants';
 
 const PAGE_SIZE = 10;
 
-// Default homepage window: actionable, recent debts (last 12 months).
-const defaultFromDate = () => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 1);
-  return d.getTime();
-};
+// Default lower bound: start of the current year. Shown as a removable chip
+// so the user immediately sees it and can change or clear it.
+const defaultFromDate = () => new Date(new Date().getFullYear(), 0, 1).getTime();
 
 const formatEur = (value) =>
   (value || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -43,9 +43,12 @@ const UnpaidReservationsReport = () => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentSearchCriteria, setCurrentSearchCriteria] = useState({});
+  // Start with the default lower bound (start of current year) as an active filter.
+  const [currentSearchCriteria, setCurrentSearchCriteria] = useState({ fromDate: defaultFromDate() });
   const [aptDropdownOpen, setAptDropdownOpen] = useState(false);
   const [draftApartmentIds, setDraftApartmentIds] = useState([]);
+  const [checkInDropdownOpen, setCheckInDropdownOpen] = useState(false);
+  const [draftDateRange, setDraftDateRange] = useState([null, null]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +99,50 @@ const UnpaidReservationsReport = () => {
   const removeApartment = (id) => applyApartmentIds(selectedApartmentIds.filter((x) => x !== id));
   const clearApartments = () => applyApartmentIds([]);
 
+  // --- Check-in date range filter (column-header dropdown, draft + Apply) ---
+  const { fromDate, toDate } = currentSearchCriteria;
+  const hasDateFilter = !!(fromDate || toDate);
+
+  const applyDateRange = async (from, to) => {
+    const criteria = { ...currentSearchCriteria };
+    if (from) criteria.fromDate = from;
+    else delete criteria.fromDate;
+    if (to) criteria.toDate = to;
+    else delete criteria.toDate;
+    setCurrentSearchCriteria(criteria);
+    setSelectedIds([]);
+    await fetchUnpaid(criteria, 0);
+  };
+
+  const onCheckInDropdownToggle = (isOpen) => {
+    if (isOpen) {
+      setDraftDateRange([
+        fromDate ? new Date(fromDate) : null,
+        toDate ? new Date(toDate) : null,
+      ]);
+    }
+    setCheckInDropdownOpen(isOpen);
+  };
+
+  const applyDraftDateRange = () => {
+    setCheckInDropdownOpen(false);
+    const [from, to] =
+      draftDateRange?.[0] && draftDateRange?.[1]
+        ? setHoursForSearchReservation(draftDateRange)
+        : [null, null];
+    applyDateRange(from, to);
+  };
+
+  const clearDateFilter = () => applyDateRange(null, null);
+
+  // Clear every active filter (date + apartments) in one go
+  const clearAllFilters = async () => {
+    const criteria = {};
+    setCurrentSearchCriteria(criteria);
+    setSelectedIds([]);
+    await fetchUnpaid(criteria, 0);
+  };
+
   const toggleSelected = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
@@ -114,9 +161,9 @@ const UnpaidReservationsReport = () => {
     setLoading(true);
     setError(null);
     try {
-      // Use the user's period filter if present; otherwise default to last 12 months.
+      // searchCriteria already carries fromDate/toDate (the default is seeded
+      // into currentSearchCriteria), so just pass it through.
       const params = {
-        fromDate: defaultFromDate(),
         ...searchCriteria,
         page,
         pageSize: PAGE_SIZE,
@@ -143,7 +190,8 @@ const UnpaidReservationsReport = () => {
   }, []);
 
   useEffect(() => {
-    fetchUnpaid({}, 0);
+    // Initial load uses the seeded default filter (start of current year)
+    fetchUnpaid({ fromDate: defaultFromDate() }, 0);
   }, [fetchUnpaid]);
 
   const onFilterSearchHandler = async (searchCriteria) => {
@@ -237,8 +285,21 @@ const UnpaidReservationsReport = () => {
   const renderBody = () => {
     return (
       <>
-          {selectedApartmentIds.length > 0 && (
+          {(selectedApartmentIds.length > 0 || hasDateFilter) && (
             <div className="mb-2 d-flex flex-wrap gap-2 align-items-center">
+              {hasDateFilter && (
+                <Badge bg="light" text="dark" className="border">
+                  Check-in: {fromDate ? formatDate(fromDate) : '…'} – {toDate ? formatDate(toDate) : 'today'}{' '}
+                  <span
+                    role="button"
+                    aria-label="remove check-in filter"
+                    onClick={clearDateFilter}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    ×
+                  </span>
+                </Badge>
+              )}
               {selectedApartmentIds.map((id) => (
                 <Badge key={id} bg="light" text="dark" className="border">
                   Apartment: {apartmentName(id)}{' '}
@@ -252,9 +313,11 @@ const UnpaidReservationsReport = () => {
                   </span>
                 </Badge>
               ))}
-              <Button variant="link" size="sm" className="p-0" onClick={clearApartments}>
-                Clear
-              </Button>
+              {(hasDateFilter ? 1 : 0) + selectedApartmentIds.length >= 2 && (
+                <Button variant="link" size="sm" className="p-0" onClick={clearAllFilters}>
+                  Clear all
+                </Button>
+              )}
             </div>
           )}
           {canWriteOff && (
@@ -340,7 +403,50 @@ const UnpaidReservationsReport = () => {
                     </Dropdown.Menu>
                   </Dropdown>
                 </th>
-                <th>Check-in</th>
+                <th>
+                  <Dropdown
+                    autoClose="outside"
+                    show={checkInDropdownOpen}
+                    onToggle={onCheckInDropdownToggle}
+                  >
+                    <Dropdown.Toggle
+                      as="span"
+                      role="button"
+                      style={{ cursor: 'pointer' }}
+                      aria-label="check-in filter"
+                    >
+                      Check-in{' '}
+                      <FontAwesomeIcon
+                        icon={faFilter}
+                        className={hasDateFilter ? 'text-primary' : 'text-muted'}
+                      />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: 'fixed' }} style={{ minWidth: 300 }}>
+                      <div className="px-3 py-2">
+                        <DateRangePicker
+                          value={draftDateRange}
+                          onChange={(v) => setDraftDateRange(v || [null, null])}
+                          format="dd.MM.yyyy"
+                          placeholder="Check-in range"
+                          style={{ width: '100%' }}
+                        />
+                        <div className="d-flex justify-content-between mt-2">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0"
+                            onClick={() => setDraftDateRange([null, null])}
+                          >
+                            Clear
+                          </Button>
+                          <Button variant="primary" size="sm" onClick={applyDraftDateRange}>
+                            Apply
+                          </Button>
+                        </div>
+                      </div>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </th>
                 <th>Check-out</th>
                 <th>Agent</th>
                 <th>Contact</th>
