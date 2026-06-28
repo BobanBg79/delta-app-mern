@@ -127,6 +127,19 @@ const UnpaidReservationsReport = () => {
     await fetchUnpaid(currentSearchCriteria, newPage);
   };
 
+  // Select-all reflects only the rows on the current page
+  const allOnPageSelected =
+    reservations.length > 0 && reservations.every((r) => selectedIds.includes(r._id));
+
+  const toggleSelectAll = () => {
+    const pageIds = reservations.map((r) => r._id);
+    setSelectedIds((prev) =>
+      allOnPageSelected
+        ? prev.filter((id) => !pageIds.includes(id)) // unselect this page's rows
+        : [...new Set([...prev, ...pageIds])] // add this page's rows
+    );
+  };
+
   const renderBody = () => {
     if (loading || error) {
       return <ReportCardState loading={loading} error={error} />;
@@ -155,7 +168,16 @@ const UnpaidReservationsReport = () => {
           <Table striped hover responsive className="mb-0">
             <thead>
               <tr>
-                {canWriteOff && <th style={{ width: '1%' }}></th>}
+                {canWriteOff && (
+                  <th style={{ width: '1%' }}>
+                    <Form.Check
+                      type="checkbox"
+                      aria-label="select all on this page"
+                      checked={allOnPageSelected}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                )}
                 <th>Apartment</th>
                 <th>Period</th>
                 <th>Agent</th>

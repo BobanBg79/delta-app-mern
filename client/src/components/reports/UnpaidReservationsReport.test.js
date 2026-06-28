@@ -227,6 +227,34 @@ describe('UnpaidReservationsReport', () => {
       expect(batchWriteOff).toHaveBeenCalledWith(['res-1']);
     });
 
+    it('should select and unselect all rows on the page via the header checkbox', async () => {
+      axios.get.mockResolvedValue({
+        data: {
+          reservations: [
+            { ...sampleReservation, _id: 'res-1', apartmentName: 'Onyx' },
+            { ...sampleReservation, _id: 'res-2', apartmentName: 'Jorgovan' },
+          ],
+          total: 2,
+        },
+      });
+
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+
+      await waitFor(() => expect(screen.getByText('Onyx')).toBeInTheDocument());
+
+      const selectAll = screen.getByLabelText(/select all on this page/i);
+      fireEvent.click(selectAll);
+
+      // both row checkboxes checked -> button shows count 2
+      expect(screen.getByRole('button', { name: /write off selected \(2\)/i })).toBeInTheDocument();
+
+      // toggle off
+      fireEvent.click(selectAll);
+      expect(screen.getByRole('button', { name: /write off selected \(0\)/i })).toBeDisabled();
+    });
+
     it('should not dispatch when the modal is cancelled', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);
