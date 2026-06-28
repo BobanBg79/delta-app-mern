@@ -183,6 +183,62 @@ describe('UnpaidReservationsReport', () => {
     });
   });
 
+  describe('Outstanding column filter', () => {
+    beforeEach(() => {
+      axios.get.mockResolvedValue({ data: { reservations: [sampleReservation], total: 1 } });
+    });
+
+    it('should refetch with minDiff/maxDiff only after Apply', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+      axios.get.mockClear();
+
+      // open the Outstanding dropdown
+      fireEvent.click(screen.getByLabelText(/outstanding filter/i));
+      const menu = screen.getByLabelText(/outstanding filter/i).closest('th').querySelector('.dropdown-menu');
+      const [minInput, maxInput] = menu.querySelectorAll('input[type="number"]');
+      fireEvent.change(minInput, { target: { value: '50' } });
+      fireEvent.change(maxInput, { target: { value: '200' } });
+      expect(axios.get).not.toHaveBeenCalled(); // draft only
+
+      const applyBtn = [...menu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      const [, config] = axios.get.mock.calls[0];
+      expect(config.params.minDiff).toBe('50');
+      expect(config.params.maxDiff).toBe('200');
+    });
+
+    it('should show an Outstanding chip and remove it on x', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByLabelText(/outstanding filter/i));
+      const menu = screen.getByLabelText(/outstanding filter/i).closest('th').querySelector('.dropdown-menu');
+      const [minInput] = menu.querySelectorAll('input[type="number"]');
+      fireEvent.change(minInput, { target: { value: '50' } });
+      const applyBtn = [...menu.querySelectorAll('button')].find((b) => b.textContent === 'Apply');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Outstanding:/i)).toBeInTheDocument());
+
+      axios.get.mockClear();
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText(/remove outstanding filter/i));
+      });
+      const [, config] = axios.get.mock.calls[0];
+      expect(config.params.minDiff).toBeUndefined();
+    });
+  });
+
   describe('Apartment column filter', () => {
     beforeEach(() => {
       mockApartments = [

@@ -15,7 +15,6 @@ import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
 import axios from 'axios';
 import { setHoursForSearchReservation } from '../../utils/date';
-import UnpaidReservationsFilters from './UnpaidReservationsFilters';
 import Pagination from '../Pagination';
 import { batchWriteOff } from '../../modules/reservation/operations';
 import { hasPermission } from '../../utils/permissions';
@@ -49,6 +48,9 @@ const UnpaidReservationsReport = () => {
   const [draftApartmentIds, setDraftApartmentIds] = useState([]);
   const [checkInDropdownOpen, setCheckInDropdownOpen] = useState(false);
   const [draftDateRange, setDraftDateRange] = useState([null, null]);
+  const [diffDropdownOpen, setDiffDropdownOpen] = useState(false);
+  const [draftMinDiff, setDraftMinDiff] = useState('');
+  const [draftMaxDiff, setDraftMaxDiff] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -135,6 +137,36 @@ const UnpaidReservationsReport = () => {
 
   const clearDateFilter = () => applyDateRange(null, null);
 
+  // --- Outstanding (min/max diff) filter (column-header dropdown, draft + Apply) ---
+  const { minDiff, maxDiff } = currentSearchCriteria;
+  const hasDiffFilter = minDiff != null || maxDiff != null;
+
+  const applyDiff = async (mn, mx) => {
+    const criteria = { ...currentSearchCriteria };
+    if (mn !== '' && mn != null) criteria.minDiff = mn;
+    else delete criteria.minDiff;
+    if (mx !== '' && mx != null) criteria.maxDiff = mx;
+    else delete criteria.maxDiff;
+    setCurrentSearchCriteria(criteria);
+    setSelectedIds([]);
+    await fetchUnpaid(criteria, 0);
+  };
+
+  const onDiffDropdownToggle = (isOpen) => {
+    if (isOpen) {
+      setDraftMinDiff(minDiff ?? '');
+      setDraftMaxDiff(maxDiff ?? '');
+    }
+    setDiffDropdownOpen(isOpen);
+  };
+
+  const applyDraftDiff = () => {
+    setDiffDropdownOpen(false);
+    applyDiff(draftMinDiff, draftMaxDiff);
+  };
+
+  const clearDiffFilter = () => applyDiff('', '');
+
   // Clear every active filter (date + apartments) in one go
   const clearAllFilters = async () => {
     const criteria = {};
@@ -193,12 +225,6 @@ const UnpaidReservationsReport = () => {
     // Initial load uses the seeded default filter (start of current year)
     fetchUnpaid({ fromDate: defaultFromDate() }, 0);
   }, [fetchUnpaid]);
-
-  const onFilterSearchHandler = async (searchCriteria) => {
-    const criteria = searchCriteria || {};
-    setCurrentSearchCriteria(criteria);
-    await fetchUnpaid(criteria, 0);
-  };
 
   const handlePageChange = async (newPage) => {
     await fetchUnpaid(currentSearchCriteria, newPage);
@@ -285,7 +311,7 @@ const UnpaidReservationsReport = () => {
   const renderBody = () => {
     return (
       <>
-          {(selectedApartmentIds.length > 0 || hasDateFilter) && (
+          {(selectedApartmentIds.length > 0 || hasDateFilter || hasDiffFilter) && (
             <div className="mb-2 d-flex flex-wrap gap-2 align-items-center">
               {hasDateFilter && (
                 <Badge bg="light" text="dark" className="border">
@@ -313,7 +339,22 @@ const UnpaidReservationsReport = () => {
                   </span>
                 </Badge>
               ))}
-              {(hasDateFilter ? 1 : 0) + selectedApartmentIds.length >= 2 && (
+              {hasDiffFilter && (
+                <Badge bg="light" text="dark" className="border">
+                  Outstanding: {minDiff != null ? `≥ ${minDiff}` : ''}
+                  {minDiff != null && maxDiff != null ? ' ' : ''}
+                  {maxDiff != null ? `≤ ${maxDiff}` : ''}{' '}
+                  <span
+                    role="button"
+                    aria-label="remove outstanding filter"
+                    onClick={clearDiffFilter}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    ×
+                  </span>
+                </Badge>
+              )}
+              {(hasDateFilter ? 1 : 0) + selectedApartmentIds.length + (hasDiffFilter ? 1 : 0) >= 2 && (
                 <Button variant="link" size="sm" className="p-0" onClick={clearAllFilters}>
                   Clear all
                 </Button>
@@ -452,7 +493,73 @@ const UnpaidReservationsReport = () => {
                 <th>Contact</th>
                 <th className="text-end">Total</th>
                 <th className="text-end">Paid</th>
-                <th className="text-end">Outstanding</th>
+                <th className="text-end">
+                  <Dropdown
+                    autoClose="outside"
+                    show={diffDropdownOpen}
+                    onToggle={onDiffDropdownToggle}
+                  >
+                    <Dropdown.Toggle
+                      as="span"
+                      role="button"
+                      style={{ cursor: 'pointer' }}
+                      aria-label="outstanding filter"
+                    >
+                      Outstanding{' '}
+                      <FontAwesomeIcon
+                        icon={faFilter}
+                        className={hasDiffFilter ? 'text-primary' : 'text-muted'}
+                      />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu
+                      renderOnMount
+                      popperConfig={{ strategy: 'fixed' }}
+                      align="end"
+                      style={{ minWidth: 240 }}
+                    >
+                      <div className="px-3 py-2 text-start">
+                        <Form.Group className="mb-2">
+                          <Form.Label className="small mb-1">Owes more than</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min="0"
+                            size="sm"
+                            value={draftMinDiff}
+                            onChange={(e) => setDraftMinDiff(e.target.value)}
+                            placeholder="Min"
+                          />
+                        </Form.Group>
+                        <Form.Group className="mb-2">
+                          <Form.Label className="small mb-1">Owes less than</Form.Label>
+                          <Form.Control
+                            type="number"
+                            min="0"
+                            size="sm"
+                            value={draftMaxDiff}
+                            onChange={(e) => setDraftMaxDiff(e.target.value)}
+                            placeholder="Max"
+                          />
+                        </Form.Group>
+                        <div className="d-flex justify-content-between">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0"
+                            onClick={() => {
+                              setDraftMinDiff('');
+                              setDraftMaxDiff('');
+                            }}
+                          >
+                            Clear
+                          </Button>
+                          <Button variant="primary" size="sm" onClick={applyDraftDiff}>
+                            Apply
+                          </Button>
+                        </div>
+                      </div>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </th>
               </tr>
             </thead>
             <tbody>{renderRows()}</tbody>
@@ -477,10 +584,6 @@ const UnpaidReservationsReport = () => {
         <h5 className="mb-0">Unpaid Reservations (check-in before today)</h5>
       </Card.Header>
       <Card.Body>
-        <UnpaidReservationsFilters
-          onSearch={onFilterSearchHandler}
-          currentSearchCriteria={currentSearchCriteria}
-        />
         {renderBody()}
       </Card.Body>
 
