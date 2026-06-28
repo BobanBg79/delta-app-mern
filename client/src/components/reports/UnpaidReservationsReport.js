@@ -99,7 +99,6 @@ const UnpaidReservationsReport = () => {
 
   // Chips above the table remove a filter immediately
   const removeApartment = (id) => applyApartmentIds(selectedApartmentIds.filter((x) => x !== id));
-  const clearApartments = () => applyApartmentIds([]);
 
   // --- Check-in date range filter (column-header dropdown, draft + Apply) ---
   const { fromDate, toDate } = currentSearchCriteria;
@@ -311,7 +310,10 @@ const UnpaidReservationsReport = () => {
   const renderBody = () => {
     return (
       <>
-          {(selectedApartmentIds.length > 0 || hasDateFilter || hasDiffFilter) && (
+          {/* Fixed-height container so the table doesn't jump when chips or the
+              write-off button appear/disappear. */}
+          <div style={{ height: 50 }}>
+            {(selectedApartmentIds.length > 0 || hasDateFilter || hasDiffFilter) && (
             <div className="mb-2 d-flex flex-wrap gap-2 align-items-center">
               {hasDateFilter && (
                 <Badge bg="light" text="dark" className="border">
@@ -361,7 +363,7 @@ const UnpaidReservationsReport = () => {
               )}
             </div>
           )}
-          {canWriteOff && selectedIds.length > 0 && (
+            {canWriteOff && selectedIds.length > 0 && (
             <div className="mb-2">
               <Button
                 variant="outline-danger"
@@ -372,6 +374,7 @@ const UnpaidReservationsReport = () => {
               </Button>
             </div>
           )}
+          </div>
           <Table striped hover responsive className="mb-0">
             <thead>
               <tr>
