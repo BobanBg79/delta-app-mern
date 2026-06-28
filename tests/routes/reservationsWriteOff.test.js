@@ -88,3 +88,43 @@ describe('PUT /api/reservations/:id/write-off', () => {
     expect(Reservation.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe('PUT /api/reservations/write-off-batch', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('should write off all given reservations', async () => {
+    const ids = [new mongoose.Types.ObjectId().toString(), new mongoose.Types.ObjectId().toString()];
+    Reservation.updateMany.mockResolvedValue({ matchedCount: 2, modifiedCount: 2 });
+
+    const response = await request(app)
+      .put('/api/reservations/write-off-batch')
+      .send({ reservationIds: ids });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ matched: 2, modified: 2 });
+
+    const [filter, update] = Reservation.updateMany.mock.calls[0];
+    expect(filter._id.$in).toEqual(ids);
+    expect(update.$set.debtWrittenOff).toBe(true);
+    expect(update.$set.writtenOffBy).toBe(mockUserId.toString());
+    expect(update.$set.writtenOffAt).toBeInstanceOf(Date);
+  });
+
+  it('should reject an empty reservationIds array with 400', async () => {
+    const response = await request(app)
+      .put('/api/reservations/write-off-batch')
+      .send({ reservationIds: [] });
+
+    expect(response.status).toBe(400);
+    expect(Reservation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('should reject when an id is not a valid ObjectId', async () => {
+    const response = await request(app)
+      .put('/api/reservations/write-off-batch')
+      .send({ reservationIds: ['not-an-id'] });
+
+    expect(response.status).toBe(400);
+    expect(Reservation.updateMany).not.toHaveBeenCalled();
+  });
+});

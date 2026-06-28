@@ -377,6 +377,38 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// @route   PUT api/reservations/write-off-batch
+// @desc     Write off the debt on several reservations at once (business status
+//           only — no accounting transaction). Used by the unpaid report.
+// @access   Private (requires CAN_WRITE_OFF_RESERVATION)
+router.put(
+  '/write-off-batch',
+  auth,
+  requirePermission('CAN_WRITE_OFF_RESERVATION'),
+  check('reservationIds', 'reservationIds must be a non-empty array').isArray({ min: 1 }),
+  check('reservationIds.*', 'Each reservation id must be valid').isMongoId(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { reservationIds } = req.body;
+
+      const result = await Reservation.updateMany(
+        { _id: { $in: reservationIds } },
+        { $set: { debtWrittenOff: true, writtenOffAt: new Date(), writtenOffBy: req.user.id } }
+      );
+
+      res.json({ matched: result.matchedCount, modified: result.modifiedCount });
+    } catch (error) {
+      console.error('Batch write-off error:', error.message);
+      res.status(500).send({ errors: [{ msg: 'Server error' }] });
+    }
+  }
+);
+
 // @route   PUT api/reservations/:id/write-off
 // @desc     Toggle the debt write-off flag on a reservation (business status
 //           only — no accounting transaction; the system is cash-basis).
