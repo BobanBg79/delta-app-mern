@@ -80,4 +80,24 @@ describe('ReservationPaymentSection - write-off', () => {
     fireEvent.click(undo);
     expect(setDebtWriteOff).toHaveBeenCalledWith('res-1', false);
   });
+
+  it('should NOT show the write-off button when the reservation is fully paid', async () => {
+    mockAuthUser = withPermission(WRITE_OFF_PERMISSION);
+    getPaymentsByReservation.mockResolvedValue({ totalPaid: 100, payments: [] }); // == totalAmount
+
+    await renderSection(); // totalAmount 100, not written off
+
+    // Add Payment is always there; the write-off button should be gone
+    await waitFor(() => expect(screen.getByText('Add Payment')).toBeInTheDocument());
+    expect(screen.queryByText(/write off debt/i)).not.toBeInTheDocument();
+  });
+
+  it('should still show Undo for a written-off reservation even if fully paid', async () => {
+    mockAuthUser = withPermission(WRITE_OFF_PERMISSION);
+    getPaymentsByReservation.mockResolvedValue({ totalPaid: 100, payments: [] });
+
+    await renderSection({ ...baseReservation, debtWrittenOff: true });
+
+    await waitFor(() => expect(screen.getByText(/undo write-off/i)).toBeInTheDocument());
+  });
 });

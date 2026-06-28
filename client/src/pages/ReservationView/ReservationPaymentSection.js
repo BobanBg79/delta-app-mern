@@ -26,6 +26,12 @@ const ReservationPaymentSection = ({ formState, isEditable }) => {
     USER_PERMISSIONS.CAN_WRITE_OFF_RESERVATION
   );
 
+  // Fully paid reservations have no outstanding debt, so there is nothing to
+  // write off. (Undo stays available if it was written off earlier.)
+  const isFullyPaid =
+    paymentInfo != null && (paymentInfo.totalPaid || 0) >= (parseFloat(totalAmount) || 0);
+  const showWriteOffButton = canWriteOff && (debtWrittenOff || !isFullyPaid);
+
   const onToggleWriteOff = () => dispatch(setDebtWriteOff(reservationId, !debtWrittenOff));
 
   // Fetch payment info for existing reservations
@@ -79,7 +85,7 @@ const ReservationPaymentSection = ({ formState, isEditable }) => {
               >
                 Add Payment
               </Button>
-              {canWriteOff && (
+              {showWriteOffButton && (
                 <Button
                   variant={debtWrittenOff ? 'outline-secondary' : 'outline-danger'}
                   size="sm"
