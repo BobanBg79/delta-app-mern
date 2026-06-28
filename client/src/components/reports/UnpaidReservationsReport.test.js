@@ -190,7 +190,7 @@ describe('UnpaidReservationsReport', () => {
       axios.get.mockResolvedValue({ data: { reservations: [sampleReservation], total: 1 } });
     });
 
-    it('should refetch with apartmentId when an apartment is picked from the header', async () => {
+    it('should refetch with apartmentIds when an apartment is checked in the header', async () => {
       await act(async () => {
         render(<UnpaidReservationsReport />);
       });
@@ -198,16 +198,42 @@ describe('UnpaidReservationsReport', () => {
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
       axios.get.mockClear();
 
-      // open the header dropdown and pick an apartment
+      // open the header dropdown and check an apartment
       fireEvent.click(screen.getByLabelText(/apartment filter/i));
       await act(async () => {
-        fireEvent.click(screen.getByText('Jorgovan'));
+        fireEvent.click(screen.getByLabelText('Jorgovan'));
       });
 
       await waitFor(() => expect(axios.get).toHaveBeenCalled());
       const [, config] = axios.get.mock.calls[0];
-      expect(config.params.apartmentId).toBe('apt-2');
+      expect(config.params.apartmentIds).toEqual(['apt-2']);
       expect(config.params.page).toBe(0);
+    });
+
+    it('should show a chip for the selected apartment and remove it on x', async () => {
+      await act(async () => {
+        render(<UnpaidReservationsReport />);
+      });
+      await waitFor(() => expect(axios.get).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByLabelText(/apartment filter/i));
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText('Jorgovan'));
+      });
+
+      // chip appears
+      await waitFor(() =>
+        expect(screen.getByText(/Apartment: Jorgovan/i)).toBeInTheDocument()
+      );
+
+      axios.get.mockClear();
+      // remove via the chip x
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText(/remove Jorgovan filter/i));
+      });
+
+      const [, config] = axios.get.mock.calls[0];
+      expect(config.params.apartmentIds).toBeUndefined();
     });
   });
 

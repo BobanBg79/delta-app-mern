@@ -8,6 +8,9 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import Dropdown from 'react-bootstrap/Dropdown';
+import Badge from 'react-bootstrap/Badge';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFilter } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import ReportCardState from './ReportCardState';
 import UnpaidReservationsFilters from './UnpaidReservationsFilters';
@@ -73,19 +76,28 @@ const UnpaidReservationsReport = () => {
     USER_PERMISSIONS.CAN_WRITE_OFF_RESERVATION
   );
 
-  const selectedApartmentId = currentSearchCriteria.apartmentId || '';
-  const selectedApartmentName =
-    apartmentsArray.find((a) => a._id === selectedApartmentId)?.name || null;
+  const selectedApartmentIds = currentSearchCriteria.apartmentIds || [];
+  const apartmentName = (id) => apartmentsArray.find((a) => a._id === id)?.name || id;
 
-  // Column-header apartment filter applies immediately (page 0), keeping other filters
-  const onApartmentFilter = async (apartmentId) => {
+  // Apply a new apartment selection immediately (page 0), keeping other filters
+  const applyApartmentIds = async (ids) => {
     const criteria = { ...currentSearchCriteria };
-    if (apartmentId) criteria.apartmentId = apartmentId;
-    else delete criteria.apartmentId;
+    if (ids.length) criteria.apartmentIds = ids;
+    else delete criteria.apartmentIds;
     setCurrentSearchCriteria(criteria);
     setSelectedIds([]);
     await fetchUnpaid(criteria, 0);
   };
+
+  // Toggle one apartment in/out of the multiselect
+  const toggleApartment = (id) => {
+    const next = selectedApartmentIds.includes(id)
+      ? selectedApartmentIds.filter((x) => x !== id)
+      : [...selectedApartmentIds, id];
+    applyApartmentIds(next);
+  };
+
+  const clearApartments = () => applyApartmentIds([]);
 
   const toggleSelected = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -169,6 +181,26 @@ const UnpaidReservationsReport = () => {
     }
     return (
       <>
+          {selectedApartmentIds.length > 0 && (
+            <div className="mb-2 d-flex flex-wrap gap-2 align-items-center">
+              {selectedApartmentIds.map((id) => (
+                <Badge key={id} bg="light" text="dark" className="border">
+                  Apartment: {apartmentName(id)}{' '}
+                  <span
+                    role="button"
+                    aria-label={`remove ${apartmentName(id)} filter`}
+                    onClick={() => toggleApartment(id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    ×
+                  </span>
+                </Badge>
+              ))}
+              <Button variant="link" size="sm" className="p-0" onClick={clearApartments}>
+                Clear
+              </Button>
+            </div>
+          )}
           {canWriteOff && (
             <div className="mb-2">
               <Button
@@ -195,31 +227,37 @@ const UnpaidReservationsReport = () => {
                   </th>
                 )}
                 <th>
-                  <Dropdown>
+                  <Dropdown autoClose="outside">
                     <Dropdown.Toggle
                       as="span"
                       role="button"
                       style={{ cursor: 'pointer' }}
                       aria-label="apartment filter"
                     >
-                      Apartment{selectedApartmentName ? `: ${selectedApartmentName}` : ''}
+                      Apartment{' '}
+                      <FontAwesomeIcon
+                        icon={faFilter}
+                        className={selectedApartmentIds.length ? 'text-primary' : 'text-muted'}
+                      />
                     </Dropdown.Toggle>
-                    <Dropdown.Menu style={{ maxHeight: 300, overflowY: 'auto' }}>
-                      <Dropdown.Item
-                        active={!selectedApartmentId}
-                        onClick={() => onApartmentFilter('')}
-                      >
-                        All apartments
-                      </Dropdown.Item>
-                      <Dropdown.Divider />
+                    <Dropdown.Menu
+                      renderOnMount
+                      popperConfig={{ strategy: 'fixed' }}
+                      style={{ maxHeight: 300, overflowY: 'auto' }}
+                    >
+                      {apartmentsArray.length === 0 && (
+                        <Dropdown.ItemText className="text-muted">No apartments</Dropdown.ItemText>
+                      )}
                       {apartmentsArray.map((a) => (
-                        <Dropdown.Item
-                          key={a._id}
-                          active={a._id === selectedApartmentId}
-                          onClick={() => onApartmentFilter(a._id)}
-                        >
-                          {a.name}
-                        </Dropdown.Item>
+                        <div key={a._id} className="px-3 py-1">
+                          <Form.Check
+                            type="checkbox"
+                            id={`apt-filter-${a._id}`}
+                            label={a.name}
+                            checked={selectedApartmentIds.includes(a._id)}
+                            onChange={() => toggleApartment(a._id)}
+                          />
+                        </div>
                       ))}
                     </Dropdown.Menu>
                   </Dropdown>
