@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "Reservations",
+    "_postman_id": "reservations-collection",
+    "description": "API endpoints for listing reservations. Requires CAN_VIEW_RESERVATION.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "List All Reservations",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/reservations",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "reservations"]
+        },
+        "description": "Returns all reservations (newest created first), with apartment, guest and booking agent populated. Required permission: CAN_VIEW_RESERVATION"
+      },
+      "response": []
+    },
+    {
+      "name": "List Reservations by Planned Check-in Window (Today's Check-ins)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/reservations?plannedCheckInFrom={{todayStart}}&plannedCheckInTo={{todayEnd}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "reservations"],
+          "query": [
+            {
+              "key": "plannedCheckInFrom",
+              "value": "{{todayStart}}",
+              "description": "Lower bound for plannedCheckIn, as a numeric UTC millisecond timestamp (Date.getTime()). Optional."
+            },
+            {
+              "key": "plannedCheckInTo",
+              "value": "{{todayEnd}}",
+              "description": "Upper bound for plannedCheckIn, as a numeric UTC millisecond timestamp. Optional."
+            }
+          ]
+        },
+        "description": "Returns reservations whose planned check-in falls in the given window. The 'Today's Check-ins' homepage report sends [start of today, end of today] in the user's local time, converted to UTC ms via Date.getTime(). Required permission: CAN_VIEW_RESERVATION"
+      },
+      "response": []
+    }
+  ]
+}

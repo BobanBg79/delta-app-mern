@@ -5,6 +5,7 @@ import MonthlyIncomeReport from '../components/MonthlyIncomeReport';
 import CleaningLadyScheduledCleaningsReport from '../components/reports/CleaningLadyScheduledCleaningsReport';
 import TomorrowCheckoutsReport from '../components/reports/TomorrowCheckoutsReport';
 import UnpaidReservationsReport from '../components/reports/UnpaidReservationsReport';
+import TodayCheckinsReport from '../components/reports/TodayCheckinsReport';
 import { hasPermission } from '../utils/permissions';
 import { USER_PERMISSIONS } from '../constants';
 
@@ -29,6 +30,10 @@ const Homepage = () => {
     userPermissions,
     USER_PERMISSIONS.CAN_VIEW_UNPAID_RESERVATIONS_REPORT
   );
+  const canViewReservations = hasPermission(
+    userPermissions,
+    USER_PERMISSIONS.CAN_VIEW_RESERVATION
+  );
 
   return (
     <Row>
@@ -41,6 +46,12 @@ const Homepage = () => {
           )}
           <h2>{`Welcome ${user.fname} ${user.lname}`}</h2>
         </div>
+
+        {canViewReservations && (
+          <div className="mt-4">
+            <TodayCheckinsReport />
+          </div>
+        )}
 
         {canViewUnpaidReport && (
           <div className="mt-4">

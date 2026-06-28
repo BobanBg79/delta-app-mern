@@ -146,11 +146,28 @@ router.get('/monthly-stats', auth, async (req, res) => {
 });
 
 // @route   GET api/reservations
-// @desc    Get the list of all reservations
-// @access  Private
-router.get('/', auth, async (req, res) => {
+// @desc    Get the list of all reservations. Optional plannedCheckInFrom /
+//          plannedCheckInTo (numeric ms timestamps) filter by planned check-in.
+// @access  Private (requires CAN_VIEW_RESERVATION)
+router.get('/', auth, requirePermission('CAN_VIEW_RESERVATION'), async (req, res) => {
   try {
-    const reservations = await Reservation.find()
+    const query = {};
+
+    // Optional planned check-in window. Bounds are numeric ms timestamps; either
+    // bound may be omitted. The frontend's "Today's Check-ins" report sends
+    // [start of today, end of today] in local time.
+    const { plannedCheckInFrom, plannedCheckInTo } = req.query;
+    if (plannedCheckInFrom !== undefined || plannedCheckInTo !== undefined) {
+      query.plannedCheckIn = {};
+      if (plannedCheckInFrom !== undefined) {
+        query.plannedCheckIn.$gte = new Date(Number(plannedCheckInFrom));
+      }
+      if (plannedCheckInTo !== undefined) {
+        query.plannedCheckIn.$lte = new Date(Number(plannedCheckInTo));
+      }
+    }
+
+    const reservations = await Reservation.find(query)
       .populate('createdBy', ['fname', 'lname'])
       .populate('apartment', ['name'])
       .populate('guest', ['firstName', 'lastName', 'phoneNumber'])
