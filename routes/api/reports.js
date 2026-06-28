@@ -22,7 +22,8 @@ router.get(
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const { fromDate, toDate, apartmentId, minDiff, maxDiff, page, pageSize } = req.query;
+    const { fromDate, toDate, apartmentId, apartmentIds, minDiff, maxDiff, page, pageSize } =
+      req.query;
 
     // Parse a date query param that may be a numeric timestamp string or ISO.
     const parseDate = (value) => {
@@ -44,7 +45,17 @@ router.get(
       // chase that money, so they should not appear as outstanding.
       debtWrittenOff: { $ne: true },
     };
-    if (apartmentId) query.apartment = apartmentId;
+    // Apartment filter: accept a single apartmentId (legacy) or apartmentIds
+    // (one or many). Multiple apartments -> $in.
+    const apartmentList = []
+      .concat(apartmentIds || [])
+      .concat(apartmentId || [])
+      .filter(Boolean);
+    if (apartmentList.length === 1) {
+      query.apartment = apartmentList[0];
+    } else if (apartmentList.length > 1) {
+      query.apartment = { $in: apartmentList };
+    }
 
     // Active reservations matching the (DB-level) filters
     const reservations = await Reservation.find(query)
