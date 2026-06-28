@@ -32,6 +32,8 @@ NODE_ENV=dev npx nodemon server
 
 Wait for `Server started on port 5000`. The server reads config from `.env`.
 
+Use **nodemon** (as above), not plain `node server` — plain node does not reload on file changes, so a newly added route returns 404 ("Cannot PUT /api/...") even though the code is correct. If a brand-new route 404s, confirm the server is nodemon and was restarted after the route was added.
+
 ## Starting the frontend
 
 ```bash

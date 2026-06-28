@@ -65,6 +65,21 @@ PUT /api/reservations/:id/write-off
 
 Setting `true` records `debtWrittenOff: true`, `writtenOffAt`, and `writtenOffBy`. Setting `false` clears all three. No `AccommodationPayment` or `Transaction` records are created.
 
+### Batch write-off
+
+```
+PUT /api/reservations/write-off-batch
+```
+
+| Property | Value |
+|----------|-------|
+| Auth | Required |
+| Permission | `CAN_WRITE_OFF_RESERVATION` |
+| Body | `{ "reservationIds": ["...", "..."] }` (non-empty array of valid ids) |
+| Success | `200 { "matched": n, "modified": n }` |
+
+Writes off all given reservations in one `updateMany` (sets `debtWrittenOff: true` + audit fields). Used by the unpaid-reservations report's multi-select. Same permission gate as the single endpoint.
+
 ---
 
 ## Implementation Notes
@@ -78,6 +93,8 @@ Setting `true` records `debtWrittenOff: true`, `writtenOffAt`, and `writtenOffBy
 ### Frontend
 
 The toggle and a "Debt written off" badge live in `client/src/pages/ReservationView/ReservationPaymentSection.js`, gated by `hasPermission(..., CAN_WRITE_OFF_RESERVATION)`. The `setDebtWriteOff` redux thunk (`modules/reservation/operations.js`) calls the endpoint and refreshes the reservation.
+
+The unpaid-reservations report also supports **batch** write-off (same permission): per-row selection checkboxes, a header "select all on this page" checkbox, and a "Write off selected (n)" button that opens a confirmation modal (Cancel / Confirm). On confirm it dispatches `batchWriteOff` and refreshes the list. See `components/reports/UnpaidReservationsReport.js`.
 
 ### Report exclusion
 
