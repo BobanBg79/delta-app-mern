@@ -355,14 +355,25 @@ New permissions must follow the established pattern:
 - Report: `CAN_VIEW_{NAME}_REPORT` (read-only, one per report)
 - Special: Only for workflow-specific actions (e.g., `CAN_COMPLETE_CLEANING`)
 
-### 4. Test Permission Sync
+### 4. Adding a New Permission
 
-When adding new entities:
-1. Add permissions to `Permission.getAllPermissions()`
-2. Restart server
-3. Verify ADMIN received new permissions
-4. Update frontend constants
-5. Write tests
+This applies to any permission type — a new entity's CRUD set, a sensitive-data
+permission, a report permission (`CAN_VIEW_{NAME}_REPORT`), or a special
+workflow permission (e.g. `CAN_UPDATE_USER_PASSWORD`):
+
+1. Make sure the name matches an allowed pattern in the `Permission` model
+   validator. If it's a new shape (not standard CRUD / sensitive / report /
+   special), add a pattern or list entry there first.
+2. Add the permission name to `Permission.getAllPermissions()` — in the matching
+   group (`standardPermissions`, `sensitiveDataPermissions`, `reportPermissions`,
+   or `specialPermissions`).
+3. Restart the server. `seedPermissions()` inserts it and
+   `updateAdminRolePermissions()` grants it to ADMIN automatically.
+4. Other roles get it manually via the role management UI — never hard-code a
+   role-name check; protect routes with `requirePermission('CAN_...')` and gate
+   UI with `hasPermission(...)`.
+5. Add the constant to `client/src/constants.js` (`USER_PERMISSIONS`).
+6. Write tests (route authorization + permission validation as needed).
 
 ## Troubleshooting
 
